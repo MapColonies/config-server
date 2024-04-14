@@ -1,7 +1,7 @@
 {
-  "name": "service-name",
+  "name": "config-server",
   "version": "1.0.0",
-  "description": "This is template for map colonies typescript service",
+  "description": "This is a api server that serves and modifies configuration",
   "main": "./src/index.ts",
   "scripts": {
     "test:unit": "jest --config=./tests/configurations/unit/jest.config.js",
@@ -46,7 +46,7 @@
     "@map-colonies/js-logger": "^1.0.1",
     "@map-colonies/openapi-express-viewer": "^3.0.0",
     "@map-colonies/read-pkg": "0.0.1",
-    "@map-colonies/telemetry": "^4.2.0",
+    "@map-colonies/telemetry": "^5.4.0",
     "@opentelemetry/api": "^1.4.1",
     "@opentelemetry/api-metrics": "0.23.0",
     "@opentelemetry/instrumentation-express": "0.32.1",
@@ -89,6 +89,6 @@
     "standard-version": "^9.5.0",
     "supertest": "^6.3.3",
     "ts-jest": "^29.0.5",
-    "typescript": "^5.1.3"
+    "typescript": "^5.4.5"
   }
 }

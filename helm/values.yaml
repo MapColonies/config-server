@@ -53,7 +53,7 @@ caPath: '/usr/local/share/ca-certificates'
 caKey: 'ca.crt'
 
 image:
-  repository: ts-server-boilerplate
+  repository: config-server
   tag: 'latest'
   pullPolicy: IfNotPresent
 

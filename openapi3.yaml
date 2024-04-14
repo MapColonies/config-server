@@ -1,57 +1,288 @@
 openapi: 3.0.1
 info:
-  title: service-name
-  description: basic template for map colonies service
+  title: config-server
+  description: This is a config server that provides the means to manage all the configurations
   version: 1.0.0
   license:
     name: MIT
     url: https://opensource.org/licenses/MIT
 paths:
-  /anotherResource:
+  '/config':
     get:
-      operationId: getAnotherResource
-      tags:
-        - anotherResource
-      summary: gets the resource
+      parameters:
+        - $ref: '#/components/parameters/FullTextQuery'
+        - $ref: '#/components/parameters/ConfigNameQuery'
+        - $ref: '#/components/parameters/SchemaIdQuery'
+        - $ref: '#/components/parameters/VersionQuery'
+        - $ref: '#/components/parameters/CreatedAtGreaterThanQuery'
+        - $ref: '#/components/parameters/CreatedAtLessThanQuery'
+        - $ref: '#/components/parameters/CreatedByQuery'
+        - $ref: '#/components/parameters/OffsetQuery'
+        - $ref: '#/components/parameters/LimitQuery'
+      operationId: getConfigs
+      summary: get configs based on filters
       responses:
-        200:
-          description: OK
+        '200':
+          description: Array containing all the configs returned based on the filters
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/anotherResource'
-  /resourceName:
-    get:
-      operationId: getResourceName
-      tags:
-        - resourceName
-      summary: gets the resource
-      responses:
-        200:
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/resource'
+                type: object
+                additionalProperties: false
+                properties:
+                  configs:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/config'
+                  total:
+                    type: integer
+
+        '400':
+          $ref: '#/components/responses/400BadRequest'
+        '500':
+          $ref: '#/components/responses/500InternalServerError'
     post:
-      operationId: createResource
-      tags:
-        - resourceName
-      summary: creates a new record of type resource
+      operationId: upsertConfig
+      summary: Create a new config or a new version of an existing config
+      requestBody:
+        required: true
+        description: If no version is provided and no version with the same name exists, a new config will be created. If a version is provided, a new version of an existing config will be created. The version provided should match the latest version of the existing config.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/config'
       responses:
-        201:
-          description: created
+        '201':
+          description: Created
+        '400':
+          $ref: '#/components/responses/400BadRequest'
+        '409':
+          $ref: '#/components/responses/409Conflict'
+        '500':
+          $ref: '#/components/responses/500InternalServerError'
+
+  '/config/{name}':
+    get:
+      parameters:
+        - in: path
+          name: name
+          required: true
+          schema:
+            $ref: '#/components/schemas/configName'
+      operationId: getConfigsByName
+      summary: get a specfic client connection for specific environment
+      responses:
+        '200':
+          description: Array containing all the configs with the specific name
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/resource'
-        400:
-          description: Bad Request
+                type: array
+                items:
+                  $ref: '#/components/schemas/config'
+        '400':
+          $ref: '#/components/responses/400BadRequest'
+        '404':
+          $ref: '#/components/responses/404NotFound'
+        '500':
+          $ref: '#/components/responses/500InternalServerError'
+  '/config/{name}/{version}':
+    parameters:
+      - in: path
+        name: name
+        required: true
+        schema:
+          $ref: '#/components/schemas/configName'
+      - in: path
+        name: version
+        required: true
+        schema:
+          oneOf:
+            - type: string
+              enum: ['latest']
+            - $ref: '#/components/schemas/version'
+    get:
+      operationId: getVersionedConfig
+      summary: get a specific version of a config
+      responses:
+        '200':
+          description: Object containing the config with the specific name and version or the latest version
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/error'
+                $ref: '#/components/schemas/config'
+        '400':
+          $ref: '#/components/responses/400BadRequest'
+        '404':
+          $ref: '#/components/responses/404NotFound'
+        '500':
+          $ref: '#/components/responses/500InternalServerError'
+  /schema/{path}:
+    get:
+      parameters:
+        - name: path
+          in: path
+          description: The relative path of the schema as defined in the schema id
+          required: true
+          schema: 
+            type: string
+        - name: shouldDereference
+          in: query
+          description: should the schema contain refs
+          schema:
+            type: boolean
+      operationId: getSchema
+      summary: return a tree representation of all the schemas
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          $ref: '#/components/responses/400BadRequest'
+        '404':
+          $ref: '#/components/responses/404NotFound'
+        '500':
+          $ref: '#/components/responses/500InternalServerError'
+  /schemas:
+    get:
+      operationId: getSchemasTree
+      summary: return a tree representation of all the schemas
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/schemaTree"
+        '400':
+          $ref: '#/components/responses/400BadRequest'
+        '500':
+          $ref: '#/components/responses/500InternalServerError'
+  /capabilities:
+    get:
+      operationId: getCapabilities
+      summary: get all capabilities about the server
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  serverVersion:
+                    description: The version of the server
+                    type: string
+                  schemasPackageVersion:
+                    description: The version of the schemas package
+                    type: string
+                  pubSubEnabled:
+                    description: a flag that indicates if the pubsub is enabled for config change notifications
+                    type: boolean
+        '400':
+          $ref: '#/components/responses/400BadRequest'
+        '500':
+          $ref: '#/components/responses/500InternalServerError'
+security: []
 components:
+  responses:
+    400BadRequest:
+      description: BadRequest
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/error'
+    404NotFound:
+      description: Not Found - If client does not exist
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/error'
+    409Conflict:
+      description: conflict
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/error'
+    500InternalServerError:
+      description: Internal Server Error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/error'
+  parameters:
+    ConfigNameQuery:
+      name: configName
+      in: query
+      description: 'Filters objects based on the exact value of the configName property.'
+      required: false
+      schema:
+        $ref: '#/components/schemas/configName'
+    SchemaIdQuery:
+      name: schemaId
+      in: query
+      description: 'Filters objects where the schemaId property exactly matches the specified URL.'
+      required: false
+      schema:
+        $ref: '#/components/schemas/schemaId'
+    VersionQuery:
+      name: version
+      in: query
+      description: 'Filters objects where the version property exactly matches the specified version string.'
+      required: false
+      schema:
+        oneOf:
+          - $ref: '#/components/schemas/version'
+          - type: string
+            enum: ['latest']
+    CreatedAtGreaterThanQuery:
+      name: createdAt_gt
+      in: query
+      description: 'Filters objects where the createdAt property is greater than the specified date-time value (format: ISO 8601).'
+      required: false
+      schema:
+        $ref: '#/components/schemas/createdAt'
+    CreatedAtLessThanQuery:
+      name: createdAt_lt
+      in: query
+      description: 'Filters objects where the createdAt property is less than the specified date-time value (format: ISO 8601).'
+      required: false
+      schema:
+        $ref: '#/components/schemas/createdAt'
+    CreatedByQuery:
+      name: createdBy
+      in: query
+      description: 'Filters objects based on the exact value of the createdBy property.'
+      required: false
+      schema:
+        $ref: '#/components/schemas/createdBy'
+    OffsetQuery:
+      name: offset
+      in: query
+      description: 'Specifies the number of items to skip before starting to return results.'
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+    LimitQuery:
+      name: limit
+      in: query
+      description: 'Specifies the maximum number of items to return.'
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+    FullTextQuery:
+      name: q
+      in: query
+      description: 'Search term for full-text search across relevant properties (implementation specific).'
+      required: false
+      schema:
+        type: string
   schemas:
     error:
       type: object
@@ -60,27 +291,74 @@ components:
       properties:
         message:
           type: string
-    resource:
+    configName:
+      type: string
+      maxLength: 50
+    schemaId:
+      type: string
+      pattern: "^https:\\/\\/mapcolonies\\.com\\/.+$"
+      example: "https://mapcolonies.com/common/db/v1"
+    version:
+      type: string
+      pattern: '^v[1-9]+[0-9]*$'
+      example: v1
+    createdAt:
+      type: string
+      format: date-time
+    createdBy:
+      type: string
+      maxLength: 50
+    schemaTree:
+      type: array
+      example: 
+        - name: common
+          children:
+           - name: boilerplate
+             children:
+               - name: v1
+                 url: https://mapcolonies.com/common/boilerplate/v1
+               - name: v2
+                 url: https://mapcolonies.com/common/boilerplate/v2
+               - name: v3
+                 url: https://mapcolonies.com/common/boilerplate/v3
+           - name: db
+             children:
+               - name: v1
+                 url: https://mapcolonies.com/common/db/v1
+               
+      items:
+        oneOf:
+          - $ref: "#/components/schemas/schemaTreeItem"
+          - $ref: "#/components/schemas/schemaTreeDir"
+    schemaTreeItem:
       type: object
-      required:
-        - id
-        - name
-        - description
-      properties:
+      properties: 
+        name: 
+          type: string
         id:
-          type: number
-          format: int64
-        name:
           type: string
-        description:
-          type: string
-    anotherResource:
+    schemaTreeDir:
       type: object
-      required:
-        - kind
-        - isAlive
       properties:
-        kind:
+        children:
+          $ref: "#/components/schemas/schemaTree"
+        name: 
           type: string
-        isAlive:
-          type: boolean
+    config:
+      type: object
+      additionalProperties: false
+      properties:
+        configName:
+          $ref: '#/components/schemas/configName'
+        schemaId:
+          $ref: '#/components/schemas/schemaId'
+        version:
+          $ref: '#/components/schemas/version'
+        config:
+          type: object
+          additionalProperties: true
+          example: { host: 'localhost', port: 8080 }
+        createdAt:
+          $ref: '#/components/schemas/createdAt'
+        createdBy:
+          $ref: '#/components/schemas/createdBy'

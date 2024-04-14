@@ -1,10 +1,10 @@
 apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
-  name: ts-server-boilerplate
-  description: A boilerplate github repo for a REST API service in NodeJS for MapColonies
+  name:  config-server
+  description: A Node.js service that provides configuration data to other services 
   annotations:
-    github.com/project-slug: MapColonies/ts-server-boilerplate
+    github.com/project-slug: MapColonies/config-server
   tags:
     - nodejs
     - typescript
@@ -14,4 +14,4 @@ spec:
   type: service
   lifecycle: production
   owner: DevInfra
-  system: boilerplate
+  system: config

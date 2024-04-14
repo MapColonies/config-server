@@ -128,11 +128,11 @@ paths:
             type: string
         - name: shouldDereference
           in: query
-          description: should the schema contain refs
+          description: should the server bundle all refs into one schema
           schema:
             type: boolean
       operationId: getSchema
-      summary: return a tree representation of all the schemas
+      summary: returns the requested schema
       responses:
         200:
           description: OK
@@ -146,7 +146,7 @@ paths:
           $ref: '#/components/responses/404NotFound'
         '500':
           $ref: '#/components/responses/500InternalServerError'
-  /schemas:
+  /schema:
     get:
       operationId: getSchemasTree
       summary: return a tree representation of all the schemas

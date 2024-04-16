@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { FactoryFunction } from 'tsyringe';
 import { SchemaController } from '../controllers/schemaController';
+import { SERVICES } from '../../common/constants';
 
 export const schemaRouterFactory: FactoryFunction<Router> = (dependencyContainer) => {
   const router = Router();

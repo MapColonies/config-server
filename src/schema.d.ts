@@ -4,39 +4,38 @@
  * Do not make direct changes to the file.
  */
 
-
 export interface paths {
-  "/config": {
+  '/config': {
     /** get configs based on filters */
-    get: operations["getConfigs"];
+    get: operations['getConfigs'];
     /** Create a new config or a new version of an existing config */
-    post: operations["upsertConfig"];
+    post: operations['upsertConfig'];
   };
-  "/config/{name}": {
+  '/config/{name}': {
     /** get a specfic client connection for specific environment */
-    get: operations["getConfigsByName"];
+    get: operations['getConfigsByName'];
   };
-  "/config/{name}/{version}": {
+  '/config/{name}/{version}': {
     /** get a specific version of a config */
-    get: operations["getVersionedConfig"];
+    get: operations['getVersionedConfig'];
     parameters: {
       path: {
-        name: components["schemas"]["configName"];
-        version: "latest" | components["schemas"]["version"];
+        name: components['schemas']['configName'];
+        version: 'latest' | components['schemas']['version'];
       };
     };
   };
-  "/schema/{path}": {
+  '/schema': {
     /** returns the requested schema */
-    get: operations["getSchema"];
+    get: operations['getSchema'];
   };
-  "/schema": {
+  '/schema/tree': {
     /** return a tree representation of all the schemas */
-    get: operations["getSchemasTree"];
+    get: operations['getSchemasTree'];
   };
-  "/capabilities": {
+  '/capabilities': {
     /** get all capabilities about the server */
-    get: operations["getCapabilities"];
+    get: operations['getCapabilities'];
   };
 }
 
@@ -90,19 +89,19 @@ export interface components {
      *   }
      * ]
      */
-    schemaTree: (components["schemas"]["schemaTreeItem"] | components["schemas"]["schemaTreeDir"])[];
+    schemaTree: (components['schemas']['schemaTreeItem'] | components['schemas']['schemaTreeDir'])[];
     schemaTreeItem: {
       name?: string;
       id?: string;
     };
     schemaTreeDir: {
-      children?: components["schemas"]["schemaTree"];
+      children?: components['schemas']['schemaTree'];
       name?: string;
     };
     config: {
-      configName?: components["schemas"]["configName"];
-      schemaId?: components["schemas"]["schemaId"];
-      version?: components["schemas"]["version"];
+      configName?: components['schemas']['configName'];
+      schemaId?: components['schemas']['schemaId'];
+      version?: components['schemas']['version'];
       /**
        * @example {
        *   "host": "localhost",
@@ -112,49 +111,49 @@ export interface components {
       config?: {
         [key: string]: unknown;
       };
-      createdAt?: components["schemas"]["createdAt"];
-      createdBy?: components["schemas"]["createdBy"];
+      createdAt?: components['schemas']['createdAt'];
+      createdBy?: components['schemas']['createdBy'];
     };
   };
   responses: {
     /** @description BadRequest */
-    "400BadRequest": {
+    '400BadRequest': {
       content: {
-        "application/json": components["schemas"]["error"];
+        'application/json': components['schemas']['error'];
       };
     };
     /** @description Not Found - If client does not exist */
-    "404NotFound": {
+    '404NotFound': {
       content: {
-        "application/json": components["schemas"]["error"];
+        'application/json': components['schemas']['error'];
       };
     };
     /** @description conflict */
-    "409Conflict": {
+    '409Conflict': {
       content: {
-        "application/json": components["schemas"]["error"];
+        'application/json': components['schemas']['error'];
       };
     };
     /** @description Internal Server Error */
-    "500InternalServerError": {
+    '500InternalServerError': {
       content: {
-        "application/json": components["schemas"]["error"];
+        'application/json': components['schemas']['error'];
       };
     };
   };
   parameters: {
     /** @description Filters objects based on the exact value of the configName property. */
-    ConfigNameQuery?: components["schemas"]["configName"];
+    ConfigNameQuery?: components['schemas']['configName'];
     /** @description Filters objects where the schemaId property exactly matches the specified URL. */
-    SchemaIdQuery?: components["schemas"]["schemaId"];
+    SchemaIdQuery?: components['schemas']['schemaId'];
     /** @description Filters objects where the version property exactly matches the specified version string. */
-    VersionQuery?: components["schemas"]["version"] | "latest";
+    VersionQuery?: components['schemas']['version'] | 'latest';
     /** @description Filters objects where the createdAt property is greater than the specified date-time value (format: ISO 8601). */
-    CreatedAtGreaterThanQuery?: components["schemas"]["createdAt"];
+    CreatedAtGreaterThanQuery?: components['schemas']['createdAt'];
     /** @description Filters objects where the createdAt property is less than the specified date-time value (format: ISO 8601). */
-    CreatedAtLessThanQuery?: components["schemas"]["createdAt"];
+    CreatedAtLessThanQuery?: components['schemas']['createdAt'];
     /** @description Filters objects based on the exact value of the createdBy property. */
-    CreatedByQuery?: components["schemas"]["createdBy"];
+    CreatedByQuery?: components['schemas']['createdBy'];
     /** @description Specifies the number of items to skip before starting to return results. */
     OffsetQuery?: number;
     /** @description Specifies the maximum number of items to return. */
@@ -172,34 +171,33 @@ export type $defs = Record<string, never>;
 export type external = Record<string, never>;
 
 export interface operations {
-
   /** get configs based on filters */
   getConfigs: {
     parameters: {
       query?: {
-        q?: components["parameters"]["FullTextQuery"];
-        configName?: components["parameters"]["ConfigNameQuery"];
-        schemaId?: components["parameters"]["SchemaIdQuery"];
-        version?: components["parameters"]["VersionQuery"];
-        createdAt_gt?: components["parameters"]["CreatedAtGreaterThanQuery"];
-        createdAt_lt?: components["parameters"]["CreatedAtLessThanQuery"];
-        createdBy?: components["parameters"]["CreatedByQuery"];
-        offset?: components["parameters"]["OffsetQuery"];
-        limit?: components["parameters"]["LimitQuery"];
+        q?: components['parameters']['FullTextQuery'];
+        configName?: components['parameters']['ConfigNameQuery'];
+        schemaId?: components['parameters']['SchemaIdQuery'];
+        version?: components['parameters']['VersionQuery'];
+        createdAt_gt?: components['parameters']['CreatedAtGreaterThanQuery'];
+        createdAt_lt?: components['parameters']['CreatedAtLessThanQuery'];
+        createdBy?: components['parameters']['CreatedByQuery'];
+        offset?: components['parameters']['OffsetQuery'];
+        limit?: components['parameters']['LimitQuery'];
       };
     };
     responses: {
       /** @description Array containing all the configs returned based on the filters */
       200: {
         content: {
-          "application/json": {
-            configs?: components["schemas"]["config"][];
+          'application/json': {
+            configs?: components['schemas']['config'][];
             total?: number;
           };
         };
       };
-      400: components["responses"]["400BadRequest"];
-      500: components["responses"]["500InternalServerError"];
+      400: components['responses']['400BadRequest'];
+      500: components['responses']['500InternalServerError'];
     };
   };
   /** Create a new config or a new version of an existing config */
@@ -207,7 +205,7 @@ export interface operations {
     /** @description If no version is provided and no version with the same name exists, a new config will be created. If a version is provided, a new version of an existing config will be created. The version provided should match the latest version of the existing config. */
     requestBody: {
       content: {
-        "application/json": components["schemas"]["config"];
+        'application/json': components['schemas']['config'];
       };
     };
     responses: {
@@ -215,72 +213,70 @@ export interface operations {
       201: {
         content: never;
       };
-      400: components["responses"]["400BadRequest"];
-      409: components["responses"]["409Conflict"];
-      500: components["responses"]["500InternalServerError"];
+      400: components['responses']['400BadRequest'];
+      409: components['responses']['409Conflict'];
+      500: components['responses']['500InternalServerError'];
     };
   };
   /** get a specfic client connection for specific environment */
   getConfigsByName: {
     parameters: {
       path: {
-        name: components["schemas"]["configName"];
+        name: components['schemas']['configName'];
       };
     };
     responses: {
       /** @description Array containing all the configs with the specific name */
       200: {
         content: {
-          "application/json": components["schemas"]["config"][];
+          'application/json': components['schemas']['config'][];
         };
       };
-      400: components["responses"]["400BadRequest"];
-      404: components["responses"]["404NotFound"];
-      500: components["responses"]["500InternalServerError"];
+      400: components['responses']['400BadRequest'];
+      404: components['responses']['404NotFound'];
+      500: components['responses']['500InternalServerError'];
     };
   };
   /** get a specific version of a config */
   getVersionedConfig: {
     parameters: {
       path: {
-        name: components["schemas"]["configName"];
-        version: "latest" | components["schemas"]["version"];
+        name: components['schemas']['configName'];
+        version: 'latest' | components['schemas']['version'];
       };
     };
     responses: {
       /** @description Object containing the config with the specific name and version or the latest version */
       200: {
         content: {
-          "application/json": components["schemas"]["config"];
+          'application/json': components['schemas']['config'];
         };
       };
-      400: components["responses"]["400BadRequest"];
-      404: components["responses"]["404NotFound"];
-      500: components["responses"]["500InternalServerError"];
+      400: components['responses']['400BadRequest'];
+      404: components['responses']['404NotFound'];
+      500: components['responses']['500InternalServerError'];
     };
   };
   /** returns the requested schema */
   getSchema: {
     parameters: {
-      query?: {
-        /** @description should the schema contain refs */
+      query: {
+        /** @description The id of the requested schema */
+        id: string;
+        /** @description should the server bundle all refs into one schema */
         shouldDereference?: boolean;
-      };
-      path: {
-        /** @description The relative path of the schema as defined in the schema id */
-        path: string;
       };
     };
     responses: {
       /** @description OK */
       200: {
         content: {
-          "application/json": Record<string, never>;
+          'application/json': Record<string, never>;
         };
       };
-      400: components["responses"]["400BadRequest"];
-      404: components["responses"]["404NotFound"];
-      500: components["responses"]["500InternalServerError"];
+      400: components['responses']['400BadRequest'];
+      404: components['responses']['404NotFound'];
+      500: components['responses']['500InternalServerError'];
     };
   };
   /** return a tree representation of all the schemas */
@@ -289,11 +285,11 @@ export interface operations {
       /** @description OK */
       200: {
         content: {
-          "application/json": components["schemas"]["schemaTree"];
+          'application/json': components['schemas']['schemaTree'];
         };
       };
-      400: components["responses"]["400BadRequest"];
-      500: components["responses"]["500InternalServerError"];
+      400: components['responses']['400BadRequest'];
+      500: components['responses']['500InternalServerError'];
     };
   };
   /** get all capabilities about the server */
@@ -302,7 +298,7 @@ export interface operations {
       /** @description OK */
       200: {
         content: {
-          "application/json": {
+          'application/json': {
             /** @description The version of the server */
             serverVersion?: string;
             /** @description The version of the schemas package */
@@ -312,8 +308,8 @@ export interface operations {
           };
         };
       };
-      400: components["responses"]["400BadRequest"];
-      500: components["responses"]["500InternalServerError"];
+      400: components['responses']['400BadRequest'];
+      500: components['responses']['500InternalServerError'];
     };
   };
 }

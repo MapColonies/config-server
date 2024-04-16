@@ -6,8 +6,9 @@ import { inject, injectable } from 'tsyringe';
 import { JSONSchema, $RefParser } from '@apidevtools/json-schema-ref-parser';
 import { SERVICES } from '../../common/constants';
 import { components } from '../../schema';
+import { SchemaNotFoundError, SchemaPathIsInvalidError } from './errors';
 
-const schemasBasePath = path.join('..', 'node_modules', '@map-colonies', 'schemas', 'build', 'schemas');
+const schemasBasePath = require.resolve('@map-colonies/schemas').substring(0, require.resolve('@map-colonies/schemas').lastIndexOf('/'));
 
 const refParser = new $RefParser();
 
@@ -22,16 +23,10 @@ export class SchemaManager {
   public async getSchema(id: string, dereference = false): Promise<JSONSchema> {
     this.logger.info({ msg: 'loading schema', schemaId: id });
 
-    const fullPath = path.join(schemasBasePath, id.split('https://mapcolonies.com/')[1] + '.schema.json');
-
-    if (path.relative(schemasBasePath, fullPath).startsWith('..')) {
-      this.logger.error({ msg: 'invalid schema path', path: fullPath });
-      throw new Error('invalid schema path');
-    }
-
-    if (!fs.existsSync(fullPath)) {
-      this.logger.error({ msg: 'schema not found', path: fullPath });
-      throw new Error('schema not found');
+    // check for path traversal, if path starts with .. it is invalid
+    if (path.normalize(id.split('https://mapcolonies.com/')[1]).startsWith('..')) {
+      this.logger.error({ msg: 'schema path is invalid, path traversal' });
+      throw new SchemaPathIsInvalidError('Schema path is invalid');
     }
 
     const schemaContent = await this.loadSchema(id.split('https://mapcolonies.com/')[1]);
@@ -53,16 +48,13 @@ export class SchemaManager {
       });
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return schemaContent;
   }
-
 
   public async getSchemas(): Promise<components['schemas']['schemaTree']> {
     this.logger.info({ msg: 'generating schema tree' });
     return this.createSchemaTreeNode(schemasBasePath);
   }
-
 
   private async createSchemaTreeNode(dirPath: string): Promise<components['schemas']['schemaTree']> {
     const dir = (await fsPromise.readdir(dirPath, { withFileTypes: true })).filter(
@@ -79,13 +71,17 @@ export class SchemaManager {
     return Promise.all(resPromises);
   }
 
-
   private async loadSchema(relativePath: string): Promise<JSONSchema> {
     if (this.schemaMap.has(relativePath)) {
       return this.schemaMap.get(relativePath) as JSONSchema;
     }
 
     const fullPath = path.join(schemasBasePath, relativePath + '.schema.json');
+
+    if (!fs.existsSync(fullPath)) {
+      this.logger.error({ msg: 'schema not found', path: fullPath });
+      throw new SchemaNotFoundError();
+    }
 
     const schemaContent = JSON.parse(await fsPromise.readFile(fullPath, { encoding: 'utf-8' })) as JSONSchema;
     this.schemaMap.set(relativePath, schemaContent);

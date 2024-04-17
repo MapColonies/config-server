@@ -114,6 +114,14 @@ export interface components {
       createdAt?: components['schemas']['createdAt'];
       createdBy?: components['schemas']['createdBy'];
     };
+    capabilities: {
+      /** @description The version of the server */
+      serverVersion: string;
+      /** @description The version of the schemas package */
+      schemasPackageVersion: string;
+      /** @description a flag that indicates if the pubsub is enabled for config change notifications */
+      pubSubEnabled: boolean;
+    };
   };
   responses: {
     /** @description BadRequest */
@@ -262,7 +270,7 @@ export interface operations {
     parameters: {
       query: {
         /** @description The id of the requested schema */
-        id: components["schemas"]["schemaId"];
+        id: components['schemas']['schemaId'];
         /** @description should the server bundle all refs into one schema */
         shouldDereference?: boolean;
       };
@@ -298,14 +306,7 @@ export interface operations {
       /** @description OK */
       200: {
         content: {
-          'application/json': {
-            /** @description The version of the server */
-            serverVersion?: string;
-            /** @description The version of the schemas package */
-            schemasPackageVersion?: string;
-            /** @description a flag that indicates if the pubsub is enabled for config change notifications */
-            pubSubEnabled?: boolean;
-          };
+          'application/json': components['schemas']['capabilities'];
         };
       };
       400: components['responses']['400BadRequest'];

@@ -11,6 +11,7 @@ import { collectMetricsExpressMiddleware, getTraceContexHeaderMiddleware } from 
 import { SERVICES } from './common/constants';
 import { IConfig } from './common/interfaces';
 import { SCHEMA_ROUTER_SYMBOL } from './schemas/routes/schemaRouter';
+import { CAPABILITIES_ROUTER_SYMBOL } from './capabilities/routes/capabilitiesRouter';
 
 @injectable()
 export class ServerBuilder {
@@ -20,6 +21,7 @@ export class ServerBuilder {
     @inject(SERVICES.CONFIG) private readonly config: IConfig,
     @inject(SERVICES.LOGGER) private readonly logger: Logger,
     @inject(SCHEMA_ROUTER_SYMBOL) private readonly schemaRouter: Router,
+    @inject(CAPABILITIES_ROUTER_SYMBOL) private readonly capabilitiesRouter: Router
   ) {
     this.serverInstance = express();
   }
@@ -43,6 +45,7 @@ export class ServerBuilder {
 
   private buildRoutes(): void {
     this.serverInstance.use('/schema', this.schemaRouter);
+    this.serverInstance.use('/capabilities', this.capabilitiesRouter);
     this.buildDocsRoutes();
   }
 

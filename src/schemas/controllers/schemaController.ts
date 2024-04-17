@@ -8,9 +8,13 @@ import { SchemaManager } from '../models/schemaManager';
 import { paths } from '../../schema';
 import { SchemaNotFoundError, SchemaPathIsInvalidError } from '../models/errors';
 
-
 type GetSchemaTypes = paths['/schema']['get'];
-type GetSchema = RequestHandler<undefined, GetSchemaTypes['responses']['200']['content']['application/json'], undefined,GetSchemaTypes['parameters']['query']>;
+type GetSchema = RequestHandler<
+  undefined,
+  GetSchemaTypes['responses']['200']['content']['application/json'],
+  undefined,
+  GetSchemaTypes['parameters']['query']
+>;
 
 type GetSchemasTypes = paths['/schema/tree']['get'];
 type GetSchemas = RequestHandler<undefined, GetSchemasTypes['responses']['200']['content']['application/json']>;
@@ -21,7 +25,6 @@ export class SchemaController {
 
   public getSchema: GetSchema = async (req, res, next) => {
     try {
-      
       const schema = await this.manager.getSchema(req.query.id, req.query.shouldDereference);
 
       return res.status(httpStatus.OK).json(schema as unknown as GetSchemaTypes['responses']['200']['content']['application/json']);
@@ -35,7 +38,7 @@ export class SchemaController {
     }
   };
 
-  public getSchemasTree: GetSchemas = async (req, res) => {    
+  public getSchemasTree: GetSchemas = async (req, res) => {
     const schemasTree = await this.manager.getSchemas();
     return res.status(httpStatus.OK).json(schemasTree);
   };

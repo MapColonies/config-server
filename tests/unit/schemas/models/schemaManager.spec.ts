@@ -56,8 +56,7 @@ describe('SchemaManager', () => {
       const schemaTree = await schemaManager.getSchemas();
 
       // Assert
-      expect(schemaTree).toSatisfySchemaInApiSpec('schemaTree')
-      
+      expect(schemaTree).toSatisfySchemaInApiSpec('schemaTree');
     });
   });
 });

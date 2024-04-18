@@ -1,8 +1,9 @@
 import { hostname } from 'node:os';
 import { readFileSync } from 'node:fs';
-import { Client, Pool, PoolConfig } from 'pg';
-
 import { drizzle } from 'drizzle-orm/node-postgres';
+import { Client, Pool, PoolConfig } from 'pg';
+import {configs} from '../../configs/models/config'
+
 
 type DbConfig = {
   enableSslAuth: boolean;
@@ -28,8 +29,13 @@ async function initConnection(dbConfig: PoolConfig): Promise<Pool> {
   return new Pool(dbConfig);
 }
 
+// eslint-disable-next-line import/exports-last
 export function createDrizzle (pool: Pool): ReturnType<typeof drizzle> {
   return drizzle(pool, {schema: {
-    
+    configs
   }});
 }
+
+const db  = createDrizzle(pool)
+
+const res = db.select({a: configs.configName}).from(configs)

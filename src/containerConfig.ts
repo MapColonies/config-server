@@ -9,6 +9,7 @@ import { tracing } from './common/tracing';
 import { SCHEMA_ROUTER_SYMBOL, schemaRouterFactory } from './schemas/routes/schemaRouter';
 import { InjectionObject, registerDependencies } from './common/dependencyRegistration';
 import { CAPABILITIES_ROUTER_SYMBOL, capabilitiesRouterFactory } from './capabilities/routes/capabilitiesRouter';
+import { CONFIG_ROUTER_SYMBOL, configRouterFactory } from './configs/routes/configRouter';
 
 export interface RegisterOptions {
   override?: InjectionObject<unknown>[];
@@ -32,6 +33,7 @@ export const registerExternalValues = (options?: RegisterOptions): DependencyCon
     { token: SERVICES.METER, provider: { useValue: OtelMetrics.getMeterProvider().getMeter(SERVICE_NAME) } },
     { token: SCHEMA_ROUTER_SYMBOL, provider: { useFactory: schemaRouterFactory } },
     { token: CAPABILITIES_ROUTER_SYMBOL, provider: { useFactory: capabilitiesRouterFactory } },
+    { token: CONFIG_ROUTER_SYMBOL, provider: { useFactory: configRouterFactory } },
     {
       token: 'onSignal',
       provider: {

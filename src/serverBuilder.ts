@@ -12,6 +12,7 @@ import { SERVICES } from './common/constants';
 import { IConfig } from './common/interfaces';
 import { SCHEMA_ROUTER_SYMBOL } from './schemas/routes/schemaRouter';
 import { CAPABILITIES_ROUTER_SYMBOL } from './capabilities/routes/capabilitiesRouter';
+import { CONFIG_ROUTER_SYMBOL } from './configs/routes/configRouter';
 
 @injectable()
 export class ServerBuilder {
@@ -21,7 +22,8 @@ export class ServerBuilder {
     @inject(SERVICES.CONFIG) private readonly config: IConfig,
     @inject(SERVICES.LOGGER) private readonly logger: Logger,
     @inject(SCHEMA_ROUTER_SYMBOL) private readonly schemaRouter: Router,
-    @inject(CAPABILITIES_ROUTER_SYMBOL) private readonly capabilitiesRouter: Router
+    @inject(CAPABILITIES_ROUTER_SYMBOL) private readonly capabilitiesRouter: Router,
+    @inject(CONFIG_ROUTER_SYMBOL) private readonly configRouter: Router
   ) {
     this.serverInstance = express();
   }

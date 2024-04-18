@@ -5,7 +5,7 @@ import { injectable, inject } from 'tsyringe';
 import { HttpError } from '@map-colonies/error-express-handler';
 import { SERVICES } from '../../common/constants';
 import { SchemaManager } from '../models/schemaManager';
-import { paths } from '../../schema';
+import { paths } from '../../openapiTypes';
 import { SchemaNotFoundError, SchemaPathIsInvalidError } from '../models/errors';
 
 type GetSchemaTypes = paths['/schema']['get'];

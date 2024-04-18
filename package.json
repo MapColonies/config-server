@@ -22,7 +22,7 @@
     "assets:copy": "copyfiles -f ./config/* ./dist/config && copyfiles -f ./openapi3.yaml ./dist/ && copyfiles ./package.json dist",
     "clean": "rimraf dist",
     "install": "npx husky install",
-    "generate:types": "openapi-typescript openapi3.yaml -o src/schema.d.ts"
+    "generate:types": "openapi-typescript openapi3.yaml -o src/openapiTypes.d.ts"
   },
   "directories": {
     "test": "tests"

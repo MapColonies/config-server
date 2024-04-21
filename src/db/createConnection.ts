@@ -1,16 +1,15 @@
 import { hostname } from 'node:os';
 import { readFileSync } from 'node:fs';
 import { drizzle } from 'drizzle-orm/node-postgres';
-import { Client, Pool, PoolConfig } from 'pg';
-import {configs} from '../../configs/models/config'
-
+import { Pool, PoolConfig } from 'pg';
+import { configs } from '../configs/models/config';
 
 type DbConfig = {
   enableSslAuth: boolean;
   sslPaths: { ca: string; cert: string; key: string };
 } & PoolConfig;
 
-function createConnectionOptions(dbConfig: DbConfig): PoolConfig {
+export function createConnectionOptions(dbConfig: DbConfig): PoolConfig {
   const { enableSslAuth, sslPaths, ...dataSourceOptions } = dbConfig;
   // eslint-disable-next-line @typescript-eslint/naming-convention
   dataSourceOptions.application_name = `${hostname()}-${process.env.NODE_ENV ?? 'unknown_env'}`;
@@ -23,19 +22,18 @@ function createConnectionOptions(dbConfig: DbConfig): PoolConfig {
   };
 }
 
-async function initConnection(dbConfig: PoolConfig): Promise<Pool> {
+export async function initConnection(dbConfig: PoolConfig): Promise<Pool> {
   const pool = new Pool(dbConfig);
   await pool.query('SELECT NOW()');
   return new Pool(dbConfig);
 }
 
-// eslint-disable-next-line import/exports-last
-export function createDrizzle (pool: Pool): ReturnType<typeof drizzle> {
-  return drizzle(pool, {schema: {
-    configs
-  }});
+export type Drizzle = ReturnType<typeof createDrizzle>;
+
+export function createDrizzle(pool: Pool): ReturnType<typeof drizzle<{ configs: typeof configs }>> {
+  return drizzle(pool, {
+    schema: {
+      configs,
+    },
+  });
 }
-
-const db  = createDrizzle(pool)
-
-const res = db.select({a: configs.configName}).from(configs)

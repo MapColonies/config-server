@@ -1,0 +1,16 @@
+{
+  "db": {
+    "host": "localhost",
+    "port": 5432,
+    "user": "postgres",
+    "password": "postgres",
+    "enableSslAuth": false,
+    "sslPaths": {
+      "ca": "",
+      "key": "",
+      "cert": ""
+    },
+    "database": "config-server",
+    "schema": "public"
+  }
+}

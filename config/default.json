@@ -26,8 +26,9 @@
     }
   },
   "db": {
+    "host": "localhost",
     "port": 5432,
-    "username": "postgres",
+    "user": "postgres",
     "password": "postgres",
     "enableSslAuth": false,
     "sslPaths": {

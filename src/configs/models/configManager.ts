@@ -1,22 +1,33 @@
 import { Logger } from '@map-colonies/js-logger';
 import { inject, injectable } from 'tsyringe';
-import { readPackageJsonSync } from '@map-colonies/read-pkg';
+import { Drizzle } from '../../db/createConnection';
 import { SERVICES } from '../../common/constants';
 import { paths } from '../../schema';
-
-const schemasPackagePath = require.resolve('@map-colonies/schemas').substring(0, require.resolve('@map-colonies/schemas').indexOf('build'));
-const schemasPackageVersion = readPackageJsonSync(schemasPackagePath + 'package.json').version as string;
-const serverVersion = readPackageJsonSync('package.json').version as string;
+import { Config, configs } from './config';
+import { and, eq } from 'drizzle-orm';
 
 @injectable()
 export class ConfigManager {
-  public constructor(@inject(SERVICES.LOGGER) private readonly logger: Logger) {}
+  public constructor(
+    @inject(SERVICES.LOGGER) private readonly logger: Logger,
+    @inject(SERVICES.DRIZZLE) private readonly drizzle: Drizzle
+  ) {}
 
-  public getConfig(): paths['/capabilities']['get']['responses']['200']['content']['application/json'] {
+  public async getConfig(name: string, version?: string): Promise<Config> {
+    const config = await this.drizzle.query.configs.findFirst({where: and(eq(configs.configName, name), version ? eq(configs.version, version): undefined)} );
+
+    if (!config) {
+      throw new Error('Config not found');
+    }
+    return config;
+  }
+
+  public async getConfigs(
+    options?: paths['/config']['get']['parameters']['query']
+  ): Promise<Config[]> {
+    const configsResult = await this.drizzle.select().from(configs).
     return {
-      serverVersion,
-      schemasPackageVersion,
-      pubSubEnabled: false,
+      configs: configsResult
     };
   }
 }

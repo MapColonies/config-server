@@ -1,15 +1,14 @@
 apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
-  name:  config-server
-  description: A Node.js service that provides configuration data to other services 
+  name: config-server
+  description: A Node.js service that provides configuration data to other services
   annotations:
     github.com/project-slug: MapColonies/config-server
   tags:
     - nodejs
     - typescript
     - expressjs
-    - boilerplate
 spec:
   type: service
   lifecycle: production

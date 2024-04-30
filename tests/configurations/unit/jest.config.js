@@ -15,6 +15,7 @@ module.exports = {
     '!<rootDir>/src/*',
   ],
   coverageDirectory: '<rootDir>/coverage',
+  setupFilesAfterEnv: ['jest-openapi', '<rootDir>/tests/configurations/initJestOpenapi.setup.ts'],
   reporters: [
     'default',
     ['jest-html-reporters', { multipleReportsUnitePath: './reports', pageTitle: 'unit', publicPath: './reports', filename: 'unit.html' }],

@@ -4,7 +4,7 @@ import httpStatus from 'http-status-codes';
 import { injectable, inject } from 'tsyringe';
 import { SERVICES } from '../../common/constants';
 import { CapabilitiesManager } from '../models/capabilitiesManager';
-import { paths } from '../../schema';
+import { paths } from '../../openapiTypes';
 
 type GetCapabilities = RequestHandler<undefined, paths['/capabilities']['get']['responses']['200']['content']['application/json']>;
 

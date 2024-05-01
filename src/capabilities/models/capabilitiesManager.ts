@@ -1,9 +1,8 @@
-import path from 'path';
 import { Logger } from '@map-colonies/js-logger';
 import { inject, injectable } from 'tsyringe';
 import { readPackageJsonSync } from '@map-colonies/read-pkg';
 import { SERVICES } from '../../common/constants';
-import { paths } from '../../schema';
+import { paths } from '../../openapiTypes';
 
 const schemasPackagePath = require.resolve('@map-colonies/schemas').substring(0, require.resolve('@map-colonies/schemas').indexOf('build'));
 const schemasPackageVersion = readPackageJsonSync(schemasPackagePath + 'package.json').version as string;

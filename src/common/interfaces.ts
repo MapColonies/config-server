@@ -5,6 +5,7 @@ type HasPathParams<T> = T extends { parameters: { path: NonNullable<any> } } ? T
 type HasResponse<T> = T extends { responses: { ['200']: any } } ? T['responses']['200']['content']['application/json'] : undefined;
 type HasRequestBody<T> = T extends { requestBody: any } ? T['requestBody']['content']['application/json'] : undefined;
 type HasQueryParams<T> = T extends { parameters: { query?: NonNullable<any> } } ? T['parameters']['query'] : undefined;
+
 export type TypedRequestHandler<Path extends keyof paths, Method extends keyof paths[Path]> = RequestHandler<
   HasPathParams<paths[Path][Method]>,
   HasResponse<paths[Path][Method]>,

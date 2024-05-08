@@ -12,7 +12,7 @@ export interface paths {
     post: operations['upsertConfig'];
   };
   '/config/{name}': {
-    /** get a specfic client connection for specific environment */
+    /** get a specific client connection for specific environment */
     get: operations['getConfigsByName'];
   };
   '/config/{name}/{version}': {
@@ -49,8 +49,7 @@ export interface components {
     configName: string;
     /** @example https://mapcolonies.com/common/db/v1 */
     schemaId: string;
-    /** @example v1 */
-    version: string;
+    version: number;
     /** Format: date-time */
     createdAt: string;
     createdBy: string;
@@ -99,20 +98,20 @@ export interface components {
       name?: string;
     };
     config: {
-      configName?: components['schemas']['configName'];
-      schemaId?: components['schemas']['schemaId'];
-      version?: components['schemas']['version'];
+      configName: components['schemas']['configName'];
+      schemaId: components['schemas']['schemaId'];
+      version: components['schemas']['version'];
       /**
        * @example {
        *   "host": "localhost",
        *   "port": 8080
        * }
        */
-      config?: {
+      config: {
         [key: string]: unknown;
       };
-      createdAt?: components['schemas']['createdAt'];
-      createdBy?: components['schemas']['createdBy'];
+      createdAt: components['schemas']['createdAt'];
+      createdBy: components['schemas']['createdBy'];
     };
     capabilities: {
       /** @description The version of the server */
@@ -184,12 +183,12 @@ export interface operations {
     parameters: {
       query?: {
         q?: components['parameters']['FullTextQuery'];
-        configName?: components['parameters']['ConfigNameQuery'];
-        schemaId?: components['parameters']['SchemaIdQuery'];
+        config_name?: components['parameters']['ConfigNameQuery'];
+        schema_id?: components['parameters']['SchemaIdQuery'];
         version?: components['parameters']['VersionQuery'];
-        createdAt_gt?: components['parameters']['CreatedAtGreaterThanQuery'];
-        createdAt_lt?: components['parameters']['CreatedAtLessThanQuery'];
-        createdBy?: components['parameters']['CreatedByQuery'];
+        created_at_gt?: components['parameters']['CreatedAtGreaterThanQuery'];
+        created_at_lt?: components['parameters']['CreatedAtLessThanQuery'];
+        created_by?: components['parameters']['CreatedByQuery'];
         offset?: components['parameters']['OffsetQuery'];
         limit?: components['parameters']['LimitQuery'];
       };
@@ -226,7 +225,7 @@ export interface operations {
       500: components['responses']['500InternalServerError'];
     };
   };
-  /** get a specfic client connection for specific environment */
+  /** get a specific client connection for specific environment */
   getConfigsByName: {
     parameters: {
       path: {
@@ -237,7 +236,7 @@ export interface operations {
       /** @description Array containing all the configs with the specific name */
       200: {
         content: {
-          'application/json': components['schemas']['config'][];
+          'application/json': components['schemas']['config'];
         };
       };
       400: components['responses']['400BadRequest'];

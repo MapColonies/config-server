@@ -1,5 +1,5 @@
 {
-  "id": "31a3f335-e519-49ae-9447-afd3244f8948",
+  "id": "afbb6f76-d30e-4e81-97c5-aea107cd030b",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "5",
   "dialect": "pg",
@@ -11,7 +11,7 @@
         "name": {
           "name": "name",
           "type": "text",
-          "primaryKey": true,
+          "primaryKey": false,
           "notNull": true
         },
         "schema_id": {
@@ -22,7 +22,7 @@
         },
         "version": {
           "name": "version",
-          "type": "text",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true
         },
@@ -38,11 +38,25 @@
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
         }
       },
       "indexes": {},
       "foreignKeys": {},
-      "compositePrimaryKeys": {},
+      "compositePrimaryKeys": {
+        "config_name_version_pk": {
+          "name": "config_name_version_pk",
+          "columns": [
+            "name",
+            "version"
+          ]
+        }
+      },
       "uniqueConstraints": {}
     }
   },

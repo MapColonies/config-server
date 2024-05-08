@@ -48,6 +48,7 @@ export class ServerBuilder {
   private buildRoutes(): void {
     this.serverInstance.use('/schema', this.schemaRouter);
     this.serverInstance.use('/capabilities', this.capabilitiesRouter);
+    this.serverInstance.use('/config', this.configRouter);
     this.buildDocsRoutes();
   }
 

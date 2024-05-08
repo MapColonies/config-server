@@ -18,7 +18,7 @@ export interface RegisterOptions {
   useChild?: boolean;
 }
 
-export const registerExternalValues = async (options?: RegisterOptions): Promise<DependencyContainer> => {
+export async function registerExternalValues (options?: RegisterOptions): Promise<DependencyContainer> {
   const loggerConfig = config.get<LoggerOptions>('telemetry.logger');
   const logger = jsLogger({ ...loggerConfig, prettyPrint: loggerConfig.prettyPrint, mixin: getOtelMixin() });
 
@@ -55,4 +55,4 @@ export const registerExternalValues = async (options?: RegisterOptions): Promise
   ];
 
   return registerDependencies(dependencies, options?.override, options?.useChild);
-};
+}

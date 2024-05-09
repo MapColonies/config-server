@@ -4,7 +4,7 @@ module.exports = {
   },
   coverageReporters: ['text', 'html'],
   collectCoverage: true,
-  collectCoverageFrom: ['<rootDir>/src/**/*.ts', '!*/node_modules/', '!/vendor/**', '!*/common/**', '!**/models/**', '!<rootDir>/src/*'],
+  collectCoverageFrom: ['<rootDir>/src/**/*.ts', '!*/node_modules/', '!/vendor/**', '!*/common/**', '!**/models/**', '!<rootDir>/src/*', '!**/db/runMigrations.ts'],
   coverageDirectory: '<rootDir>/coverage',
   rootDir: '../../../.',
   testMatch: ['<rootDir>/tests/integration/**/*.spec.ts'],
@@ -18,6 +18,8 @@ module.exports = {
     ],
   ],
   moduleDirectories: ['node_modules', 'src'],
+  globalSetup: '<rootDir>/tests/configurations/integration/jest.globalSetup.ts',
+  globalTeardown: '<rootDir>/tests/configurations/integration/jest.globalTeardown.ts',
   preset: 'ts-jest',
   testEnvironment: 'node',
   coverageThreshold: {

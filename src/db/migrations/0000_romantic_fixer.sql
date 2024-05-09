@@ -1,4 +1,6 @@
-CREATE TABLE IF NOT EXISTS "config" (
+CREATE SCHEMA IF NOT EXISTS "config_server";
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "config_server"."config" (
 	"name" text NOT NULL,
 	"schema_id" text NOT NULL,
 	"version" integer NOT NULL,
@@ -9,4 +11,4 @@ CREATE TABLE IF NOT EXISTS "config" (
 	"textsearchable_index_col" tsvector GENERATED ALWAYS AS (to_tsvector('english', name || ' ' || schema_id || ' ' || version::text || ' ' || created_by ) || jsonb_to_tsvector('english', config, '"all"') ) STORED
 );
 
-CREATE INDEX textsearch_idx ON config USING GIN (textsearchable_index_col);
+CREATE INDEX textsearch_idx ON "config_server"."config" USING GIN (textsearchable_index_col);

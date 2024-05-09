@@ -1,10 +1,11 @@
 import { hostname } from 'node:os';
 import { readFileSync } from 'node:fs';
 import { drizzle } from 'drizzle-orm/node-postgres';
+import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { Pool, PoolConfig } from 'pg';
 import { configs } from '../configs/models/config';
 
-type DbConfig = {
+export type DbConfig = {
   enableSslAuth: boolean;
   sslPaths: { ca: string; cert: string; key: string };
 } & PoolConfig;
@@ -25,7 +26,7 @@ export function createConnectionOptions(dbConfig: DbConfig): PoolConfig {
 export async function initConnection(dbConfig: PoolConfig): Promise<Pool> {
   const pool = new Pool(dbConfig);
   await pool.query('SELECT NOW()');
-  return new Pool(dbConfig);
+  return pool;
 }
 
 export type Drizzle = ReturnType<typeof createDrizzle>;
@@ -36,4 +37,8 @@ export function createDrizzle(pool: Pool): ReturnType<typeof drizzle<{ configs: 
       configs,
     },
   });
+}
+
+export async function runMigrations(drizzle: Drizzle): Promise<void> {
+  await migrate(drizzle, { migrationsFolder: './src/db/migrations', migrationsSchema: 'config_server' });
 }

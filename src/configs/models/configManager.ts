@@ -1,7 +1,7 @@
 import { Logger } from '@map-colonies/js-logger';
 import { inject, injectable } from 'tsyringe';
 import { parseISO } from 'date-fns';
-import { ConfigRepository, ConfigSearchParams, SqlPaginationParams } from '../DAL/configRepository';
+import { ConfigRepository, ConfigSearchParams, SqlPaginationParams } from '../repositories/configRepository';
 import { SERVICES } from '../../common/constants';
 import { paths, components } from '../../openapiTypes';
 import { Config } from './config';

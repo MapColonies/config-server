@@ -1,12 +1,12 @@
 {
-  "id": "afbb6f76-d30e-4e81-97c5-aea107cd030b",
+  "id": "cd9fa987-a4ff-4770-9994-6de9679de7ed",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "5",
   "dialect": "pg",
   "tables": {
     "config": {
       "name": "config",
-      "schema": "",
+      "schema": "config_server",
       "columns": {
         "name": {
           "name": "name",
@@ -61,7 +61,9 @@
     }
   },
   "enums": {},
-  "schemas": {},
+  "schemas": {
+    "config_server": "config_server"
+  },
   "_meta": {
     "columns": {},
     "schemas": {},

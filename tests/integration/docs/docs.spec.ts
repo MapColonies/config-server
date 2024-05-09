@@ -1,5 +1,6 @@
 import jsLogger from '@map-colonies/js-logger';
 import { trace } from '@opentelemetry/api';
+import { DependencyContainer } from 'tsyringe';
 import httpStatusCodes from 'http-status-codes';
 import { getApp } from '../../../src/app';
 import { SERVICES } from '../../../src/common/constants';
@@ -7,8 +8,9 @@ import { DocsRequestSender } from './helpers/docsRequestSender';
 
 describe('docs', function () {
   let requestSender: DocsRequestSender;
-  beforeEach(function () {
-    const app = getApp({
+  let dependencyContainer: DependencyContainer;
+  beforeEach(async function () {
+    const [app, container] = await getApp({
       override: [
         { token: SERVICES.LOGGER, provider: { useValue: jsLogger({ enabled: false }) } },
         { token: SERVICES.TRACER, provider: { useValue: trace.getTracer('testTracer') } },
@@ -16,6 +18,12 @@ describe('docs', function () {
       useChild: true,
     });
     requestSender = new DocsRequestSender(app);
+    dependencyContainer = container;
+  });
+
+  afterEach(async function () {
+    const onSignal = dependencyContainer.resolve<() => Promise<void>>('onSignal');
+    await onSignal();
   });
 
   describe('Happy Path', function () {

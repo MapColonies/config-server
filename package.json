@@ -24,7 +24,7 @@
     "install": "npx husky install",
     "generate:types": "openapi-typescript openapi3.yaml -o src/openapiTypes.d.ts",
     "migration:create": "drizzle-kit generate:pg",
-    "migration:run": "ts-node ./src/db/migrations.ts"
+    "migration:run": "ts-node ./src/db/runMigrations.ts"
   },
   "directories": {
     "test": "tests"
@@ -101,7 +101,7 @@
     "rimraf": "^5.0.1",
     "standard-version": "^9.5.0",
     "supertest": "^6.3.3",
-    "ts-jest": "^29.0.5",
+    "ts-jest": "^29.1.2",
     "ts-node": "10.9.2",
     "typescript": "^5.4.5"
   }

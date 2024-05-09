@@ -1,15 +1,16 @@
 import jsLogger from '@map-colonies/js-logger';
 import { trace } from '@opentelemetry/api';
 import httpStatusCodes from 'http-status-codes';
-
+import { DependencyContainer } from 'tsyringe';
 import { getApp } from '../../../src/app';
 import { SERVICES } from '../../../src/common/constants';
 import { SchemaRequestSender } from './helpers/requestSender';
 
 describe('schema', function () {
   let requestSender: SchemaRequestSender;
-  beforeEach(function () {
-    const app = getApp({
+  let dependencyContainer: DependencyContainer;
+  beforeEach(async function () {
+    const [app, container] = await getApp({
       override: [
         { token: SERVICES.LOGGER, provider: { useValue: jsLogger({ enabled: false }) } },
         { token: SERVICES.TRACER, provider: { useValue: trace.getTracer('testTracer') } },
@@ -17,6 +18,12 @@ describe('schema', function () {
       useChild: true,
     });
     requestSender = new SchemaRequestSender(app);
+    dependencyContainer = container;
+  });
+
+  afterEach(async function () {
+    const onSignal = dependencyContainer.resolve<() => Promise<void>>('onSignal');
+    await onSignal();
   });
 
   describe('/schema', function () {
@@ -41,7 +48,7 @@ describe('schema', function () {
         expect(response.body).toHaveProperty('$id', 'https://mapcolonies.com/common/boilerplate/v1');
       });
     });
-    
+
     describe('Bad Path', function () {
       it('should return 400 status code if the path is invalid', async function () {
         const response = await requestSender.getSchema({ id: 'https://mapcolonies.com/../avi/..' });

@@ -11,7 +11,7 @@ import { SCHEMA_ROUTER_SYMBOL, schemaRouterFactory } from './schemas/routes/sche
 import { InjectionObject, registerDependencies } from './common/dependencyRegistration';
 import { CAPABILITIES_ROUTER_SYMBOL, capabilitiesRouterFactory } from './capabilities/routes/capabilitiesRouter';
 import { CONFIG_ROUTER_SYMBOL, configRouterFactory } from './configs/routes/configRouter';
-import { initConnection, createDrizzle } from './db/createConnection';
+import { initConnection, createDrizzle, createConnectionOptions, DbConfig } from './db/createConnection';
 
 export interface RegisterOptions {
   override?: InjectionObject<unknown>[];
@@ -28,7 +28,7 @@ export async function registerExternalValues (options?: RegisterOptions): Promis
   tracing.start();
   const tracer = trace.getTracer(SERVICE_NAME);
 
-  const pool = await initConnection(config.get('db'));
+  const pool = await initConnection(createConnectionOptions(config.get<DbConfig>('db')));
 
   const dependencies: InjectionObject<unknown>[] = [
     { token: SERVICES.CONFIG, provider: { useValue: config } },
@@ -45,10 +45,8 @@ export async function registerExternalValues (options?: RegisterOptions): Promis
     {
       token: 'onSignal',
       provider: {
-        useValue: {
           useValue: async (): Promise<void> => {
             await Promise.all([tracing.stop(), metrics.stop(), pool.end()]);
-          },
         },
       },
     },

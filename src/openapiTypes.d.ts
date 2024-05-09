@@ -25,11 +25,11 @@ export interface paths {
       };
     };
   };
-  "/schema": {
+  '/schema': {
     /** returns the requested schema */
     get: operations['getSchema'];
   };
-  "/schema/tree": {
+  '/schema/tree': {
     /** return a tree representation of all the schemas */
     get: operations['getSchemasTree'];
   };

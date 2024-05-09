@@ -6,7 +6,7 @@ import { HttpError } from '@map-colonies/error-express-handler';
 import { SERVICES } from '../../common/constants';
 import { ConfigManager } from '../models/configManager';
 import { TypedRequestHandler } from '../../common/interfaces';
-import type { components } from '../../schema';
+import type { components } from '../../openapiTypes';
 import { Config } from '../models/config';
 import { ConfigNotFoundError, ConfigValidationError, ConfigVersionMismatchError } from '../models/errors';
 

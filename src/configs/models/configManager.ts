@@ -3,7 +3,7 @@ import { inject, injectable } from 'tsyringe';
 import { parseISO } from 'date-fns';
 import { ConfigRepository, ConfigSearchParams, SqlPaginationParams } from '../DAL/configRepository';
 import { SERVICES } from '../../common/constants';
-import { paths, components } from '../../schema';
+import { paths, components } from '../../openapiTypes';
 import { Config } from './config';
 import { Validator } from './configValidator';
 import { ConfigNotFoundError, ConfigValidationError, ConfigVersionMismatchError } from './errors';

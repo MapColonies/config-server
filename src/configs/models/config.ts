@@ -1,4 +1,4 @@
-import { integer, jsonb, pgTable, text, timestamp, customType, index, primaryKey } from 'drizzle-orm/pg-core';
+import { integer, jsonb, pgTable, text, timestamp, primaryKey } from 'drizzle-orm/pg-core';
 
 export const configs = pgTable(
   'config',

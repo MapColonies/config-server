@@ -171,17 +171,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  serverVersion:
-                    description: The version of the server
-                    type: string
-                  schemasPackageVersion:
-                    description: The version of the schemas package
-                    type: string
-                  pubSubEnabled:
-                    description: a flag that indicates if the pubsub is enabled for config change notifications
-                    type: boolean
+                $ref: '#/components/schemas/capabilities'
         '400':
           $ref: '#/components/responses/400BadRequest'
         '500':
@@ -362,3 +352,16 @@ components:
           $ref: '#/components/schemas/createdAt'
         createdBy:
           $ref: '#/components/schemas/createdBy'
+    capabilities:
+      type: object
+      required: [serverVersion, schemasPackageVersion, pubSubEnabled]
+      properties:
+        serverVersion:
+          description: The version of the server
+          type: string
+        schemasPackageVersion:
+          description: The version of the schemas package
+          type: string
+        pubSubEnabled:
+          description: a flag that indicates if the pubsub is enabled for config change notifications
+          type: boolean

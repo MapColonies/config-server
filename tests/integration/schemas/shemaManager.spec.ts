@@ -41,7 +41,7 @@ describe('schema', function () {
         expect(response.body).toHaveProperty('$id', 'https://mapcolonies.com/common/boilerplate/v1');
       });
     });
-
+    
     describe('Bad Path', function () {
       it('should return 400 status code if the path is invalid', async function () {
         const response = await requestSender.getSchema({ id: 'https://mapcolonies.com/../avi/..' });

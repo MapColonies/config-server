@@ -16,8 +16,12 @@ describe('Validator', () => {
   describe('isValid', () => {
     it('should return true when the data is valid', async () => {
       const schemaId = 'https://mapcolonies.com/test/v1';
-      const data = { /* valid data object */ };
-      const schema = { /* mock schema object */ };
+      const data = {
+        /* valid data object */
+      };
+      const schema = {
+        /* mock schema object */
+      };
       const validateMock = jest.fn().mockReturnValue(true);
       const getSchemaMock = jest.fn().mockResolvedValue(schema);
       const compileAsyncMock = jest.fn().mockResolvedValue(validateMock);
@@ -32,8 +36,12 @@ describe('Validator', () => {
 
     it('should return false and error messages when the data is invalid', async () => {
       const schemaId = 'https://mapcolonies.com/test/v1';
-      const data = { /* invalid data object */ };
-      const schema = { /* mock schema object */ };
+      const data = {
+        /* invalid data object */
+      };
+      const schema = {
+        /* mock schema object */
+      };
       const validateMock = jest.fn().mockReturnValue(false);
       const getSchemaMock = jest.fn().mockResolvedValue(schema);
       const compileAsyncMock = jest.fn().mockResolvedValue(validateMock);

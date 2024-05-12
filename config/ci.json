@@ -10,12 +10,6 @@
       "key": "",
       "cert": ""
     },
-    "database": "config-server",
-    "schema": "public"
-  },
-  "telemetry": {
-    "logger": {
-      "prettyPrint": true
-    }
+    "database": "postgres"
   }
 }

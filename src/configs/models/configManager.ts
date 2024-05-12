@@ -32,6 +32,7 @@ export class ConfigManager {
       const { offset, limit, ...querySearchParams } = options;
       paginationParams = { offset, limit };
 
+      searchParams.configName = querySearchParams.config_name;
       searchParams.q = querySearchParams.q;
       searchParams.version = querySearchParams.version;
       searchParams.schemaId = querySearchParams.schema_id;
@@ -66,6 +67,6 @@ export class ConfigManager {
 
     config.version++;
 
-    await this.configRepository.createConfig({...config, createdBy: 'TBD'});
+    await this.configRepository.createConfig({ ...config, createdBy: 'TBD' });
   }
 }

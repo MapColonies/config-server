@@ -18,7 +18,7 @@ export interface RegisterOptions {
   useChild?: boolean;
 }
 
-export async function registerExternalValues (options?: RegisterOptions): Promise<DependencyContainer> {
+export async function registerExternalValues(options?: RegisterOptions): Promise<DependencyContainer> {
   const loggerConfig = config.get<LoggerOptions>('telemetry.logger');
   const logger = jsLogger({ ...loggerConfig, prettyPrint: loggerConfig.prettyPrint, mixin: getOtelMixin() });
 
@@ -38,15 +38,20 @@ export async function registerExternalValues (options?: RegisterOptions): Promis
     { token: SCHEMA_ROUTER_SYMBOL, provider: { useFactory: schemaRouterFactory } },
     { token: CAPABILITIES_ROUTER_SYMBOL, provider: { useFactory: capabilitiesRouterFactory } },
     { token: CONFIG_ROUTER_SYMBOL, provider: { useFactory: configRouterFactory } },
-    { token: SERVICES.PG_POOL, provider: { useValue: pool }},
-    { token: SERVICES.DRIZZLE, provider: { useFactory: instancePerContainerCachingFactory((container) => {
-      return createDrizzle(container.resolve(SERVICES.PG_POOL));
-    }) } },
+    { token: SERVICES.PG_POOL, provider: { useValue: pool } },
+    {
+      token: SERVICES.DRIZZLE,
+      provider: {
+        useFactory: instancePerContainerCachingFactory((container) => {
+          return createDrizzle(container.resolve(SERVICES.PG_POOL));
+        }),
+      },
+    },
     {
       token: 'onSignal',
       provider: {
-          useValue: async (): Promise<void> => {
-            await Promise.all([tracing.stop(), metrics.stop(), pool.end()]);
+        useValue: async (): Promise<void> => {
+          await Promise.all([tracing.stop(), metrics.stop(), pool.end()]);
         },
       },
     },

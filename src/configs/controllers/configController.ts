@@ -21,7 +21,7 @@ function configMapper(config: Config): components['schemas']['config'] {
 export class ConfigController {
   public constructor(@inject(SERVICES.LOGGER) private readonly logger: Logger, @inject(ConfigManager) private readonly manager: ConfigManager) {}
 
-  public getConfig: TypedRequestHandler<'/config', 'get'> = async (req, res, next) => {
+  public getConfigs: TypedRequestHandler<'/config', 'get'> = async (req, res, next) => {
     try {
       const getConfigsResult = await this.manager.getConfigs(req.query);
       const formattedConfigs = getConfigsResult.configs.map(configMapper);
@@ -39,7 +39,7 @@ export class ConfigController {
       if (error instanceof ConfigNotFoundError) {
         (error as HttpError).status = httpStatus.NOT_FOUND;
       }
-      
+
       next(error);
     }
   };
@@ -64,9 +64,7 @@ export class ConfigController {
       await this.manager.createConfig(req.body);
       return res.status(httpStatus.CREATED).json();
     } catch (error) {
-      if (error instanceof ConfigNotFoundError) {
-        (error as HttpError).status = httpStatus.NOT_FOUND;
-      } else if (error instanceof ConfigValidationError) {
+      if (error instanceof ConfigValidationError) {
         (error as HttpError).status = httpStatus.BAD_REQUEST;
       } else if (error instanceof ConfigVersionMismatchError) {
         (error as HttpError).status = httpStatus.CONFLICT;

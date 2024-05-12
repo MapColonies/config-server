@@ -51,10 +51,7 @@
       "compositePrimaryKeys": {
         "config_name_version_pk": {
           "name": "config_name_version_pk",
-          "columns": [
-            "name",
-            "version"
-          ]
+          "columns": ["name", "version"]
         }
       },
       "uniqueConstraints": {}

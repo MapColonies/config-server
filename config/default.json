@@ -36,7 +36,6 @@
       "key": "",
       "cert": ""
     },
-    "database": "auth-manager",
-    "schema": "auth_manager"
+    "database": "config-server"
   }
 }

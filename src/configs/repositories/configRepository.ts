@@ -1,5 +1,5 @@
 import { Logger, SQLWrapper, and, eq, gt, lt, max, sql } from 'drizzle-orm';
-import { injectable, inject } from 'tsyringe';
+import { inject, scoped, Lifecycle } from 'tsyringe';
 import { PgSelect } from 'drizzle-orm/pg-core';
 import { SERVICES } from '../../common/constants';
 import { Drizzle } from '../../db/createConnection';
@@ -16,6 +16,7 @@ export interface ConfigSearchParams {
   createdAtGt?: Date;
   createdAtLt?: Date;
   createdBy?: string;
+  configName?: string;
 }
 
 export interface SqlPaginationParams {
@@ -23,7 +24,7 @@ export interface SqlPaginationParams {
   offset?: number;
 }
 
-@injectable()
+@scoped(Lifecycle.ContainerScoped)
 export class ConfigRepository {
   public constructor(@inject(SERVICES.LOGGER) private readonly logger: Logger, @inject(SERVICES.DRIZZLE) private readonly drizzle: Drizzle) {}
 
@@ -78,7 +79,7 @@ export class ConfigRepository {
         config: configs.config,
         createdAt: configs.createdAt,
         createdBy: configs.createdBy,
-        totalCount: sql<number>`count(*) over()`,
+        totalCount: sql<string>`count(*) over()`,
       })
       .from(configs)
       .where(and(...filterParams))
@@ -96,7 +97,7 @@ export class ConfigRepository {
       return { configs: [], totalCount: 0 };
     }
 
-    const totalCount = configsResult[0].totalCount;
+    const totalCount = parseInt(configsResult[0].totalCount);
 
     const mappedConfig = configsResult.map((config) => ({
       configName: config.configName,
@@ -117,8 +118,13 @@ export class ConfigRepository {
       filterParams.push(sql`textsearchable_index_col @@ to_tsquery('english', ${searchParams.q})`);
     }
 
-    if (typeof searchParams.version === 'number') {
-      filterParams.push(eq(configs.version, searchParams.version));
+    if (searchParams.configName !== undefined) {
+      filterParams.push(eq(configs.configName, searchParams.configName));
+    }
+
+    const version = parseInt(searchParams.version as string);
+    if (Number.isInteger(version)) {
+      filterParams.push(eq(configs.version, version));
     }
 
     if (searchParams.schemaId !== undefined) {

@@ -19,7 +19,9 @@ describe('ConfigManager', () => {
 
   describe('getConfig', () => {
     it('should return the config when it exists', async () => {
-      const config = { /* mock config object */ };
+      const config = {
+        /* mock config object */
+      };
       configRepository.getConfig = jest.fn().mockResolvedValue(config);
 
       const result = await configManager.getConfig('configName');
@@ -44,21 +46,24 @@ describe('ConfigManager', () => {
       };
       const configs = { configs: [], totalCount: 0 };
       const getConfigsMock = jest.fn().mockResolvedValue(configs);
-      configRepository.getConfigs = getConfigsMock
+      configRepository.getConfigs = getConfigsMock;
 
       const result = await configManager.getConfigs(options);
 
       expect(result).toBe(configs);
-      expect(getConfigsMock).toHaveBeenCalledWith({
-        createdAtGt: new Date('2021-01-01T00:00:00Z'),
-        createdAtLt: new Date('2021-01-02T00:00:00Z'),
-      }, {});
+      expect(getConfigsMock).toHaveBeenCalledWith(
+        {
+          createdAtGt: new Date('2021-01-01T00:00:00Z'),
+          createdAtLt: new Date('2021-01-02T00:00:00Z'),
+        },
+        {}
+      );
     });
   });
 
   describe('createConfig', () => {
     it('should create a new config', async () => {
-      const config  = { configName: 'avi', schemaId: 'https://mapcolonies.com/test/v1', config: {}, version: 1 };
+      const config = { configName: 'avi', schemaId: 'https://mapcolonies.com/test/v1', config: {}, version: 1 };
       configRepository.getConfigMaxVersion = jest.fn().mockResolvedValue(1);
       configValidator.isValid = jest.fn().mockResolvedValue([true, null]);
       configRepository.createConfig = jest.fn();

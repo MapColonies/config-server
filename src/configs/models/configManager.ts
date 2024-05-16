@@ -1,5 +1,6 @@
 import { Logger } from '@map-colonies/js-logger';
 import { inject, injectable } from 'tsyringe';
+import pointer from 'json-pointer';
 import { parseISO } from 'date-fns';
 import { ConfigRepository, ConfigSearchParams, SqlPaginationParams } from '../repositories/configRepository';
 import { SERVICES } from '../../common/constants';
@@ -70,5 +71,16 @@ export class ConfigManager {
     }
 
     await this.configRepository.createConfig({ ...config, createdBy: 'TBD' });
+  }
+
+  private async validateConfigRefs(config: Config): Promise<void> {
+    const set = new Set();
+
+    pointer.walk(config.config,  (val, key) => {
+      if (key.endsWith('$ref/name') || key.endsWith('$ref/version')) {
+        set.add(key.slice(0, key.lastIndexOf('/')));
+      }
+    });
+    // return val;
   }
 }

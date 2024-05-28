@@ -29,18 +29,19 @@ export const configsRefs = pgDbSchema.table(
     originalConfigRef: foreignKey({
       columns: [table.configName, table.version],
       foreignColumns: [configs.configName, configs.version],
-      name : 'config_refs_original_config_fk',
+      name: 'config_refs_original_config_fk',
     }),
     childConfigRef: foreignKey({
       columns: [table.refConfigName, table.refVersion],
       foreignColumns: [configs.configName, configs.version],
-      name : 'config_refs_child_config_fk',
+      name: 'config_refs_child_config_fk',
     }),
-    index: index("idx_config_name_version").on(table.configName, table.version),
+    index: index('idx_config_name_version').on(table.configName, table.version),
   })
 );
 
-
-
 export type Config = typeof configs.$inferSelect;
 export type NewConfig = typeof configs.$inferInsert;
+
+export type ConfigRef = typeof configsRefs.$inferSelect;
+export type NewConfigRef = typeof configsRefs.$inferInsert;

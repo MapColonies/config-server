@@ -1,19 +1,27 @@
-import Ajv, { AnySchemaObject, ErrorObject } from 'ajv';
+import Ajv, { AnySchemaObject, ErrorObject, ValidateFunction } from 'ajv';
 import { injectable } from 'tsyringe';
+import addFormats from 'ajv-formats';
 import betterAjvErrors, { type IOutputError } from '@sidvind/better-ajv-errors';
 import { SchemaManager } from '../../schemas/models/schemaManager';
+import { ConfigReference, configReferenceSchema } from './configReference';
 
 @injectable()
 export class Validator {
   private readonly ajv: Ajv;
+  private readonly ajvRefValidator: ValidateFunction;
 
   public constructor(private readonly schemaManager: SchemaManager) {
-    this.ajv = new Ajv({
-      loadSchema: async (uri): Promise<AnySchemaObject> => {
-        return this.schemaManager.getSchema(uri);
-      },
-      useDefaults: true,
-    });
+    this.ajv = addFormats(
+      new Ajv({
+        loadSchema: async (uri): Promise<AnySchemaObject> => {
+          return this.schemaManager.getSchema(uri);
+        },
+        useDefaults: true,
+      }),
+      ['date-time', 'time', 'date', 'email', 'hostname', 'ipv4', 'ipv6', 'uri', 'uuid', 'regex', 'uri-template']
+    );
+
+    this.ajvRefValidator = this.ajv.compile(configReferenceSchema);
   }
 
   public async isValid(schemaId: string, data: unknown): Promise<[boolean, IOutputError[]?]> {
@@ -26,5 +34,9 @@ export class Validator {
       return [false, betterErrors];
     }
     return [true];
+  }
+
+  public validateRef(ref: unknown): ref is ConfigReference {
+    return this.ajvRefValidator(ref);
   }
 }

@@ -51,10 +51,7 @@
       "compositePrimaryKeys": {
         "config_name_version_pk": {
           "name": "config_name_version_pk",
-          "columns": [
-            "name",
-            "version"
-          ]
+          "columns": ["name", "version"]
         }
       },
       "uniqueConstraints": {}
@@ -91,10 +88,7 @@
       "indexes": {
         "idx_config_name_version": {
           "name": "idx_config_name_version",
-          "columns": [
-            "name",
-            "version"
-          ],
+          "columns": ["name", "version"],
           "isUnique": false
         }
       },
@@ -104,14 +98,8 @@
           "tableFrom": "config_refs",
           "tableTo": "config",
           "schemaTo": "config_server",
-          "columnsFrom": [
-            "name",
-            "version"
-          ],
-          "columnsTo": [
-            "name",
-            "version"
-          ],
+          "columnsFrom": ["name", "version"],
+          "columnsTo": ["name", "version"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -120,14 +108,8 @@
           "tableFrom": "config_refs",
           "tableTo": "config",
           "schemaTo": "config_server",
-          "columnsFrom": [
-            "ref_name",
-            "ref_version"
-          ],
-          "columnsTo": [
-            "name",
-            "version"
-          ],
+          "columnsFrom": ["ref_name", "ref_version"],
+          "columnsTo": ["name", "version"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }

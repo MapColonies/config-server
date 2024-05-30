@@ -1,6 +1,6 @@
 import { Logger } from '@map-colonies/js-logger';
 import { inject, injectable } from 'tsyringe';
-import { Hash as ObjectHash, Clone } from '@sinclair/typebox/value';
+import { Clone } from '@sinclair/typebox/value';
 import pointer, { JsonObject } from 'json-pointer';
 import { parseISO } from 'date-fns';
 import { ConfigRepository, ConfigSearchParams, SqlPaginationParams } from '../repositories/configRepository';
@@ -19,12 +19,27 @@ export class ConfigManager {
     private readonly configValidator: Validator
   ) {}
 
-  public async getConfig(name: string, version?: number): Promise<Config> {
-    const config = await this.configRepository.getConfig(name, version);
+  public async getConfig(name: string, version?: number, shouldDereferenceConfig?: boolean): Promise<Config> {
+    if (shouldDereferenceConfig !== true) {
+      const config = await this.configRepository.getConfig(name, version);
 
-    if (!config) {
+      if (!config) {
+        throw new ConfigNotFoundError('Config not found');
+      }
+      return config;
+    }
+
+    const res = await this.configRepository.getConfigRecursive(name, version);
+    if (!res) {
       throw new ConfigNotFoundError('Config not found');
     }
+
+    const [config, refs] = res;
+
+    if (refs.length > 0) {
+      this.replaceRefs(config.config, refs);
+    }
+
     return config;
   }
 
@@ -64,6 +79,7 @@ export class ConfigManager {
 
     const refs = this.getAllConfigRefs(config);
     const resolvedRefs = await this.configRepository.getAllConfigRefs(refs);
+
     const resolvedConfig = Clone(config.config);
     this.replaceRefs(resolvedConfig, resolvedRefs);
 
@@ -94,7 +110,7 @@ export class ConfigManager {
         const refPointer = key.slice(0, key.lastIndexOf('/'));
         const val = pointer.get(config, refPointer) as unknown;
         if (!this.configValidator.validateRef(val)) {
-          throw new ConfigValidationError(`The config is not valid: ${JSON.stringify(val)}`);
+          throw new ConfigValidationError(`The reference is not valid: ${JSON.stringify(val)}`);
         }
         refs.push(val);
       }
@@ -117,11 +133,10 @@ export class ConfigManager {
     const paths = new Map<string, ConfigReference>();
     pointer.walk(obj, (val, key) => {
       if (key.endsWith('$ref/configName')) {
-        console.log(key, val);
         const refPath = key.slice(0, key.lastIndexOf('/'));
         const ref = pointer.get(obj, refPath) as unknown;
         if (!this.configValidator.validateRef(ref)) {
-          throw new ConfigValidationError(`The config is not valid: ${JSON.stringify(val)}`);
+          throw new ConfigValidationError(`The reference is not valid: ${JSON.stringify(val)}`);
         }
 
         paths.set(key.slice(0, key.lastIndexOf('/$ref/configName')), ref);
@@ -131,7 +146,7 @@ export class ConfigManager {
     for (const [path, ref] of paths) {
       const config = refs.find((r) => r.configName === ref.configName && (ref.version === 'latest' || r.version === ref.version));
       if (!config) {
-        throw new ConfigValidationError(`The config is not valid: ${JSON.stringify(ref)}`);
+        throw new Error(`could not find ref in db: ${JSON.stringify(ref)}`);
       }
 
       this.replaceRefs(config.config, refs);

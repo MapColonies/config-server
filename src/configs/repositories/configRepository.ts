@@ -1,6 +1,7 @@
 import { Logger, SQL, SQLWrapper, and, eq, gt, lt, max, sql } from 'drizzle-orm';
 import { inject, scoped, Lifecycle } from 'tsyringe';
-import { PgDialect, PgSelect, alias } from 'drizzle-orm/pg-core';
+import { PgDialect, PgSelect } from 'drizzle-orm/pg-core';
+import { toDate, format } from 'date-fns-tz'
 import { SERVICES } from '../../common/constants';
 import { Drizzle } from '../../db/createConnection';
 import { Config, NewConfig, NewConfigRef, configs, configsRefs } from '../models/config';
@@ -8,6 +9,53 @@ import { ConfigReference } from '../models/configReference';
 
 const DEFAULT_LIMIT = 10;
 const DEFAULT_OFFSET = 0;
+
+function maxVersionQueryBuilder(drizzle: Drizzle, comparator: SQLWrapper | string): SQLWrapper {
+  return drizzle
+    .select({ maxVersion: max(configs.version) })
+    .from(configs)
+    .where(eq(configs.configName, comparator));
+}
+
+// eslint-disable-next-line @typescript-eslint/no-magic-numbers
+function recursiveQueryBuilder(drizzle: Drizzle, baseQuery: SQLWrapper, recursiveSelectParameters: Parameters<typeof drizzle.select>[0]): SQL {
+  const recursiveQuery = drizzle
+    .select(recursiveSelectParameters)
+    .from(sql`rec`)
+    .innerJoin(configsRefs, and(eq(configsRefs.configName, sql`rec."configName"`), eq(configsRefs.version, sql`rec."version"`)))
+    .innerJoin(
+      configs,
+      and(
+        eq(configsRefs.refConfigName, configs.configName),
+        eq(
+          configs.version,
+          sql`
+            coalesce(
+              ${configsRefs.refVersion},
+              (${maxVersionQueryBuilder(drizzle, configs.configName)})
+            )
+          `
+        )
+      )
+    );
+
+  return sql`
+    WITH RECURSIVE
+      BASE_QUERY AS ${baseQuery},
+      REC AS (
+        SELECT
+          *
+        FROM
+          BASE_QUERY
+        UNION
+        ${recursiveQuery}
+      )
+    SELECT
+      *
+    FROM
+      REC
+  `;
+}
 
 export interface ConfigSearchParams {
   q?: string;
@@ -25,6 +73,10 @@ export interface SqlPaginationParams {
   offset?: number;
 }
 
+export type ConfigRefResponse = Pick<Config, 'config' | 'configName' | 'version'> & {
+  isMaxVersion: boolean;
+};
+
 @scoped(Lifecycle.ContainerScoped)
 export class ConfigRepository {
   public constructor(
@@ -32,7 +84,7 @@ export class ConfigRepository {
     @inject(SERVICES.DRIZZLE) private readonly drizzle: Drizzle
   ) {}
 
-  public async getAllConfigRefs(refs: ConfigReference[]): Promise<(Pick<Config, 'config' | 'configName' | 'version'> & { isMaxVersion: boolean })[]> {
+  public async getAllConfigRefs(refs: ConfigReference[]): Promise<ConfigRefResponse[]> {
     const refsForSql = refs.map((ref) => ({ configName: ref.configName, version: ref.version === 'latest' ? null : ref.version }));
     // query to transform the input into a postgresql recordset so it can be joined with the data
     const inputCTE = sql`
@@ -42,16 +94,9 @@ export class ConfigRepository {
         jsonb_to_recordset(${JSON.stringify(refsForSql)}) AS x ("configName" text, "version" int)
     `;
 
-    // query factory to get the max version of a config
-    const maxVersionQueryFactory = (comparator: SQLWrapper): SQLWrapper =>
-      this.drizzle
-        .select({ maxVersion: max(configs.version) })
-        .from(configs)
-        .where(eq(configs.configName, comparator));
-
+    // this query selects all the references requested by the input
     const baseQuery = this.drizzle
       .select({
-        /* eslint-disable @typescript-eslint/naming-convention */
         inputName: sql`input."configName" AS "inputConfigName"`,
         inputVersion: sql`input."version" AS "inputVersion"`,
         name: sql`${configs.configName} AS "configName"`,
@@ -63,9 +108,8 @@ export class ConfigRepository {
             ELSE FALSE
           END AS "isMaxVersion"
         `,
-        /* eslint-enable @typescript-eslint/naming-convention */
       })
-      .from(sql`INPUT`)
+      .from(sql`(${inputCTE}) AS INPUT`)
       .leftJoin(
         configs,
         and(
@@ -75,69 +119,34 @@ export class ConfigRepository {
             sql`
               coalesce(
                 input."version",
-                (${maxVersionQueryFactory(configs.configName)})
+                (${maxVersionQueryBuilder(this.drizzle, configs.configName)})
               )
             `
           )
         )
       );
 
-    const recursiveQuery = this.drizzle
-      .select({
-        inputName: sql`NULL`,
-        inputVersion: sql`NULL`,
-        name: configs.configName,
-        version: configs.version,
-        config: configs.config,
-        isMaxVersion: sql`
-          CASE
-            WHEN ${configsRefs.refVersion} IS NULL THEN TRUE
-            ELSE FALSE
-          END AS "isMaxVersion"
-        `,
-      })
-      .from(sql`rec`)
-      .innerJoin(configsRefs, and(eq(configsRefs.configName, sql`rec."configName"`), eq(configsRefs.version, sql`rec."version"`)))
-      .innerJoin(
-        configs,
-        and(
-          eq(configsRefs.refConfigName, configs.configName),
-          eq(
-            configs.version,
-            sql`
-              coalesce(
-                ${configsRefs.refVersion},
-                (${maxVersionQueryFactory(configs.configName)})
-              )
-            `
-          )
-        )
-      );
-
-    const q = sql`
-      WITH RECURSIVE
-        INPUT AS (${inputCTE}),
-        BASE_QUERY AS ${baseQuery},
-        REC AS (
-          SELECT
-            *
-          FROM
-            BASE_QUERY
-          UNION
-          ${recursiveQuery}
-        )
-      SELECT
-        *
-      FROM
-        REC
-    `;
+    // this query is the recursive query that will fetch the references of the requested references
+    const recursiveQuery = recursiveQueryBuilder(this.drizzle, baseQuery, {
+      inputName: sql`NULL`,
+      inputVersion: sql`NULL`,
+      name: configs.configName,
+      version: configs.version,
+      config: configs.config,
+      isMaxVersion: sql`
+        CASE
+          WHEN ${configsRefs.refVersion} IS NULL THEN TRUE
+          ELSE FALSE
+        END AS "isMaxVersion"
+      `,
+    });
 
     const res = await this.drizzle.execute<
       { inputConfigName: string | null; inputVersion: number | null; configName: string | null; isMaxVersion: boolean } & Pick<
         Config,
         'config' | 'version'
       >
-    >(q);
+    >(recursiveQuery);
     const returnValue: Awaited<ReturnType<typeof this.getAllConfigRefs>> = [];
 
     for (const row of res.rows) {
@@ -160,6 +169,11 @@ export class ConfigRepository {
     return res[0].maxVersion ?? null;
   }
 
+  /**
+   * Creates a new configuration with the provided data.
+   * @param config - The configuration data to be created.
+   * @returns A Promise that resolves when the configuration is created.
+   */
   public async createConfig(config: Omit<NewConfig, 'createdAt'> & { refs: ConfigReference[] }): Promise<void> {
     const { refs, ...configData } = config;
     const dbRefs = config.refs.map<NewConfigRef>((ref) => ({
@@ -169,7 +183,6 @@ export class ConfigRepository {
       refVersion: ref.version === 'latest' ? null : ref.version,
     }));
 
-
     await this.drizzle.transaction(async (tx) => {
       await tx.insert(configs).values(configData).execute();
       if (dbRefs.length > 0) {
@@ -178,39 +191,103 @@ export class ConfigRepository {
     });
   }
 
+  
+  /**
+   * Retrieves a configuration by name and version.
+   * If the version is not provided, the latest version will be retrieved.
+   * @param name - The name of the configuration.
+   * @param version - The version of the configuration (optional).
+   * @returns A Promise that resolves to the retrieved configuration, or undefined if not found.
+   */
   public async getConfig(name: string, version?: number): Promise<Config | undefined> {
-    const maxVersion = this.drizzle.$with('maxVersion').as(
-      this.drizzle
-        .select({ maxVersion: max(configs.version) })
-        .from(configs)
-        .where(eq(configs.configName, name))
-    );
+    const maxVersion = maxVersionQueryBuilder(this.drizzle, name);
 
-    const versionCompare =
-      version !== undefined
-        ? version
-        : sql<number>`
-            (
-              SELECT
-                *
-              FROM
-                ${maxVersion}
-            )
-          `;
+    const versionCompare = version !== undefined ? version : sql<number>`(${maxVersion}) `;
 
     const config = await this.drizzle
-      .with(maxVersion)
       .select()
       .from(configs)
       .where(and(eq(configs.configName, name), eq(configs.version, versionCompare)))
       .execute();
-
+    
     if (config.length === 0) {
       return undefined;
     }
     return config[0];
   }
 
+  /**
+   * Retrieves a configuration recursively by name and version.
+   * @param name - The name of the configuration.
+   * @param version - The version of the configuration (optional).
+   * @returns A promise that resolves to an array containing the configuration and its references, or undefined if not found.
+   */
+  public async getConfigRecursive(name: string, version?: number): Promise<[Config, ConfigRefResponse[]] | undefined> {
+    const maxVersion = maxVersionQueryBuilder(this.drizzle, name);
+
+    const versionCompare = version !== undefined ? version : sql<number>`(${maxVersion}) `;
+
+    // this query select the config that matches the name and version specified
+    const baseQuery = this.drizzle
+      .select({
+        configName: sql`${configs.configName} AS "configName"`,
+        version: configs.version,
+        config: configs.config,
+        schemaId: sql`${configs.schemaId} AS "schemaId"`,
+        createdAt: sql`${configs.createdAt} AS "createdAt"`,
+        createdBy: sql`${configs.createdBy} AS "createdBy"`,
+        isMaxVersion: sql`
+          CASE
+            WHEN ${configs.version} = (${maxVersion}) THEN TRUE
+            ELSE FALSE
+          END AS "isMaxVersion"
+        `,
+      })
+      .from(configs)
+      .where(and(eq(configs.configName, name), eq(configs.version, versionCompare)));
+
+    // this query is the recursive query that will fetch the references of the config
+    const recursiveQuery = recursiveQueryBuilder(this.drizzle, baseQuery, {
+      configName: configs.configName,
+      version: configs.version,
+      config: configs.config,
+      schemaId: sql`NULL`,
+      createdAt: sql`NULL`,
+      createdBy: sql`NULL`,
+      isMaxVersion: sql`
+        CASE
+          WHEN ${configsRefs.refVersion} IS NULL THEN TRUE
+          ELSE FALSE
+        END AS "isMaxVersion"
+      `,
+    });
+
+    const res = await this.drizzle.execute<Omit<Config,'createdAt'> & { isMaxVersion: boolean, createdAt: string }>(recursiveQuery);
+
+    const configResult = res.rows.shift();
+    if (!configResult) {
+      return undefined;
+    }
+
+    const config = {
+      configName: configResult.configName,
+      schemaId: configResult.schemaId,
+      version: configResult.version,
+      config: configResult.config,
+      createdAt: toDate(configResult.createdAt, {timeZone: 'UTC'}),
+      createdBy: configResult.createdBy,
+    }
+    const refs = res.rows.map((row) => ({ config: row.config, configName: row.configName, version: row.version, isMaxVersion: row.isMaxVersion }));
+    
+    return [config, refs];
+  }
+
+  /**
+   * Retrieves configurations based on the provided search parameters and pagination options.
+   * @param searchParams - The search parameters to filter the configurations.
+   * @param paginationParams - The pagination options for the query (default: { limit: 1, offset: 0 }).
+   * @returns A promise that resolves to an object containing the retrieved configurations and the total count.
+   */
   public async getConfigs(
     searchParams: ConfigSearchParams,
     paginationParams: SqlPaginationParams = { limit: 1, offset: 0 }

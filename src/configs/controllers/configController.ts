@@ -36,7 +36,7 @@ export class ConfigController {
 
   public getConfigByName: TypedRequestHandler<'/config/{name}', 'get'> = async (req, res, next) => {
     try {
-      const config = await this.manager.getConfig(req.params.name);
+      const config = await this.manager.getConfig(req.params.name, undefined, req.query?.shouldDereference);
       return res.status(httpStatus.OK).json(configMapper(config));
     } catch (error) {
       if (error instanceof ConfigNotFoundError) {
@@ -51,7 +51,7 @@ export class ConfigController {
     const version = req.params.version !== 'latest' ? req.params.version : undefined;
 
     try {
-      const config = await this.manager.getConfig(req.params.name, version);
+      const config = await this.manager.getConfig(req.params.name, version, req.query?.shouldDereference);
       return res.status(httpStatus.OK).json(configMapper(config));
     } catch (error) {
       if (error instanceof ConfigNotFoundError) {

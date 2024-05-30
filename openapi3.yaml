@@ -69,6 +69,7 @@ paths:
           required: true
           schema:
             $ref: '#/components/schemas/configName'
+        - $ref: '#/components/parameters/ShouldDereferenceConfigQuery'
       operationId: getConfigsByName
       summary: get a specific client connection for specific environment
       responses:
@@ -99,6 +100,7 @@ paths:
             - type: string
               enum: ['latest']
             - $ref: '#/components/schemas/version'
+      - $ref: '#/components/parameters/ShouldDereferenceConfigQuery'
     get:
       operationId: getVersionedConfig
       summary: get a specific version of a config
@@ -272,6 +274,12 @@ components:
       required: false
       schema:
         type: string
+    ShouldDereferenceConfigQuery:
+      name: shouldDereference
+      in: query
+      description: should the server bundle all refs into one config
+      schema:
+        type: boolean
   schemas:
     error:
       type: object

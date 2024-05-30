@@ -64,14 +64,26 @@ describe('ConfigManager', () => {
   describe('createConfig', () => {
     it('should create a new config', async () => {
       const config = { configName: 'avi', schemaId: 'https://mapcolonies.com/test/v1', config: {}, version: 1 };
+      configRepository.getConfigMaxVersion = jest.fn().mockResolvedValue(null);
+      configValidator.isValid = jest.fn().mockResolvedValue([true, null]);
+      configRepository.createConfig = jest.fn();
+
+      await configManager.createConfig({...config});
+
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(configRepository.createConfig).toHaveBeenCalledWith({ ...config, createdBy: 'TBD' });
+    });
+
+    it('should increment the version when a new version is created', async () => {
+      const config = { configName: 'avi', schemaId: 'https://mapcolonies.com/test/v1', config: {}, version: 1 };
       configRepository.getConfigMaxVersion = jest.fn().mockResolvedValue(1);
       configValidator.isValid = jest.fn().mockResolvedValue([true, null]);
       configRepository.createConfig = jest.fn();
 
-      await configManager.createConfig(config);
+      await configManager.createConfig({...config});
 
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(configRepository.createConfig).toHaveBeenCalledWith({ ...config, createdBy: 'TBD' });
+      expect(configRepository.createConfig).toHaveBeenCalledWith({ ...config, version: 2, createdBy: 'TBD' });
     });
 
     it('should throw ConfigVersionMismatchError when the version is not the next one in line', async () => {

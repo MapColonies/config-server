@@ -65,7 +65,9 @@ export class ConfigManager {
       throw new ConfigValidationError(`The config is not valid: ${JSON.stringify(err)}`);
     }
 
-    config.version++;
+    if (maxVersion !== null) {
+      config.version++;
+    }
 
     await this.configRepository.createConfig({ ...config, createdBy: 'TBD' });
   }

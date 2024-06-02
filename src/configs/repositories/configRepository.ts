@@ -26,7 +26,10 @@ export interface SqlPaginationParams {
 
 @scoped(Lifecycle.ContainerScoped)
 export class ConfigRepository {
-  public constructor(@inject(SERVICES.LOGGER) private readonly logger: Logger, @inject(SERVICES.DRIZZLE) private readonly drizzle: Drizzle) {}
+  public constructor(
+    @inject(SERVICES.LOGGER) private readonly logger: Logger,
+    @inject(SERVICES.DRIZZLE) private readonly drizzle: Drizzle
+  ) {}
 
   public async getConfigMaxVersion(name: string): Promise<number | null> {
     const res = await this.drizzle

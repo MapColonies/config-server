@@ -21,7 +21,10 @@ type GetSchemas = RequestHandler<undefined, GetSchemasTypes['responses']['200'][
 
 @injectable()
 export class SchemaController {
-  public constructor(@inject(SERVICES.LOGGER) private readonly logger: Logger, @inject(SchemaManager) private readonly manager: SchemaManager) {}
+  public constructor(
+    @inject(SERVICES.LOGGER) private readonly logger: Logger,
+    @inject(SchemaManager) private readonly manager: SchemaManager
+  ) {}
 
   public getSchema: GetSchema = async (req, res, next) => {
     try {

@@ -19,7 +19,10 @@ function configMapper(config: Config): components['schemas']['config'] {
 
 @injectable()
 export class ConfigController {
-  public constructor(@inject(SERVICES.LOGGER) private readonly logger: Logger, @inject(ConfigManager) private readonly manager: ConfigManager) {}
+  public constructor(
+    @inject(SERVICES.LOGGER) private readonly logger: Logger,
+    @inject(ConfigManager) private readonly manager: ConfigManager
+  ) {}
 
   public getConfigs: TypedRequestHandler<'/config', 'get'> = async (req, res, next) => {
     try {

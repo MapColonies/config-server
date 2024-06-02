@@ -68,7 +68,7 @@ describe('ConfigManager', () => {
       configValidator.isValid = jest.fn().mockResolvedValue([true, null]);
       configRepository.createConfig = jest.fn();
 
-      await configManager.createConfig({...config});
+      await configManager.createConfig({ ...config });
 
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(configRepository.createConfig).toHaveBeenCalledWith({ ...config, createdBy: 'TBD' });
@@ -80,7 +80,7 @@ describe('ConfigManager', () => {
       configValidator.isValid = jest.fn().mockResolvedValue([true, null]);
       configRepository.createConfig = jest.fn();
 
-      await configManager.createConfig({...config});
+      await configManager.createConfig({ ...config });
 
       // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(configRepository.createConfig).toHaveBeenCalledWith({ ...config, version: 2, createdBy: 'TBD' });

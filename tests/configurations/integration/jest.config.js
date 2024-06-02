@@ -4,12 +4,20 @@ module.exports = {
   },
   coverageReporters: ['text', 'html'],
   collectCoverage: true,
-  collectCoverageFrom: ['<rootDir>/src/**/*.ts', '!*/node_modules/', '!/vendor/**', '!*/common/**', '!**/models/**', '!<rootDir>/src/*'],
+  collectCoverageFrom: [
+    '<rootDir>/src/**/*.ts',
+    '!*/node_modules/',
+    '!/vendor/**',
+    '!*/common/**',
+    '!**/models/**',
+    '!<rootDir>/src/*',
+    '!**/db/runMigrations.ts',
+  ],
   coverageDirectory: '<rootDir>/coverage',
   rootDir: '../../../.',
   testMatch: ['<rootDir>/tests/integration/**/*.spec.ts'],
   setupFiles: ['<rootDir>/tests/configurations/jest.setup.ts'],
-  setupFilesAfterEnv: ['jest-openapi', '<rootDir>/tests/configurations/initJestOpenapi.setup.ts'],
+  setupFilesAfterEnv: ['jest-openapi', 'jest-extended/all', '<rootDir>/tests/configurations/initJestOpenapi.setup.ts'],
   reporters: [
     'default',
     [
@@ -18,6 +26,8 @@ module.exports = {
     ],
   ],
   moduleDirectories: ['node_modules', 'src'],
+  globalSetup: '<rootDir>/tests/configurations/integration/jest.globalSetup.ts',
+  globalTeardown: '<rootDir>/tests/configurations/integration/jest.globalTeardown.ts',
   preset: 'ts-jest',
   testEnvironment: 'node',
   coverageThreshold: {

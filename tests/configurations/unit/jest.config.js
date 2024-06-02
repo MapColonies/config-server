@@ -11,6 +11,8 @@ module.exports = {
     '!/vendor/**',
     '!*/common/**',
     '!**/controllers/**',
+    '!**/repositories/**',
+    '!**/db/**',
     '!**/routes/**',
     '!<rootDir>/src/*',
   ],

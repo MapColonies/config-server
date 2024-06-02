@@ -70,16 +70,14 @@ paths:
           schema:
             $ref: '#/components/schemas/configName'
       operationId: getConfigsByName
-      summary: get a specfic client connection for specific environment
+      summary: get a specific client connection for specific environment
       responses:
         '200':
           description: Array containing all the configs with the specific name
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/config'
+                $ref: '#/components/schemas/config'
         '400':
           $ref: '#/components/responses/400BadRequest'
         '404':
@@ -205,14 +203,14 @@ components:
             $ref: '#/components/schemas/error'
   parameters:
     ConfigNameQuery:
-      name: configName
+      name: config_name
       in: query
       description: 'Filters objects based on the exact value of the configName property.'
       required: false
       schema:
         $ref: '#/components/schemas/configName'
     SchemaIdQuery:
-      name: schemaId
+      name: schema_id
       in: query
       description: 'Filters objects where the schemaId property exactly matches the specified URL.'
       required: false
@@ -229,21 +227,21 @@ components:
           - type: string
             enum: ['latest']
     CreatedAtGreaterThanQuery:
-      name: createdAt_gt
+      name: created_at_gt
       in: query
       description: 'Filters objects where the createdAt property is greater than the specified date-time value (format: ISO 8601).'
       required: false
       schema:
         $ref: '#/components/schemas/createdAt'
     CreatedAtLessThanQuery:
-      name: createdAt_lt
+      name: created_at_lt
       in: query
       description: 'Filters objects where the createdAt property is less than the specified date-time value (format: ISO 8601).'
       required: false
       schema:
         $ref: '#/components/schemas/createdAt'
     CreatedByQuery:
-      name: createdBy
+      name: created_by
       in: query
       description: 'Filters objects based on the exact value of the createdBy property.'
       required: false
@@ -264,6 +262,7 @@ components:
       required: false
       schema:
         type: integer
+        default: 10
         minimum: 1
         maximum: 100
     FullTextQuery:
@@ -289,9 +288,11 @@ components:
       pattern: "^https:\\/\\/mapcolonies\\.com\\/.+$"
       example: 'https://mapcolonies.com/common/db/v1'
     version:
-      type: string
-      pattern: '^v[1-9]+[0-9]*$'
-      example: v1
+      # type: string
+      # pattern: '^v[1-9]+[0-9]*$'
+      # example: v1
+      type: integer
+      minimum: 1
     createdAt:
       type: string
       format: date-time
@@ -337,6 +338,7 @@ components:
     config:
       type: object
       additionalProperties: false
+      required: [configName, schemaId, version, config, createdAt, createdBy]
       properties:
         configName:
           $ref: '#/components/schemas/configName'
@@ -349,9 +351,13 @@ components:
           additionalProperties: true
           example: { host: 'localhost', port: 8080 }
         createdAt:
-          $ref: '#/components/schemas/createdAt'
+          readOnly: true
+          allOf:
+            - $ref: '#/components/schemas/createdAt'
         createdBy:
-          $ref: '#/components/schemas/createdBy'
+          readOnly: true
+          allOf:
+            - $ref: '#/components/schemas/createdBy'
     capabilities:
       type: object
       required: [serverVersion, schemasPackageVersion, pubSubEnabled]

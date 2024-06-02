@@ -11,13 +11,18 @@ import { getApp } from './app';
 
 const port: number = config.get<number>('server.port') || DEFAULT_SERVER_PORT;
 
-const app = getApp();
+void getApp()
+  .then(([app]) => {
+    const logger = container.resolve<Logger>(SERVICES.LOGGER);
+    const stubHealthCheck = async (): Promise<void> => Promise.resolve();
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    const server = createTerminus(createServer(app), { healthChecks: { '/liveness': stubHealthCheck, onSignal: container.resolve('onSignal') } });
 
-const logger = container.resolve<Logger>(SERVICES.LOGGER);
-const stubHealthCheck = async (): Promise<void> => Promise.resolve();
-// eslint-disable-next-line @typescript-eslint/naming-convention
-const server = createTerminus(createServer(app), { healthChecks: { '/liveness': stubHealthCheck, onSignal: container.resolve('onSignal') } });
-
-server.listen(port, () => {
-  logger.info(`app started on port ${port}`);
-});
+    server.listen(port, () => {
+      logger.info(`app started on port ${port}`);
+    });
+  })
+  .catch((error: Error) => {
+    console.error('😢 - failed initializing the server');
+    console.error(error.message);
+  });

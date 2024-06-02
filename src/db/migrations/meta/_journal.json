@@ -1,0 +1,13 @@
+{
+  "version": "5",
+  "dialect": "pg",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1715239328453,
+      "tag": "0000_romantic_fixer",
+      "breakpoints": true
+    }
+  ]
+}

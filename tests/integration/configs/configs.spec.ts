@@ -261,7 +261,7 @@ describe('config', function () {
       });
 
       it('should return 200 status code and the dereferenced config', async function () {
-        const response = await requestSender.getConfigByVersion('configRef2',1 ,{ shouldDereference: true });
+        const response = await requestSender.getConfigByVersion('configRef2', 1, { shouldDereference: true });
 
         expect(response.status).toBe(httpStatusCodes.OK);
         expect(response).toSatisfyApiSpec();
@@ -348,12 +348,12 @@ describe('config', function () {
                 version: 'latest',
               },
             },
-            role: 'unknown'
+            role: 'unknown',
           },
-        });        
+        });
 
         expect(response.status).toBe(httpStatusCodes.CREATED);
-        expect(response).toSatisfyApiSpec(); 
+        expect(response).toSatisfyApiSpec();
       });
 
       it('should return 201 and create the config with refs with primitives', async function () {
@@ -372,7 +372,7 @@ describe('config', function () {
         });
 
         expect(response.status).toBe(httpStatusCodes.CREATED);
-        expect(response).toSatisfyApiSpec(); 
+        expect(response).toSatisfyApiSpec();
       });
     });
 
@@ -434,12 +434,12 @@ describe('config', function () {
                 version: 99,
               },
             },
-            role: 'unknown'
+            role: 'unknown',
           },
-        });        
-        
+        });
+
         expect(response.status).toBe(httpStatusCodes.BAD_REQUEST);
-        expect(response).toSatisfyApiSpec(); 
+        expect(response).toSatisfyApiSpec();
       });
 
       it('should return 400 if a ref is not valid', async function () {
@@ -454,12 +454,12 @@ describe('config', function () {
                 version: 'invalid',
               },
             },
-            role: 'unknown'
+            role: 'unknown',
           },
-        });        
-        
+        });
+
         expect(response.status).toBe(httpStatusCodes.BAD_REQUEST);
-        expect(response).toSatisfyApiSpec(); 
+        expect(response).toSatisfyApiSpec();
       });
 
       it('should return 409 status code when trying to post a new version of a config that does not exists', async function () {

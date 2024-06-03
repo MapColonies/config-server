@@ -110,7 +110,7 @@ export class ConfigManager {
     pointer.walk(config, (val, key) => {
       if (key.endsWith('$ref/configName')) {
         const refPointer = key.slice(0, key.lastIndexOf('/'));
-        
+
         const val = pointer.get(config, refPointer) as unknown;
         if (!this.configValidator.validateRef(val)) {
           throw new ConfigValidationError(`The reference is not valid: ${JSON.stringify(val)}`);

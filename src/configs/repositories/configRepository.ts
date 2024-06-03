@@ -1,11 +1,11 @@
 import { Logger, SQL, SQLWrapper, and, eq, gt, lt, max, sql } from 'drizzle-orm';
 import { inject, scoped, Lifecycle } from 'tsyringe';
-import { PgDialect, PgSelect } from 'drizzle-orm/pg-core';
-import { toDate, format } from 'date-fns-tz'
+import type { PgSelect } from 'drizzle-orm/pg-core';
+import { toDate } from 'date-fns-tz';
 import { SERVICES } from '../../common/constants';
-import { Drizzle } from '../../db/createConnection';
-import { Config, NewConfig, NewConfigRef, configs, configsRefs } from '../models/config';
-import { ConfigReference } from '../models/configReference';
+import type { Drizzle } from '../../db/createConnection';
+import { type Config, type NewConfig, type NewConfigRef, configs, configsRefs } from '../models/config';
+import type { ConfigReference } from '../models/configReference';
 import { ConfigNotFoundError } from '../models/errors';
 
 const DEFAULT_LIMIT = 10;
@@ -141,7 +141,7 @@ export class ConfigRepository {
         END AS "isMaxVersion"
       `,
     });
-    
+
     const res = await this.drizzle.execute<
       { inputConfigName: string | null; inputVersion: number | null; configName: string | null; isMaxVersion: boolean } & Pick<
         Config,
@@ -149,10 +149,12 @@ export class ConfigRepository {
       >
     >(recursiveQuery);
     const returnValue: Awaited<ReturnType<typeof this.getAllConfigRefs>> = [];
-    
+
     for (const row of res.rows) {
       if (row.configName === null) {
-        throw new ConfigNotFoundError(`no matching config was found for the following reference: ${row.inputConfigName ?? ''} ${row.inputVersion ?? 'latest'}`);
+        throw new ConfigNotFoundError(
+          `no matching config was found for the following reference: ${row.inputConfigName ?? ''} ${row.inputVersion ?? 'latest'}`
+        );
       }
       returnValue.push({ config: row.config, configName: row.configName, version: row.version, isMaxVersion: row.isMaxVersion });
     }
@@ -192,7 +194,6 @@ export class ConfigRepository {
     });
   }
 
-  
   /**
    * Retrieves a configuration by name and version.
    * If the version is not provided, the latest version will be retrieved.
@@ -210,7 +211,7 @@ export class ConfigRepository {
       .from(configs)
       .where(and(eq(configs.configName, name), eq(configs.version, versionCompare)))
       .execute();
-    
+
     if (config.length === 0) {
       return undefined;
     }
@@ -263,7 +264,7 @@ export class ConfigRepository {
       `,
     });
 
-    const res = await this.drizzle.execute<Omit<Config,'createdAt'> & { isMaxVersion: boolean, createdAt: string }>(recursiveQuery);
+    const res = await this.drizzle.execute<Omit<Config, 'createdAt'> & { isMaxVersion: boolean; createdAt: string }>(recursiveQuery);
 
     const configResult = res.rows.shift();
     if (!configResult) {
@@ -275,11 +276,11 @@ export class ConfigRepository {
       schemaId: configResult.schemaId,
       version: configResult.version,
       config: configResult.config,
-      createdAt: toDate(configResult.createdAt, {timeZone: 'UTC'}),
+      createdAt: toDate(configResult.createdAt, { timeZone: 'UTC' }),
       createdBy: configResult.createdBy,
-    }
+    };
     const refs = res.rows.map((row) => ({ config: row.config, configName: row.configName, version: row.version, isMaxVersion: row.isMaxVersion }));
-    
+
     return [config, refs];
   }
 

@@ -26,7 +26,7 @@ export const schemaWithRef: JSONSchema = {
     role: {
       type: 'string',
       default: 'manager',
-    }
+    },
   },
 };
 
@@ -44,7 +44,6 @@ export const primitiveRefSchema: JSONSchema = {
     },
   },
 };
-
 
 export const configsMockData: NewConfig[] = [
   {
@@ -119,7 +118,7 @@ export const configsMockData: NewConfig[] = [
     version: 1,
     config: {
       manager: {
-        "$ref": {configName: 'config3', version: 1}
+        $ref: { configName: 'config3', version: 1 },
       },
     },
   },
@@ -130,7 +129,7 @@ export const configsMockData: NewConfig[] = [
     version: 1,
     config: {
       manager: {
-        "$ref": {configName: 'config3', version: 'latest'}
+        $ref: { configName: 'config3', version: 'latest' },
       },
     },
   },
@@ -140,11 +139,11 @@ export const configsMockData: NewConfig[] = [
     schemaId: 'https://mapcolonies.com/primitiveSchema/v1',
     version: 1,
     config: 'primitive' as unknown as Record<string, unknown>,
-  }
+  },
 ];
 
 export const refs: ConfigRef[] = [
- {
+  {
     configName: 'configRef2',
     version: 1,
     refConfigName: 'config3',
@@ -155,5 +154,5 @@ export const refs: ConfigRef[] = [
     version: 1,
     refConfigName: 'config3',
     refVersion: null,
- }
-]
+  },
+];

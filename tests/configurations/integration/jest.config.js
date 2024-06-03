@@ -10,6 +10,7 @@ module.exports = {
     '!/vendor/**',
     '!*/common/**',
     '!**/models/**',
+    'src/**/*Manager*.ts',
     '!<rootDir>/src/*',
     '!**/db/runMigrations.ts',
   ],

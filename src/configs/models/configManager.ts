@@ -77,9 +77,11 @@ export class ConfigManager {
       throw new ConfigVersionMismatchError('The version of the config is not the next one in line');
     }
 
-    const refs = this.getAllConfigRefs(config);
+    // Resolve all the references in the config
+    const refs = this.listConfigRefs(config);
     const resolvedRefs = await this.configRepository.getAllConfigRefs(refs);
 
+    // close so we keep the original config with the refs unresolved
     const resolvedConfig = Clone(config.config);
     this.replaceRefs(resolvedConfig, resolvedRefs);
 
@@ -102,12 +104,13 @@ export class ConfigManager {
    * @returns An array of config references.
    * @throws {ConfigValidationError} If the config reference is not valid.
    */
-  private getAllConfigRefs(config: components['schemas']['config']['config']): ConfigReference[] {
+  private listConfigRefs(config: components['schemas']['config']['config']): ConfigReference[] {
     const refs: ConfigReference[] = [];
 
     pointer.walk(config, (val, key) => {
       if (key.endsWith('$ref/configName')) {
         const refPointer = key.slice(0, key.lastIndexOf('/'));
+        
         const val = pointer.get(config, refPointer) as unknown;
         if (!this.configValidator.validateRef(val)) {
           throw new ConfigValidationError(`The reference is not valid: ${JSON.stringify(val)}`);
@@ -120,23 +123,26 @@ export class ConfigManager {
   }
 
   /**
-   * Replaces the references in the given object with the corresponding configuration values.
+   * Recursively replaces the references in the given object with the corresponding configuration values.
    * @param obj - The object containing references to be replaced.
    * @param refs - The list of configuration references.
    * @throws {ConfigValidationError} If the configuration is not valid.
    */
   private replaceRefs(obj: JsonObject, refs: Awaited<ReturnType<typeof this.configRepository.getAllConfigRefs>>): void {
+    // the input is not an object or an array so we don't need to do anything
     if (!Array.isArray(obj) && typeof obj !== 'object') {
       return;
     }
 
     const paths = new Map<string, ConfigReference>();
+
+    // find all the references in the object
     pointer.walk(obj, (val, key) => {
       if (key.endsWith('$ref/configName')) {
         const refPath = key.slice(0, key.lastIndexOf('/'));
         const ref = pointer.get(obj, refPath) as unknown;
         if (!this.configValidator.validateRef(ref)) {
-          throw new ConfigValidationError(`The reference is not valid: ${JSON.stringify(val)}`);
+          throw new ConfigValidationError(`The reference in the following path ${refPath} is not valid`);
         }
 
         paths.set(key.slice(0, key.lastIndexOf('/$ref/configName')), ref);
@@ -149,11 +155,13 @@ export class ConfigManager {
         throw new Error(`could not find ref in db: ${JSON.stringify(ref)}`);
       }
 
+      // replace the reference in the child object
       this.replaceRefs(config.config, refs);
 
       const prevValue = pointer.get(obj, path) as Record<string, unknown>;
       let replacementValue = config.config;
 
+      // if the config is an object we can merge it with the previous value
       if (!Array.isArray(config.config) && typeof config.config === 'object') {
         delete prevValue.$ref;
         replacementValue = { ...prevValue, ...config.config };

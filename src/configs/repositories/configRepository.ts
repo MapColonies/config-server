@@ -6,6 +6,7 @@ import { SERVICES } from '../../common/constants';
 import { Drizzle } from '../../db/createConnection';
 import { Config, NewConfig, NewConfigRef, configs, configsRefs } from '../models/config';
 import { ConfigReference } from '../models/configReference';
+import { ConfigNotFoundError } from '../models/errors';
 
 const DEFAULT_LIMIT = 10;
 const DEFAULT_OFFSET = 0;
@@ -119,7 +120,7 @@ export class ConfigRepository {
             sql`
               coalesce(
                 input."version",
-                (${maxVersionQueryBuilder(this.drizzle, configs.configName)})
+                (${maxVersionQueryBuilder(this.drizzle, sql`input."configName"`)})
               )
             `
           )
@@ -140,7 +141,7 @@ export class ConfigRepository {
         END AS "isMaxVersion"
       `,
     });
-
+    
     const res = await this.drizzle.execute<
       { inputConfigName: string | null; inputVersion: number | null; configName: string | null; isMaxVersion: boolean } & Pick<
         Config,
@@ -148,10 +149,10 @@ export class ConfigRepository {
       >
     >(recursiveQuery);
     const returnValue: Awaited<ReturnType<typeof this.getAllConfigRefs>> = [];
-
+    
     for (const row of res.rows) {
       if (row.configName === null) {
-        throw new Error(`no matching config was found for the following reference: ${row.inputConfigName ?? ''} ${row.inputVersion ?? 'latest'}`);
+        throw new ConfigNotFoundError(`no matching config was found for the following reference: ${row.inputConfigName ?? ''} ${row.inputVersion ?? 'latest'}`);
       }
       returnValue.push({ config: row.config, configName: row.configName, version: row.version, isMaxVersion: row.isMaxVersion });
     }

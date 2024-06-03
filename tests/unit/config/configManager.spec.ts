@@ -1,6 +1,6 @@
 import { Logger } from '@map-colonies/js-logger';
 import { ConfigManager } from '../../../src/configs/models/configManager';
-import { ConfigRepository } from '../../../src/configs/repositories/configRepository';
+import { ConfigRefResponse, ConfigRepository } from '../../../src/configs/repositories/configRepository';
 import { Validator } from '../../../src/configs/models/configValidator';
 import { ConfigNotFoundError, ConfigVersionMismatchError, ConfigValidationError } from '../../../src/configs/models/errors';
 
@@ -17,6 +17,10 @@ describe('ConfigManager', () => {
     configManager = new ConfigManager(logger, configRepository, configValidator);
   });
 
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
   describe('getConfig', () => {
     it('should return the config when it exists', async () => {
       const config = {
@@ -29,10 +33,30 @@ describe('ConfigManager', () => {
       expect(result).toBe(config);
     });
 
+    it('should return the config with it being dereferenced', async () => {
+      // @ts-expect-error ts wants this to be a predicate
+      configValidator.validateRef = jest.fn().mockResolvedValue(true);
+      const config = {
+        config: { avi: { $ref: { configName: 'refName', version: 1 } } },
+      };
+      const refs: ConfigRefResponse[] = [{ config: { test: 'test' }, configName: 'refName', version: 1, isMaxVersion: false }];
+      configRepository.getConfigRecursive = jest.fn().mockResolvedValue([config, refs]);
+
+      const result = await configManager.getConfig('configName', 1, true);
+
+      expect(result).toStrictEqual({ ...config, config: { avi: { test: 'test' } } });
+    });
+
     it('should throw ConfigNotFoundError when the config does not exist', async () => {
       configRepository.getConfig = jest.fn().mockResolvedValue(null);
 
       await expect(configManager.getConfig('configName')).rejects.toThrow(ConfigNotFoundError);
+    });
+
+    it('should throw ConfigNotFoundError when the config does not exist and dereference config is true', async () => {
+      configRepository.getConfigRecursive = jest.fn().mockResolvedValue(null);
+
+      await expect(configManager.getConfig('configName', 1, true)).rejects.toThrow(ConfigNotFoundError);
     });
   });
 
@@ -65,25 +89,52 @@ describe('ConfigManager', () => {
     it('should create a new config', async () => {
       const config = { configName: 'avi', schemaId: 'https://mapcolonies.com/test/v1', config: {}, version: 1 };
       configRepository.getConfigMaxVersion = jest.fn().mockResolvedValue(null);
+      configRepository.getAllConfigRefs = jest.fn().mockResolvedValue([]);
       configValidator.isValid = jest.fn().mockResolvedValue([true, null]);
       configRepository.createConfig = jest.fn();
 
       await configManager.createConfig({ ...config });
 
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(configRepository.createConfig).toHaveBeenCalledWith({ ...config, createdBy: 'TBD' });
+      expect(configRepository.createConfig).toHaveBeenCalledWith({ ...config, createdBy: 'TBD', refs: [] });
     });
 
     it('should increment the version when a new version is created', async () => {
       const config = { configName: 'avi', schemaId: 'https://mapcolonies.com/test/v1', config: {}, version: 1 };
       configRepository.getConfigMaxVersion = jest.fn().mockResolvedValue(1);
       configValidator.isValid = jest.fn().mockResolvedValue([true, null]);
+      configRepository.getAllConfigRefs = jest.fn().mockResolvedValue([]);
       configRepository.createConfig = jest.fn();
 
       await configManager.createConfig({ ...config });
 
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(configRepository.createConfig).toHaveBeenCalledWith({ ...config, version: 2, createdBy: 'TBD' });
+      expect(configRepository.createConfig).toHaveBeenCalledWith({ ...config, version: 2, createdBy: 'TBD', refs: [] });
+    });
+
+    it('should create a new config with refs', async () => {
+      const config = {
+        configName: 'avi',
+        schemaId: 'https://mapcolonies.com/test/v1',
+        config: { avi: { $ref: { configName: 'refName', version: 'latest' } } },
+        version: 1,
+      };
+      const refs: ConfigRefResponse[] = [{ configName: 'refName', version: 1, isMaxVersion: true, config: { test: 'test' } }];
+      configRepository.getConfigMaxVersion = jest.fn().mockResolvedValue(null);
+      configValidator.isValid = jest.fn().mockResolvedValue([true, null]);
+      configRepository.getAllConfigRefs = jest.fn().mockResolvedValue(refs);
+      configRepository.createConfig = jest.fn();
+      // @ts-expect-error ts wants this to be a predicate
+      configValidator.validateRef = jest.fn().mockReturnValue(true);
+
+      await configManager.createConfig({ ...config });
+
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(configRepository.createConfig).toHaveBeenCalledWith({
+        ...config,
+        createdBy: 'TBD',
+        refs: [{ configName: 'refName', version: 'latest' }],
+      });
     });
 
     it('should throw ConfigVersionMismatchError when the version is not the next one in line', async () => {
@@ -93,10 +144,34 @@ describe('ConfigManager', () => {
       await expect(configManager.createConfig(config)).rejects.toThrow(ConfigVersionMismatchError);
     });
 
+    it('should throw ConfigVersionMismatchError when a new version is created, but no version exists', async () => {
+      const config = { configName: 'avi', schemaId: 'https://mapcolonies.com/test/v1', config: {}, version: 2 };
+      configRepository.getConfigMaxVersion = jest.fn().mockResolvedValue(null);
+
+      await expect(configManager.createConfig(config)).rejects.toThrow(ConfigVersionMismatchError);
+    });
+
     it('should throw ConfigValidationError when the config is not valid', async () => {
       const config = { configName: 'avi', schemaId: 'https://mapcolonies.com/test/v1', config: {}, version: 1 };
       configRepository.getConfigMaxVersion = jest.fn().mockResolvedValue(1);
       configValidator.isValid = jest.fn().mockResolvedValue([false, 'Validation error']);
+      configRepository.getAllConfigRefs = jest.fn().mockResolvedValue([]);
+
+      await expect(configManager.createConfig(config)).rejects.toThrow(ConfigValidationError);
+    });
+
+    it('should throw ConfigValidationError when the reference is not valid', async () => {
+      const config = {
+        configName: 'avi',
+        schemaId: 'https://mapcolonies.com/test/v1',
+        config: { avi: { $ref: { configName: 'refName' } } },
+        version: 1,
+      };
+      configRepository.getConfigMaxVersion = jest.fn().mockResolvedValue(null);
+      configValidator.isValid = jest.fn().mockResolvedValue([true, null]);
+      configRepository.getAllConfigRefs = jest.fn().mockResolvedValue([]);
+      // @ts-expect-error ts wants this to be a predicate
+      configValidator.validateRef = jest.fn().mockReturnValue(false);
 
       await expect(configManager.createConfig(config)).rejects.toThrow(ConfigValidationError);
     });

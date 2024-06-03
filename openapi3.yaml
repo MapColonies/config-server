@@ -355,7 +355,6 @@ components:
         version:
           $ref: '#/components/schemas/version'
         config:
-          type: object
           additionalProperties: true
           example: { host: 'localhost', port: 8080 }
         createdAt:

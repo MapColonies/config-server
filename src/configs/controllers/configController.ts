@@ -67,7 +67,7 @@ export class ConfigController {
       await this.manager.createConfig(req.body);
       return res.status(httpStatus.CREATED).json();
     } catch (error) {
-      if (error instanceof ConfigValidationError) {
+      if (error instanceof ConfigValidationError || error instanceof ConfigNotFoundError) {
         (error as HttpError).status = httpStatus.BAD_REQUEST;
       } else if (error instanceof ConfigVersionMismatchError) {
         (error as HttpError).status = httpStatus.CONFLICT;

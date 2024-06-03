@@ -1,4 +1,6 @@
 import 'jest-extended';
+import 'jest-openapi';
+
 import jsLogger, { Logger } from '@map-colonies/js-logger';
 import { trace } from '@opentelemetry/api';
 import httpStatusCodes from 'http-status-codes';
@@ -10,17 +12,22 @@ import { SchemaManager } from '../../../src/schemas/models/schemaManager';
 import { Drizzle } from '../../../src/db/createConnection';
 import { getApp } from '../../../src/app';
 import { SERVICES } from '../../../src/common/constants';
-import { configs } from '../../../src/configs/models/config';
+import { configs, configsRefs } from '../../../src/configs/models/config';
 import { ConfigRequestSender } from './helpers/requestSender';
-import { configsMockData, schemaWithRef, simpleSchema } from './helpers/data';
+import { configsMockData, refs, schemaWithRef, simpleSchema, primitiveRefSchema, primitiveSchema } from './helpers/data';
 
 async function getSchemaMock(id: string): Promise<JSONSchema> {
-  if (id === schemaWithRef.$id) {
-    return Promise.resolve(schemaWithRef);
-  } else if (id === simpleSchema.$id) {
-    return Promise.resolve(simpleSchema);
-  } else {
-    throw new Error('Schema not found');
+  switch (id) {
+    case schemaWithRef.$id:
+      return Promise.resolve(schemaWithRef);
+    case simpleSchema.$id:
+      return Promise.resolve(simpleSchema);
+    case primitiveSchema.$id:
+      return Promise.resolve(primitiveSchema);
+    case primitiveRefSchema.$id:
+      return Promise.resolve(primitiveRefSchema);
+    default:
+      throw new Error('Schema not found');
   }
 }
 
@@ -50,6 +57,7 @@ describe('config', function () {
     dependencyContainer = container;
     const drizzle = dependencyContainer.resolve<Drizzle>(SERVICES.DRIZZLE);
     await drizzle.insert(configs).values(configsMockData);
+    await drizzle.insert(configsRefs).values(refs);
   });
 
   afterAll(async function () {
@@ -187,11 +195,32 @@ describe('config', function () {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         expect(response.body.version).toBe(2);
       });
+
+      it('should return 200 status code and the dereferenced config', async function () {
+        const response = await requestSender.getConfigByName('configRef2', { shouldDereference: true });
+
+        expect(response.status).toBe(httpStatusCodes.OK);
+        expect(response).toSatisfyApiSpec();
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        expect(response.body.config).toStrictEqual({
+          manager: {
+            name: 'name4',
+            age: 5,
+          },
+        });
+      });
     });
 
     describe('Bad Path', function () {
       it('should return 404 status code when the config not exists', async function () {
         const response = await requestSender.getConfigByName('not_exists');
+
+        expect(response.status).toBe(httpStatusCodes.NOT_FOUND);
+        expect(response).toSatisfyApiSpec();
+      });
+
+      it('should return 404 status code when the config not exists in a dereferenced request', async function () {
+        const response = await requestSender.getConfigByName('not_exists', { shouldDereference: true });
 
         expect(response.status).toBe(httpStatusCodes.NOT_FOUND);
         expect(response).toSatisfyApiSpec();
@@ -229,6 +258,20 @@ describe('config', function () {
         expect(response).toSatisfyApiSpec();
         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         expect(response.body.version).toBe(2);
+      });
+
+      it('should return 200 status code and the dereferenced config', async function () {
+        const response = await requestSender.getConfigByVersion('configRef2',1 ,{ shouldDereference: true });
+
+        expect(response.status).toBe(httpStatusCodes.OK);
+        expect(response).toSatisfyApiSpec();
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        expect(response.body.config).toStrictEqual({
+          manager: {
+            name: 'name4',
+            age: 5,
+          },
+        });
       });
     });
 
@@ -292,6 +335,45 @@ describe('config', function () {
         expect(response.status).toBe(httpStatusCodes.CREATED);
         expect(response).toSatisfyApiSpec();
       });
+
+      it('should return 201 and create the config with refs', async function () {
+        const response = await requestSender.postConfig({
+          configName: 'configWithRef',
+          schemaId: 'https://mapcolonies.com/schemaWithRef/v1',
+          version: 1,
+          config: {
+            manager: {
+              $ref: {
+                configName: 'config3',
+                version: 'latest',
+              },
+            },
+            role: 'unknown'
+          },
+        });        
+
+        expect(response.status).toBe(httpStatusCodes.CREATED);
+        expect(response).toSatisfyApiSpec(); 
+      });
+
+      it('should return 201 and create the config with refs with primitives', async function () {
+        const response = await requestSender.postConfig({
+          configName: 'configWithPrimitiveRef',
+          schemaId: 'https://mapcolonies.com/primitiveRefSchema/v1',
+          version: 1,
+          config: {
+            primitive: {
+              $ref: {
+                configName: 'primitiveConfig',
+                version: 1,
+              },
+            },
+          },
+        });
+
+        expect(response.status).toBe(httpStatusCodes.CREATED);
+        expect(response).toSatisfyApiSpec(); 
+      });
     });
 
     describe('Bad Path', function () {
@@ -338,6 +420,46 @@ describe('config', function () {
 
         expect(response.status).toBe(httpStatusCodes.BAD_REQUEST);
         expect(response).toSatisfyApiSpec();
+      });
+
+      it('should return 400 if a ref is does not exist in the database', async function () {
+        const response = await requestSender.postConfig({
+          configName: 'configWithRef',
+          schemaId: 'https://mapcolonies.com/schemaWithRef/v1',
+          version: 1,
+          config: {
+            manager: {
+              $ref: {
+                configName: 'config3',
+                version: 99,
+              },
+            },
+            role: 'unknown'
+          },
+        });        
+        
+        expect(response.status).toBe(httpStatusCodes.BAD_REQUEST);
+        expect(response).toSatisfyApiSpec(); 
+      });
+
+      it('should return 400 if a ref is not valid', async function () {
+        const response = await requestSender.postConfig({
+          configName: 'configWithRef',
+          schemaId: 'https://mapcolonies.com/schemaWithRef/v1',
+          version: 1,
+          config: {
+            manager: {
+              $ref: {
+                configName: 'config3',
+                version: 'invalid',
+              },
+            },
+            role: 'unknown'
+          },
+        });        
+        
+        expect(response.status).toBe(httpStatusCodes.BAD_REQUEST);
+        expect(response).toSatisfyApiSpec(); 
       });
 
       it('should return 409 status code when trying to post a new version of a config that does not exists', async function () {

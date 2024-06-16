@@ -16,6 +16,8 @@ const refParser = new $RefParser();
 type ArrayElement<ArrayType extends readonly unknown[]> = ArrayType extends readonly (infer ElementType)[] ? ElementType : never;
 
 const SCHEMA_DOMAIN = 'https://mapcolonies.com/';
+const LAST_ARRAY_ELEMENT = -1;
+
 @injectable()
 export class SchemaManager {
   private readonly schemaMap: Map<string, JSONSchema> = new Map();
@@ -67,7 +69,11 @@ export class SchemaManager {
       if (dirent.isDirectory()) {
         return { name: dirent.name, children: await this.createSchemaTreeNode(path.join(dirPath, dirent.name)) };
       }
-      return { name: dirent.name, id: path.posix.join(SCHEMA_DOMAIN, dirPath.split(schemasBasePath)[1], dirent.name.split('.')[0]) };
+
+      return {
+        name: dirent.name,
+        id: SCHEMA_DOMAIN.slice(0, LAST_ARRAY_ELEMENT) + path.posix.join(dirPath.split(schemasBasePath)[1], dirent.name.split('.')[0]),
+      };
     });
 
     return Promise.all(resPromises);

@@ -327,7 +327,7 @@ components:
         name:
           type: string
         id:
-          type: string
+          $ref: '#/components/schemas/schemaId'
     schemaTreeDir:
       type: object
       properties:

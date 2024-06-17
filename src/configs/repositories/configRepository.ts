@@ -204,7 +204,7 @@ export class ConfigRepository {
   public async getConfig(name: string, version?: number): Promise<Config | undefined> {
     const maxVersion = maxVersionQueryBuilder(this.drizzle, name);
 
-    const versionCompare = version !== undefined ? version : sql<number>`(${maxVersion}) `;
+    const versionCompare = version !== undefined ? version : sql<number>`(${maxVersion})`;
 
     const config = await this.drizzle
       .select()

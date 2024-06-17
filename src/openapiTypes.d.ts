@@ -19,6 +19,9 @@ export interface paths {
     /** get a specific version of a config */
     get: operations['getVersionedConfig'];
     parameters: {
+      query?: {
+        shouldDereference?: components['parameters']['ShouldDereferenceConfigQuery'];
+      };
       path: {
         name: components['schemas']['configName'];
         version: 'latest' | components['schemas']['version'];
@@ -167,6 +170,8 @@ export interface components {
     LimitQuery?: number;
     /** @description Search term for full-text search across relevant properties (implementation specific). */
     FullTextQuery?: string;
+    /** @description should the server bundle all refs into one config */
+    ShouldDereferenceConfigQuery?: boolean;
   };
   requestBodies: never;
   headers: never;
@@ -228,6 +233,9 @@ export interface operations {
   /** get a specific client connection for specific environment */
   getConfigsByName: {
     parameters: {
+      query?: {
+        shouldDereference?: components['parameters']['ShouldDereferenceConfigQuery'];
+      };
       path: {
         name: components['schemas']['configName'];
       };
@@ -247,6 +255,9 @@ export interface operations {
   /** get a specific version of a config */
   getVersionedConfig: {
     parameters: {
+      query?: {
+        shouldDereference?: components['parameters']['ShouldDereferenceConfigQuery'];
+      };
       path: {
         name: components['schemas']['configName'];
         version: 'latest' | components['schemas']['version'];

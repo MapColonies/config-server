@@ -41,6 +41,17 @@ describe('SchemaManager', () => {
       expect(schema).toHaveProperty('allOf.[0].$id', 'https://mapcolonies.com/common/db/partial/v1');
     });
 
+    it('should not mix between dereferenced and non-dereferenced schemas in cache (issue #26 regression)', async () => {
+      const id = 'https://mapcolonies.com/common/db/full/v1';
+
+      const nonDereferencedSchema = await schemaManager.getSchema(id, false);
+      const dereferencedSchema = await schemaManager.getSchema(id, true);
+      const nonDereferencedSchema2 = await schemaManager.getSchema(id, false);
+
+      expect(nonDereferencedSchema).not.toStrictEqual(dereferencedSchema);
+      expect(nonDereferencedSchema).toStrictEqual(nonDereferencedSchema2);
+    });
+
     it('should throw an error if the schema is not found', async () => {
       // Arrange
       const id = 'https://mapcolonies.com/avi';

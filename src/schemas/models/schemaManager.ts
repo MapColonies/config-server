@@ -33,7 +33,7 @@ export class SchemaManager {
       throw new SchemaPathIsInvalidError('Schema path is invalid');
     }
 
-    const schemaContent = await this.loadSchema(id.split(SCHEMA_DOMAIN)[1]);
+    const schemaContent = await this.loadSchema(id.split(SCHEMA_DOMAIN)[1], dereference);
 
     if (dereference) {
       return refParser.bundle(schemaContent, {
@@ -45,7 +45,7 @@ export class SchemaManager {
             read: async (file: { url: string; hash: string; extension: string }) => {
               const subPath = file.url.split(SCHEMA_DOMAIN)[1];
 
-              return this.loadSchema(subPath);
+              return this.loadSchema(subPath, dereference);
             },
           },
         },
@@ -79,9 +79,11 @@ export class SchemaManager {
     return Promise.all(resPromises);
   }
 
-  private async loadSchema(relativePath: string): Promise<JSONSchema> {
-    if (this.schemaMap.has(relativePath)) {
-      return this.schemaMap.get(relativePath) as JSONSchema;
+  private async loadSchema(relativePath: string, isDereferenced = false): Promise<JSONSchema> {
+    const cacheKey = String(isDereferenced) + ':' + relativePath;
+
+    if (this.schemaMap.has(cacheKey)) {
+      return this.schemaMap.get(cacheKey) as JSONSchema;
     }
 
     const fullPath = path.join(schemasBasePath, relativePath + '.schema.json');
@@ -92,7 +94,9 @@ export class SchemaManager {
     }
 
     const schemaContent = JSON.parse(await fsPromise.readFile(fullPath, { encoding: 'utf-8' })) as JSONSchema;
-    this.schemaMap.set(relativePath, schemaContent);
+    if (!isDereferenced) {
+      this.schemaMap.set(cacheKey, schemaContent);
+    }
     return schemaContent;
   }
 }

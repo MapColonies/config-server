@@ -100,6 +100,39 @@ export const configsMockData: NewConfig[] = [
     createdBy: 'user3',
   },
   {
+    configName: 'config4',
+    schemaId: 'https://mapcolonies.com/simpleSchema/v1',
+    version: 1,
+    config: {
+      name: 'name10',
+      age: 10,
+    },
+    createdAt: new Date('2001-01-01'),
+    createdBy: 'user3',
+  },
+  {
+    configName: 'config4',
+    schemaId: 'https://mapcolonies.com/simpleSchema/v1',
+    version: 2,
+    config: {
+      name: 'name11',
+      age: 11,
+    },
+    createdAt: new Date('2001-01-01'),
+    createdBy: 'user3',
+  },
+  {
+    configName: 'config4',
+    schemaId: 'https://mapcolonies.com/simpleSchema/v1',
+    version: 3,
+    config: {
+      name: 'name12',
+      age: 12,
+    },
+    createdAt: new Date('2001-01-01'),
+    createdBy: 'user3',
+  },
+  {
     configName: 'configRef1',
     createdBy: 'user4',
     schemaId: 'https://mapcolonies.com/schemaWithRef/v1',

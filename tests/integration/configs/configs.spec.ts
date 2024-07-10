@@ -276,7 +276,6 @@ describe('config', function () {
 
       it('should return 200 status code and the dereferenced config without any refs inside', async function () {
         const response = await requestSender.getConfigByVersion('configRef3', 1, { shouldDereference: true });
-        console.log(response.body);
 
         expect(response.status).toBe(httpStatusCodes.OK);
         expect(response).toSatisfyApiSpec();

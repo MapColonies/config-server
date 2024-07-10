@@ -16,6 +16,7 @@ export class Validator {
         loadSchema: async (uri): Promise<AnySchemaObject> => {
           return this.schemaManager.getSchema(uri);
         },
+        keywords: ['x-env-value'],
         useDefaults: true,
       }),
       ['date-time', 'time', 'date', 'email', 'hostname', 'ipv4', 'ipv6', 'uri', 'uuid', 'regex', 'uri-template']

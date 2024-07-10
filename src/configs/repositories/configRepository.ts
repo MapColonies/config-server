@@ -33,7 +33,7 @@ function recursiveQueryBuilder(drizzle: Drizzle, baseQuery: SQLWrapper, recursiv
           sql`
             coalesce(
               ${configsRefs.refVersion},
-              (${maxVersionQueryBuilder(drizzle, configs.configName)})
+              (${maxVersionQueryBuilder(drizzle, configsRefs.refConfigName)})
             )
           `
         )

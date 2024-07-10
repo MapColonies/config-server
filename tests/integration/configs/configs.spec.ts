@@ -273,6 +273,15 @@ describe('config', function () {
           },
         });
       });
+
+      it('should return 200 status code and the dereferenced config without any refs inside', async function () {
+        const response = await requestSender.getConfigByVersion('configRef3', 1, { shouldDereference: true });
+
+        expect(response.status).toBe(httpStatusCodes.OK);
+        expect(response).toSatisfyApiSpec();
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        expect(JSON.stringify(response.body.config)).not.toContain('$ref');
+      });
     });
 
     describe('Bad Path', function () {

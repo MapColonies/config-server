@@ -12,6 +12,13 @@ export class ConfigVersionMismatchError extends Error {
   }
 }
 
+export class ConfigSchemaMismatchError extends Error {
+  public constructor(message: string) {
+    super(message);
+    Object.setPrototypeOf(this, ConfigSchemaMismatchError.prototype);
+  }
+}
+
 export class ConfigValidationError extends Error {
   public constructor(message: string) {
     super(message);

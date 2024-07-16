@@ -68,10 +68,9 @@ export class ConfigManager {
 
   public async createConfig(config: Omit<components['schemas']['config'], 'createdAt' | 'createdBy'>): Promise<void> {
     const latestConfig = await this.configRepository.getConfig(config.configName);
-    // const maxVersion = await this.configRepository.getConfigMaxVersion(config.configName);
 
     if (!latestConfig && config.version !== 1) {
-      throw new ConfigVersionMismatchError('A new version of a config was submitted, when the config does not exists');
+      throw new ConfigVersionMismatchError('A new version of a config was submitted, when the config does not exist');
     }
 
     if (latestConfig) {

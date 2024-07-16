@@ -2,7 +2,12 @@ import { Logger } from '@map-colonies/js-logger';
 import { ConfigManager } from '../../../src/configs/models/configManager';
 import { ConfigRefResponse, ConfigRepository } from '../../../src/configs/repositories/configRepository';
 import { Validator } from '../../../src/configs/models/configValidator';
-import { ConfigNotFoundError, ConfigVersionMismatchError, ConfigValidationError } from '../../../src/configs/models/errors';
+import {
+  ConfigNotFoundError,
+  ConfigVersionMismatchError,
+  ConfigValidationError,
+  ConfigSchemaMismatchError,
+} from '../../../src/configs/models/errors';
 
 describe('ConfigManager', () => {
   let configManager: ConfigManager;
@@ -88,7 +93,7 @@ describe('ConfigManager', () => {
   describe('createConfig', () => {
     it('should create a new config', async () => {
       const config = { configName: 'avi', schemaId: 'https://mapcolonies.com/test/v1', config: {}, version: 1 };
-      configRepository.getConfigMaxVersion = jest.fn().mockResolvedValue(null);
+      configRepository.getConfig = jest.fn().mockResolvedValue(undefined);
       configRepository.getAllConfigRefs = jest.fn().mockResolvedValue([]);
       configValidator.isValid = jest.fn().mockResolvedValue([true, null]);
       configRepository.createConfig = jest.fn();
@@ -101,7 +106,7 @@ describe('ConfigManager', () => {
 
     it('should increment the version when a new version is created', async () => {
       const config = { configName: 'avi', schemaId: 'https://mapcolonies.com/test/v1', config: {}, version: 1 };
-      configRepository.getConfigMaxVersion = jest.fn().mockResolvedValue(1);
+      configRepository.getConfig = jest.fn().mockResolvedValue({ version: 1, schemaId: config.schemaId });
       configValidator.isValid = jest.fn().mockResolvedValue([true, null]);
       configRepository.getAllConfigRefs = jest.fn().mockResolvedValue([]);
       configRepository.createConfig = jest.fn();
@@ -120,7 +125,7 @@ describe('ConfigManager', () => {
         version: 1,
       };
       const refs: ConfigRefResponse[] = [{ configName: 'refName', version: 1, isMaxVersion: true, config: { test: 'test' } }];
-      configRepository.getConfigMaxVersion = jest.fn().mockResolvedValue(null);
+      configRepository.getConfig = jest.fn().mockResolvedValue(undefined);
       configValidator.isValid = jest.fn().mockResolvedValue([true, null]);
       configRepository.getAllConfigRefs = jest.fn().mockResolvedValue(refs);
       configRepository.createConfig = jest.fn();
@@ -139,21 +144,21 @@ describe('ConfigManager', () => {
 
     it('should throw ConfigVersionMismatchError when the version is not the next one in line', async () => {
       const config = { configName: 'avi', schemaId: 'https://mapcolonies.com/test/v1', config: {}, version: 1 };
-      configRepository.getConfigMaxVersion = jest.fn().mockResolvedValue(2);
+      configRepository.getConfig = jest.fn().mockResolvedValue({ version: 2, schemaId: config.schemaId });
 
       await expect(configManager.createConfig(config)).rejects.toThrow(ConfigVersionMismatchError);
     });
 
     it('should throw ConfigVersionMismatchError when a new version is created, but no version exists', async () => {
       const config = { configName: 'avi', schemaId: 'https://mapcolonies.com/test/v1', config: {}, version: 2 };
-      configRepository.getConfigMaxVersion = jest.fn().mockResolvedValue(null);
+      configRepository.getConfig = jest.fn().mockResolvedValue(undefined);
 
       await expect(configManager.createConfig(config)).rejects.toThrow(ConfigVersionMismatchError);
     });
 
     it('should throw ConfigValidationError when the config is not valid', async () => {
       const config = { configName: 'avi', schemaId: 'https://mapcolonies.com/test/v1', config: {}, version: 1 };
-      configRepository.getConfigMaxVersion = jest.fn().mockResolvedValue(1);
+      configRepository.getConfig = jest.fn().mockResolvedValue({ version: 1, schemaId: config.schemaId });
       configValidator.isValid = jest.fn().mockResolvedValue([false, 'Validation error']);
       configRepository.getAllConfigRefs = jest.fn().mockResolvedValue([]);
 
@@ -167,13 +172,20 @@ describe('ConfigManager', () => {
         config: { avi: { $ref: { configName: 'refName' } } },
         version: 1,
       };
-      configRepository.getConfigMaxVersion = jest.fn().mockResolvedValue(null);
+      configRepository.getConfig = jest.fn().mockResolvedValue(undefined);
       configValidator.isValid = jest.fn().mockResolvedValue([true, null]);
       configRepository.getAllConfigRefs = jest.fn().mockResolvedValue([]);
       // @ts-expect-error ts wants this to be a predicate
       configValidator.validateRef = jest.fn().mockReturnValue(false);
 
       await expect(configManager.createConfig(config)).rejects.toThrow(ConfigValidationError);
+    });
+
+    it('should throw ConfigSchemaMismatchError when the schema does not match the last entry', async () => {
+      const config = { configName: 'avi', schemaId: 'https://mapcolonies.com/test/v1', config: {}, version: 1 };
+      configRepository.getConfig = jest.fn().mockResolvedValue({ version: 1, schemaId: 'https://mapcolonies.com/test/v2' });
+
+      await expect(configManager.createConfig(config)).rejects.toThrow(ConfigSchemaMismatchError);
     });
   });
 });

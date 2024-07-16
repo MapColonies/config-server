@@ -8,7 +8,7 @@ import { SERVICES } from '../../common/constants';
 import { paths, components } from '../../openapiTypes';
 import { Config } from './config';
 import { Validator } from './configValidator';
-import { ConfigNotFoundError, ConfigValidationError, ConfigVersionMismatchError } from './errors';
+import { ConfigNotFoundError, ConfigSchemaMismatchError, ConfigValidationError, ConfigVersionMismatchError } from './errors';
 import { ConfigReference } from './configReference';
 
 @injectable()
@@ -67,14 +67,20 @@ export class ConfigManager {
   }
 
   public async createConfig(config: Omit<components['schemas']['config'], 'createdAt' | 'createdBy'>): Promise<void> {
-    const maxVersion = await this.configRepository.getConfigMaxVersion(config.configName);
+    const latestConfig = await this.configRepository.getConfig(config.configName);
 
-    if (maxVersion === null && config.version !== 1) {
-      throw new ConfigVersionMismatchError('A new version of a config was submitted, when the config does not exists');
+    if (!latestConfig && config.version !== 1) {
+      throw new ConfigVersionMismatchError('A new version of a config was submitted, when the config does not exist');
     }
 
-    if (maxVersion !== null && config.version !== maxVersion) {
-      throw new ConfigVersionMismatchError('The version of the config is not the next one in line');
+    if (latestConfig) {
+      if (config.version !== latestConfig.version) {
+        throw new ConfigVersionMismatchError('The version of the config is not the next one in line');
+      }
+
+      if (config.schemaId !== latestConfig.schemaId) {
+        throw new ConfigSchemaMismatchError('The schema id of the config is not the same as the rest of the configs with the same name');
+      }
     }
 
     // Resolve all the references in the config
@@ -91,7 +97,7 @@ export class ConfigManager {
       throw new ConfigValidationError(`The config is not valid: ${JSON.stringify(err)}`);
     }
 
-    if (maxVersion !== null) {
+    if (latestConfig !== undefined) {
       config.version++;
     }
 

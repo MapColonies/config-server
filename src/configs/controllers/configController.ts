@@ -8,7 +8,7 @@ import { ConfigManager } from '../models/configManager';
 import { TypedRequestHandler } from '../../common/interfaces';
 import type { components } from '../../openapiTypes';
 import { Config } from '../models/config';
-import { ConfigNotFoundError, ConfigValidationError, ConfigVersionMismatchError } from '../models/errors';
+import { ConfigNotFoundError, ConfigSchemaMismatchError, ConfigValidationError, ConfigVersionMismatchError } from '../models/errors';
 
 function configMapper(config: Config): components['schemas']['config'] {
   return {
@@ -69,7 +69,7 @@ export class ConfigController {
     } catch (error) {
       if (error instanceof ConfigValidationError || error instanceof ConfigNotFoundError) {
         (error as HttpError).status = httpStatus.BAD_REQUEST;
-      } else if (error instanceof ConfigVersionMismatchError) {
+      } else if (error instanceof ConfigVersionMismatchError || error instanceof ConfigSchemaMismatchError) {
         (error as HttpError).status = httpStatus.CONFLICT;
       }
       next(error);

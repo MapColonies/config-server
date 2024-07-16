@@ -500,6 +500,18 @@ describe('config', function () {
         expect(response.status).toBe(httpStatusCodes.CONFLICT);
         expect(response).toSatisfyApiSpec();
       });
+
+      it('should return 409 status code when the schema provided does not match the schema of the last config', async function () {
+        const response = await requestSender.postConfig({
+          schemaId: 'https://mapcolonies.com/primitiveSchema/v1',
+          configName: 'config4',
+          version: 3,
+          config: { string: 'string' },
+        });
+
+        expect(response.status).toBe(httpStatusCodes.CONFLICT);
+        expect(response).toSatisfyApiSpec();
+      });
     });
 
     describe('Sad Path', function () {

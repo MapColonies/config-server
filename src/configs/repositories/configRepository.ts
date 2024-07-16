@@ -162,16 +162,6 @@ export class ConfigRepository {
     return returnValue;
   }
 
-  public async getConfigMaxVersion(name: string): Promise<number | null> {
-    const res = await this.drizzle
-      .select({ maxVersion: max(configs.version) })
-      .from(configs)
-      .where(eq(configs.configName, name))
-      .execute();
-
-    return res[0].maxVersion ?? null;
-  }
-
   /**
    * Creates a new configuration with the provided data.
    * @param config - The configuration data to be created.

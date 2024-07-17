@@ -274,7 +274,7 @@ export class ConfigRepository {
   ): Promise<{ configs: Config[]; totalCount: number }> {
     const filterParams: SQLWrapper[] = this.getFilterParams(searchParams);
 
-    let configsQuery = this.drizzle
+    const configsQuery = this.drizzle
       .select({
         configName: configs.configName,
         schemaId: configs.schemaId,

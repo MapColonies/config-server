@@ -44,7 +44,7 @@ describe('ConfigManager', () => {
       const config = {
         config: { avi: { $ref: { configName: 'refName', version: 1 } } },
       };
-      const refs: ConfigRefResponse[] = [{ config: { test: 'test' }, configName: 'refName', version: 1, isMaxVersion: false }];
+      const refs: ConfigRefResponse[] = [{ config: { test: 'test' }, configName: 'refName', version: 1, isLatest: false }];
       configRepository.getConfigRecursive = jest.fn().mockResolvedValue([config, refs]);
 
       const result = await configManager.getConfig('configName', 1, true);
@@ -124,7 +124,7 @@ describe('ConfigManager', () => {
         config: { avi: { $ref: { configName: 'refName', version: 'latest' } } },
         version: 1,
       };
-      const refs: ConfigRefResponse[] = [{ configName: 'refName', version: 1, isMaxVersion: true, config: { test: 'test' } }];
+      const refs: ConfigRefResponse[] = [{ configName: 'refName', version: 1, isLatest: true, config: { test: 'test' } }];
       configRepository.getConfig = jest.fn().mockResolvedValue(undefined);
       configValidator.isValid = jest.fn().mockResolvedValue([true, null]);
       configRepository.getAllConfigRefs = jest.fn().mockResolvedValue(refs);

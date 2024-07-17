@@ -55,6 +55,7 @@ export const configsMockData: NewConfig[] = [
       age: 1,
     },
     createdBy: 'user1',
+    isLatest: false,
   },
   {
     configName: 'config1',
@@ -65,6 +66,7 @@ export const configsMockData: NewConfig[] = [
       age: 2,
     },
     createdBy: 'user2',
+    isLatest: true,
   },
   {
     configName: 'config2',
@@ -76,6 +78,7 @@ export const configsMockData: NewConfig[] = [
     },
     createdAt: new Date('2001-01-01'),
     createdBy: 'user3',
+    isLatest: true,
   },
   {
     configName: 'config3',
@@ -87,6 +90,7 @@ export const configsMockData: NewConfig[] = [
     },
     createdAt: new Date('2001-01-01'),
     createdBy: 'user3',
+    isLatest: false,
   },
   {
     configName: 'config3',
@@ -98,6 +102,7 @@ export const configsMockData: NewConfig[] = [
     },
     createdAt: new Date('2001-01-01'),
     createdBy: 'user3',
+    isLatest: true,
   },
   {
     configName: 'config4',
@@ -109,6 +114,7 @@ export const configsMockData: NewConfig[] = [
     },
     createdAt: new Date('2001-01-01'),
     createdBy: 'user3',
+    isLatest: false,
   },
   {
     configName: 'config4',
@@ -120,6 +126,7 @@ export const configsMockData: NewConfig[] = [
     },
     createdAt: new Date('2001-01-01'),
     createdBy: 'user3',
+    isLatest: false,
   },
   {
     configName: 'config4',
@@ -131,6 +138,7 @@ export const configsMockData: NewConfig[] = [
     },
     createdAt: new Date('2001-01-01'),
     createdBy: 'user3',
+    isLatest: true,
   },
   {
     configName: 'configRef1',
@@ -143,6 +151,7 @@ export const configsMockData: NewConfig[] = [
         age: 1,
       },
     },
+    isLatest: true,
   },
   {
     configName: 'configRef2',
@@ -154,6 +163,7 @@ export const configsMockData: NewConfig[] = [
         $ref: { configName: 'config3', version: 1 },
       },
     },
+    isLatest: true,
   },
   {
     configName: 'configRef3',
@@ -165,6 +175,7 @@ export const configsMockData: NewConfig[] = [
         $ref: { configName: 'config3', version: 'latest' },
       },
     },
+    isLatest: true,
   },
   {
     configName: 'primitiveConfig',
@@ -172,6 +183,7 @@ export const configsMockData: NewConfig[] = [
     schemaId: 'https://mapcolonies.com/primitiveSchema/v1',
     version: 1,
     config: 'primitive' as unknown as Record<string, unknown>,
+    isLatest: true,
   },
 ];
 

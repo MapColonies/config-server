@@ -1,0 +1,136 @@
+{
+  "id": "803e5a56-4d36-4b1b-ad64-4a0ceca0a77d",
+  "prevId": "bc0c8f91-085a-489c-a7c2-1566fa6159d3",
+  "version": "5",
+  "dialect": "pg",
+  "tables": {
+    "config": {
+      "name": "config",
+      "schema": "config_server",
+      "columns": {
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "schema_id": {
+          "name": "schema_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "config": {
+          "name": "config",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_latest": {
+          "name": "is_latest",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "config_name_version_pk": {
+          "name": "config_name_version_pk",
+          "columns": ["name", "version"]
+        }
+      },
+      "uniqueConstraints": {}
+    },
+    "config_refs": {
+      "name": "config_refs",
+      "schema": "config_server",
+      "columns": {
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ref_name": {
+          "name": "ref_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ref_version": {
+          "name": "ref_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "idx_config_name_version": {
+          "name": "idx_config_name_version",
+          "columns": ["name", "version"],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "config_refs_original_config_fk": {
+          "name": "config_refs_original_config_fk",
+          "tableFrom": "config_refs",
+          "tableTo": "config",
+          "schemaTo": "config_server",
+          "columnsFrom": ["name", "version"],
+          "columnsTo": ["name", "version"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "config_refs_child_config_fk": {
+          "name": "config_refs_child_config_fk",
+          "tableFrom": "config_refs",
+          "tableTo": "config",
+          "schemaTo": "config_server",
+          "columnsFrom": ["ref_name", "ref_version"],
+          "columnsTo": ["name", "version"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    }
+  },
+  "enums": {},
+  "schemas": {
+    "config_server": "config_server"
+  },
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

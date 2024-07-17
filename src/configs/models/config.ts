@@ -1,4 +1,4 @@
-import { integer, jsonb, pgSchema, text, timestamp, primaryKey, foreignKey, index } from 'drizzle-orm/pg-core';
+import { integer, jsonb, pgSchema, text, timestamp, primaryKey, foreignKey, index, boolean } from 'drizzle-orm/pg-core';
 
 export const pgDbSchema = pgSchema('config_server');
 
@@ -11,6 +11,7 @@ export const configs = pgDbSchema.table(
     config: jsonb('config').notNull().$type<Record<string, unknown>>(),
     createdAt: timestamp('created_at').notNull().defaultNow(),
     createdBy: text('created_by').notNull(),
+    isLatest: boolean('is_latest').notNull(),
   },
   (table) => ({
     pk: primaryKey({ columns: [table.configName, table.version] }),

@@ -15,6 +15,13 @@
       "when": 1715834656622,
       "tag": "0001_complete_domino",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1721137236172,
+      "tag": "0002_military_russian",
+      "breakpoints": true
     }
   ]
 }

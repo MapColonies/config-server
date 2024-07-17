@@ -94,7 +94,7 @@ export interface components {
     schemaTree: (components['schemas']['schemaTreeItem'] | components['schemas']['schemaTreeDir'])[];
     schemaTreeItem: {
       name?: string;
-      id?: string;
+      id?: components['schemas']['schemaId'];
     };
     schemaTreeDir: {
       children?: components['schemas']['schemaTree'];
@@ -115,6 +115,7 @@ export interface components {
       };
       createdAt: components['schemas']['createdAt'];
       createdBy: components['schemas']['createdBy'];
+      isLatest?: boolean;
     };
     capabilities: {
       /** @description The version of the server */

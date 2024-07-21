@@ -162,6 +162,7 @@ export class ConfigRepository {
         await tx.insert(configsRefs).values(dbRefs).execute();
       }
 
+      // set the previous version of the config to not be the latest if a previous version exists
       if (config.version !== 1) {
         await tx
           .update(configs)

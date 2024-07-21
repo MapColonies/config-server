@@ -127,7 +127,7 @@ describe('config', function () {
 
       it('should return 200 status code and empty array if no results have returned', async function () {
         // eslint-disable-next-line @typescript-eslint/naming-convention
-        const response = await requestSender.getConfigs({ config_name: 'not_exists' });
+        const response = await requestSender.getConfigs({ config_name: 'not-exists' });
 
         expect(response.status).toBe(httpStatusCodes.OK);
         expect(response).toSatisfyApiSpec();
@@ -197,7 +197,7 @@ describe('config', function () {
       });
 
       it('should return 200 status code and the dereferenced config', async function () {
-        const response = await requestSender.getConfigByName('configRef2', { shouldDereference: true });
+        const response = await requestSender.getConfigByName('config-ref-2', { shouldDereference: true });
 
         expect(response.status).toBe(httpStatusCodes.OK);
         expect(response).toSatisfyApiSpec();
@@ -212,15 +212,21 @@ describe('config', function () {
     });
 
     describe('Bad Path', function () {
+      it('should return 400 status code when using invalid config name', async function () {
+        const response = await requestSender.getConfigByName('Invalid_name');
+
+        expect(response.status).toBe(httpStatusCodes.BAD_REQUEST);
+        expect(response).toSatisfyApiSpec();
+      });
       it('should return 404 status code when the config not exists', async function () {
-        const response = await requestSender.getConfigByName('not_exists');
+        const response = await requestSender.getConfigByName('not-exists');
 
         expect(response.status).toBe(httpStatusCodes.NOT_FOUND);
         expect(response).toSatisfyApiSpec();
       });
 
       it('should return 404 status code when the config not exists in a dereferenced request', async function () {
-        const response = await requestSender.getConfigByName('not_exists', { shouldDereference: true });
+        const response = await requestSender.getConfigByName('not-exists', { shouldDereference: true });
 
         expect(response.status).toBe(httpStatusCodes.NOT_FOUND);
         expect(response).toSatisfyApiSpec();
@@ -261,7 +267,7 @@ describe('config', function () {
       });
 
       it('should return 200 status code and the dereferenced config', async function () {
-        const response = await requestSender.getConfigByVersion('configRef2', 1, { shouldDereference: true });
+        const response = await requestSender.getConfigByVersion('config-ref-2', 1, { shouldDereference: true });
 
         expect(response.status).toBe(httpStatusCodes.OK);
         expect(response).toSatisfyApiSpec();
@@ -275,7 +281,7 @@ describe('config', function () {
       });
 
       it('should return 200 status code and the dereferenced config without any refs inside', async function () {
-        const response = await requestSender.getConfigByVersion('configRef3', 1, { shouldDereference: true });
+        const response = await requestSender.getConfigByVersion('config-ref-3', 1, { shouldDereference: true });
 
         expect(response.status).toBe(httpStatusCodes.OK);
         expect(response).toSatisfyApiSpec();
@@ -317,7 +323,7 @@ describe('config', function () {
     describe('Happy Path', function () {
       it('should return 201 and create the config', async function () {
         const response = await requestSender.postConfig({
-          configName: 'newConfig1',
+          configName: 'new-config1',
           schemaId: 'https://mapcolonies.com/simpleSchema/v1',
           version: 1,
           config: {
@@ -347,7 +353,7 @@ describe('config', function () {
 
       it('should return 201 and create the config with refs', async function () {
         const response = await requestSender.postConfig({
-          configName: 'configWithRef',
+          configName: 'config-with-ref',
           schemaId: 'https://mapcolonies.com/schemaWithRef/v1',
           version: 1,
           config: {
@@ -367,13 +373,13 @@ describe('config', function () {
 
       it('should return 201 and create the config with refs with primitives', async function () {
         const response = await requestSender.postConfig({
-          configName: 'configWithPrimitiveRef',
+          configName: 'config-with-primitive-ref',
           schemaId: 'https://mapcolonies.com/primitiveRefSchema/v1',
           version: 1,
           config: {
             primitive: {
               $ref: {
-                configName: 'primitiveConfig',
+                configName: 'primitive-config',
                 version: 1,
               },
             },
@@ -388,7 +394,7 @@ describe('config', function () {
     describe('Bad Path', function () {
       it('should return 400 status code when using invalid version', async function () {
         const response = await requestSender.postConfig({
-          configName: 'newConfig2',
+          configName: 'new-config2',
           schemaId: 'https://mapcolonies.com/simpleSchema/v1',
           version: 'invalid' as unknown as number,
           config: {
@@ -403,7 +409,7 @@ describe('config', function () {
 
       it('should return 400 status code when using invalid schema id', async function () {
         const response = await requestSender.postConfig({
-          configName: 'newConfig2',
+          configName: 'new-config2',
           schemaId: 'invalid',
           version: 1,
           config: {
@@ -418,7 +424,7 @@ describe('config', function () {
 
       it('should return 400 status code when using invalid config', async function () {
         const response = await requestSender.postConfig({
-          configName: 'newConfig2',
+          configName: 'new-config2',
           schemaId: 'https://mapcolonies.com/simpleSchema/v1',
           version: 1,
           config: {
@@ -433,7 +439,7 @@ describe('config', function () {
 
       it('should return 400 if a ref is does not exist in the database', async function () {
         const response = await requestSender.postConfig({
-          configName: 'configWithRef',
+          configName: 'config-with-ref',
           schemaId: 'https://mapcolonies.com/schemaWithRef/v1',
           version: 1,
           config: {
@@ -453,7 +459,7 @@ describe('config', function () {
 
       it('should return 400 if a ref is not valid', async function () {
         const response = await requestSender.postConfig({
-          configName: 'configWithRef',
+          configName: 'config-with-ref',
           schemaId: 'https://mapcolonies.com/schemaWithRef/v1',
           version: 1,
           config: {
@@ -473,7 +479,7 @@ describe('config', function () {
 
       it('should return 409 status code when trying to post a new version of a config that does not exists', async function () {
         const response = await requestSender.postConfig({
-          configName: 'not_exists',
+          configName: 'not-exists',
           schemaId: 'https://mapcolonies.com/simpleSchema/v1',
           version: 2,
           config: {
@@ -520,7 +526,7 @@ describe('config', function () {
         jest.spyOn(configRepo, 'createConfig').mockRejectedValueOnce(new Error('Database is down'));
 
         const response = await requestSender.postConfig({
-          configName: 'newConfig3',
+          configName: 'new-config3',
           schemaId: 'https://mapcolonies.com/simpleSchema/v1',
           version: 1,
           config: {

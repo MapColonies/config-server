@@ -133,7 +133,7 @@ export const configsMockData: NewConfig[] = [
     createdBy: 'user3',
   },
   {
-    configName: 'configRef1',
+    configName: 'config-ref-1',
     createdBy: 'user4',
     schemaId: 'https://mapcolonies.com/schemaWithRef/v1',
     version: 1,
@@ -145,7 +145,7 @@ export const configsMockData: NewConfig[] = [
     },
   },
   {
-    configName: 'configRef2',
+    configName: 'config-ref-2',
     createdBy: 'user5',
     schemaId: 'https://mapcolonies.com/schemaWithRef/v1',
     version: 1,
@@ -156,7 +156,7 @@ export const configsMockData: NewConfig[] = [
     },
   },
   {
-    configName: 'configRef3',
+    configName: 'config-ref-3',
     createdBy: 'user5',
     schemaId: 'https://mapcolonies.com/schemaWithRef/v1',
     version: 1,
@@ -167,7 +167,7 @@ export const configsMockData: NewConfig[] = [
     },
   },
   {
-    configName: 'primitiveConfig',
+    configName: 'primitive-config',
     createdBy: 'user5',
     schemaId: 'https://mapcolonies.com/primitiveSchema/v1',
     version: 1,
@@ -177,13 +177,13 @@ export const configsMockData: NewConfig[] = [
 
 export const refs: ConfigRef[] = [
   {
-    configName: 'configRef2',
+    configName: 'config-ref-2',
     version: 1,
     refConfigName: 'config3',
     refVersion: 1,
   },
   {
-    configName: 'configRef3',
+    configName: 'config-ref-3',
     version: 1,
     refConfigName: 'config3',
     refVersion: null,

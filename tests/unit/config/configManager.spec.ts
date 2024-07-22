@@ -85,6 +85,7 @@ describe('ConfigManager', () => {
         /* eslint-disable @typescript-eslint/naming-convention */
         created_at_gt: '2021-01-01T00:00:00Z',
         created_at_lt: '2021-01-02T00:00:00Z',
+        sort: [{ field: 'configName', order: 'asc' }],
         /* eslint-enable @typescript-eslint/naming-convention */
       };
       const configs = { configs: [], totalCount: 0 };
@@ -99,7 +100,8 @@ describe('ConfigManager', () => {
           createdAtGt: new Date('2021-01-01T00:00:00Z'),
           createdAtLt: new Date('2021-01-02T00:00:00Z'),
         },
-        {}
+        {},
+        [{ field: 'configName', order: 'asc' }]
       );
     });
   });

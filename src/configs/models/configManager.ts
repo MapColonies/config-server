@@ -3,13 +3,16 @@ import { inject, injectable } from 'tsyringe';
 import { Clone } from '@sinclair/typebox/value';
 import pointer, { JsonObject } from 'json-pointer';
 import { parseISO } from 'date-fns';
+import type { Prettify } from '../../common/interfaces';
 import { ConfigRepository, ConfigSearchParams, SqlPaginationParams } from '../repositories/configRepository';
 import { SERVICES } from '../../common/constants';
 import { paths, components } from '../../openapiTypes';
-import { Config } from './config';
+import { Config, SortOption } from './config';
 import { Validator } from './configValidator';
 import { ConfigNotFoundError, ConfigSchemaMismatchError, ConfigValidationError, ConfigVersionMismatchError } from './errors';
 import { ConfigReference } from './configReference';
+
+type GetConfigOptions = Prettify<Omit<NonNullable<paths['/config']['get']['parameters']['query']>, 'sort'> & { sort?: SortOption[] }>;
 
 @injectable()
 export class ConfigManager {
@@ -43,12 +46,17 @@ export class ConfigManager {
     return config;
   }
 
-  public async getConfigs(options?: paths['/config']['get']['parameters']['query']): Promise<{ configs: Config[]; totalCount: number }> {
+  public async getConfigs(options?: GetConfigOptions): Promise<{ configs: Config[]; totalCount: number }> {
     const searchParams: ConfigSearchParams = {};
     let paginationParams: SqlPaginationParams = {};
+    let sortParams: SortOption[] = [];
     if (options) {
-      const { offset, limit, ...querySearchParams } = options;
+      const { offset, limit, sort, ...querySearchParams } = options;
       paginationParams = { offset, limit };
+
+      if (sort !== undefined) {
+        sortParams = sort;
+      }
 
       searchParams.configName = querySearchParams.config_name;
       searchParams.q = querySearchParams.q;
@@ -63,7 +71,7 @@ export class ConfigManager {
       searchParams.createdBy = querySearchParams.created_by;
     }
 
-    return this.configRepository.getConfigs(searchParams, paginationParams);
+    return this.configRepository.getConfigs(searchParams, paginationParams, sortParams);
   }
 
   public async createConfig(config: Omit<components['schemas']['config'], 'createdAt' | 'createdBy'>): Promise<void> {

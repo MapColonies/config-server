@@ -171,6 +171,8 @@ export interface components {
     LimitQuery?: number;
     /** @description Search term for full-text search across relevant properties (implementation specific). */
     FullTextQuery?: string;
+    /** @description Sorts the results based on the value of one or more properties. The value is a comma-separated list of property names with an optional "-" prefix to indicate descending order. */
+    SortQuery?: string[];
     /** @description should the server bundle all refs into one config */
     ShouldDereferenceConfigQuery?: boolean;
   };
@@ -197,6 +199,7 @@ export interface operations {
         created_by?: components['parameters']['CreatedByQuery'];
         offset?: components['parameters']['OffsetQuery'];
         limit?: components['parameters']['LimitQuery'];
+        sort?: components['parameters']['SortQuery'];
       };
     };
     responses: {

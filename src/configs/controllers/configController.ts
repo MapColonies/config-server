@@ -8,13 +8,55 @@ import { ConfigManager } from '../models/configManager';
 import { TypedRequestHandler } from '../../common/interfaces';
 import type { components } from '../../openapiTypes';
 import { Config } from '../models/config';
-import { ConfigNotFoundError, ConfigSchemaMismatchError, ConfigValidationError, ConfigVersionMismatchError } from '../models/errors';
+import {
+  ConfigNotFoundError,
+  ConfigSchemaMismatchError,
+  ConfigValidationError,
+  ConfigVersionMismatchError,
+  SortQueryRepeatError,
+} from '../models/errors';
 
 function configMapper(config: Config): components['schemas']['config'] {
   return {
     ...config,
     createdAt: formatISO(config.createdAt),
   };
+}
+
+const sortFieldsMap = new Map<string, keyof Omit<Config, 'config'>>(
+  Object.entries({
+    /* eslint-disable @typescript-eslint/naming-convention */
+    'config-name': 'configName',
+    version: 'version',
+    'created-at': 'createdAt',
+    'schema-id': 'schemaId',
+    'created-by': 'createdBy',
+    /* eslint-enable @typescript-eslint/naming-convention */
+  })
+);
+
+function sortOptionParser(sortArray: components['parameters']['SortQuery']): { field: keyof Omit<Config, 'config'>; order: 'asc' | 'desc' }[] {
+  if (!sortArray) {
+    return [];
+  }
+
+  const parsedOptions: { field: keyof Omit<Config, 'config'>; order: 'asc' | 'desc' }[] = [];
+  const fieldSet = new Set<string>();
+
+  for (const option of sortArray) {
+    const [field, order] = option.split(':');
+
+    if (fieldSet.has(field)) {
+      throw new SortQueryRepeatError(`Duplicate field in sort query: ${field}`);
+    }
+    fieldSet.add(field);
+
+    const parsedField = sortFieldsMap.get(field) as keyof Omit<Config, 'config'>;
+
+    parsedOptions.push({ field: parsedField, order: (order as 'asc' | 'desc' | undefined) ?? 'asc' });
+  }
+
+  return parsedOptions;
 }
 
 @injectable()
@@ -26,10 +68,14 @@ export class ConfigController {
 
   public getConfigs: TypedRequestHandler<'/config', 'get'> = async (req, res, next) => {
     try {
-      const getConfigsResult = await this.manager.getConfigs(req.query);
+      const { sort, ...options } = req.query ?? {};
+      const getConfigsResult = await this.manager.getConfigs({ ...options, sort: sortOptionParser(sort) });
       const formattedConfigs = getConfigsResult.configs.map(configMapper);
       return res.status(httpStatus.OK).json({ configs: formattedConfigs, total: getConfigsResult.totalCount });
     } catch (error) {
+      if (error instanceof SortQueryRepeatError) {
+        (error as HttpError).status = httpStatus.UNPROCESSABLE_ENTITY;
+      }
       next(error);
     }
   };

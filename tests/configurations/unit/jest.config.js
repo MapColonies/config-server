@@ -15,6 +15,7 @@ module.exports = {
     '!**/db/**',
     '!**/routes/**',
     '!<rootDir>/src/*',
+    '!<rootDir>/src/configs/models/config.ts',
   ],
   coverageDirectory: '<rootDir>/coverage',
   setupFilesAfterEnv: ['jest-openapi', '<rootDir>/tests/configurations/initJestOpenapi.setup.ts'],

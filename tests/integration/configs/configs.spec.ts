@@ -1,5 +1,6 @@
 import 'jest-extended';
 import 'jest-openapi';
+import 'jest-sorted';
 
 import jsLogger, { Logger } from '@map-colonies/js-logger';
 import { trace } from '@opentelemetry/api';
@@ -12,7 +13,7 @@ import { SchemaManager } from '../../../src/schemas/models/schemaManager';
 import { Drizzle } from '../../../src/db/createConnection';
 import { getApp } from '../../../src/app';
 import { SERVICES } from '../../../src/common/constants';
-import { configs, configsRefs } from '../../../src/configs/models/config';
+import { Config, configs, configsRefs } from '../../../src/configs/models/config';
 import { ConfigRequestSender } from './helpers/requestSender';
 import { configsMockData, refs, schemaWithRef, simpleSchema, primitiveRefSchema, primitiveSchema } from './helpers/data';
 
@@ -146,6 +147,33 @@ describe('config', function () {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         expect(response.body.configs).toSatisfyAll((config) => config.version === 1);
       });
+
+      it('should return 200 and sort the configs by config name', async function () {
+        const response = await requestSender.getConfigs({ sort: ['config-name:asc'] });
+
+        expect(response.status).toBe(httpStatusCodes.OK);
+        expect(response).toSatisfyApiSpec();
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        expect(response.body.configs).toBeSortedBy('configName', { descending: false });
+      });
+
+      it('should return 200 and sort the configs by name and version', async function () {
+        const response = await requestSender.getConfigs({ sort: ['config-name:asc', 'version:desc'] });
+
+        expect(response.status).toBe(httpStatusCodes.OK);
+        expect(response).toSatisfyApiSpec();
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        expect(response.body.configs).toBeSorted({
+          descending: false,
+          compare: (a: Config, b: Config) => {
+            const nameCompare = a.configName.localeCompare(b.configName);
+            if (nameCompare !== 0) {
+              return nameCompare;
+            }
+            return b.version - a.version;
+          },
+        });
+      });
     });
 
     describe('Bad Path', function () {
@@ -168,6 +196,20 @@ describe('config', function () {
         const response = await requestSender.getConfigs({ limit: 'invalid' as unknown as number });
 
         expect(response.status).toBe(httpStatusCodes.BAD_REQUEST);
+        expect(response).toSatisfyApiSpec();
+      });
+
+      it('should return 400 if a bad sort query option is provided', async function () {
+        const response = await requestSender.getConfigs({ sort: ['config-name:ascc'] });
+
+        expect(response.status).toBe(httpStatusCodes.BAD_REQUEST);
+        expect(response).toSatisfyApiSpec();
+      });
+
+      it('should return 422 status code when a sort option is repeated', async function () {
+        const response = await requestSender.getConfigs({ sort: ['config-name:asc', 'config-name:desc'] });
+
+        expect(response.status).toBe(httpStatusCodes.UNPROCESSABLE_ENTITY);
         expect(response).toSatisfyApiSpec();
       });
     });

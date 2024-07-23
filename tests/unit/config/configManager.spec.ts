@@ -52,6 +52,20 @@ describe('ConfigManager', () => {
       expect(result).toStrictEqual({ ...config, config: { avi: { test: 'test' } } });
     });
 
+    it('should return the config with it being dereferenced when the ref is in the root of the object', async () => {
+      // @ts-expect-error ts wants this to be a predicate
+      configValidator.validateRef = jest.fn().mockResolvedValue(true);
+      const config = {
+        config: { $ref: { configName: 'refName', version: 1 } },
+      };
+      const refs: ConfigRefResponse[] = [{ config: { test: 'test' }, configName: 'refName', version: 1, isMaxVersion: false }];
+      configRepository.getConfigRecursive = jest.fn().mockResolvedValue([config, refs]);
+
+      const result = await configManager.getConfig('configName', 1, true);
+
+      expect(result).toStrictEqual({ ...config, config: { test: 'test' } });
+    });
+
     it('should throw ConfigNotFoundError when the config does not exist', async () => {
       configRepository.getConfig = jest.fn().mockResolvedValue(null);
 

@@ -389,6 +389,23 @@ describe('config', function () {
         expect(response.status).toBe(httpStatusCodes.CREATED);
         expect(response).toSatisfyApiSpec();
       });
+
+      it('should return 201 and create a config that is a root ref to another config', async function () {
+        const response = await requestSender.postConfig({
+          configName: 'config-root-ref',
+          schemaId: 'https://mapcolonies.com/simpleSchema/v1',
+          version: 1,
+          config: {
+            $ref: {
+              configName: 'config1',
+              version: 'latest',
+            },
+          },
+        });
+
+        expect(response.status).toBe(httpStatusCodes.CREATED);
+        expect(response).toSatisfyApiSpec();
+      });
     });
 
     describe('Bad Path', function () {

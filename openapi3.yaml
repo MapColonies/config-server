@@ -366,6 +366,9 @@ components:
           readOnly: true
           allOf:
             - $ref: '#/components/schemas/createdBy'
+        isLatest:
+          type: boolean
+          readOnly: true
     capabilities:
       type: object
       required: [serverVersion, schemasPackageVersion, pubSubEnabled]

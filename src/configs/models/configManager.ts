@@ -173,6 +173,11 @@ export class ConfigManager {
         replacementValue = { ...prevValue, ...config.config };
       }
 
+      if (path === '') {
+        Object.assign(obj, replacementValue);
+        return;
+      }
+
       pointer.set(obj, path, replacementValue);
     }
   }

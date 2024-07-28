@@ -1,4 +1,4 @@
-import { Logger, SQL, SQLWrapper, and, asc, desc, eq, gt, isNull, lt, max, or, sql } from 'drizzle-orm';
+import { Logger, SQL, SQLWrapper, and, asc, desc, eq, gt, isNull, lt, or, sql } from 'drizzle-orm';
 import { inject, scoped, Lifecycle } from 'tsyringe';
 import { toDate } from 'date-fns-tz';
 import { SERVICES } from '../../common/constants';

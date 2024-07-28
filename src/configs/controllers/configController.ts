@@ -7,7 +7,7 @@ import { SERVICES } from '../../common/constants';
 import { ConfigManager } from '../models/configManager';
 import { TypedRequestHandler } from '../../common/interfaces';
 import type { components } from '../../openapiTypes';
-import { Config } from '../models/config';
+import { Config, SortOption, SortableFields } from '../models/config';
 import {
   ConfigNotFoundError,
   ConfigSchemaMismatchError,
@@ -23,7 +23,7 @@ function configMapper(config: Config): components['schemas']['config'] {
   };
 }
 
-const sortFieldsMap = new Map<string, keyof Omit<Config, 'config'>>(
+const sortFieldsMap = new Map<string, SortableFields>(
   Object.entries({
     /* eslint-disable @typescript-eslint/naming-convention */
     'config-name': 'configName',
@@ -35,12 +35,12 @@ const sortFieldsMap = new Map<string, keyof Omit<Config, 'config'>>(
   })
 );
 
-function sortOptionParser(sortArray: components['parameters']['SortQuery']): { field: keyof Omit<Config, 'config'>; order: 'asc' | 'desc' }[] {
+function sortOptionParser(sortArray: components['parameters']['SortQuery']): SortOption[] {
   if (!sortArray) {
     return [];
   }
 
-  const parsedOptions: { field: keyof Omit<Config, 'config'>; order: 'asc' | 'desc' }[] = [];
+  const parsedOptions: SortOption[] = [];
   const fieldSet = new Set<string>();
 
   for (const option of sortArray) {
@@ -51,7 +51,7 @@ function sortOptionParser(sortArray: components['parameters']['SortQuery']): { f
     }
     fieldSet.add(field);
 
-    const parsedField = sortFieldsMap.get(field) as keyof Omit<Config, 'config'>;
+    const parsedField = sortFieldsMap.get(field) as SortableFields;
 
     parsedOptions.push({ field: parsedField, order: (order as 'asc' | 'desc' | undefined) ?? 'asc' });
   }

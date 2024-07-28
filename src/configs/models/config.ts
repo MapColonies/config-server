@@ -47,7 +47,9 @@ export type NewConfig = typeof configs.$inferInsert;
 export type ConfigRef = typeof configsRefs.$inferSelect;
 export type NewConfigRef = typeof configsRefs.$inferInsert;
 
+export type SortableFields = keyof Omit<Config, 'config'>;
+
 export interface SortOption {
-  field: keyof Omit<Config, 'config'>;
+  field: SortableFields;
   order: 'asc' | 'desc';
 }

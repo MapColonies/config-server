@@ -58,7 +58,7 @@ describe('ConfigManager', () => {
       const config = {
         config: { $ref: { configName: 'refName', version: 1 } },
       };
-      const refs: ConfigRefResponse[] = [{ config: { test: 'test' }, configName: 'refName', version: 1, isMaxVersion: false }];
+      const refs: ConfigRefResponse[] = [{ config: { test: 'test' }, configName: 'refName', version: 1, isLatest: false }];
       configRepository.getConfigRecursive = jest.fn().mockResolvedValue([config, refs]);
 
       const result = await configManager.getConfig('configName', 1, true);

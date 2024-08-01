@@ -1,9 +1,9 @@
-import { Logger, SQL, SQLWrapper, and, eq, gt, lt, sql, or, isNull } from 'drizzle-orm';
+import { Logger, SQL, SQLWrapper, and, asc, desc, eq, gt, isNull, lt, or, sql } from 'drizzle-orm';
 import { inject, scoped, Lifecycle } from 'tsyringe';
 import { toDate } from 'date-fns-tz';
 import { SERVICES } from '../../common/constants';
 import type { Drizzle } from '../../db/createConnection';
-import { type Config, type NewConfig, type NewConfigRef, configs, configsRefs } from '../models/config';
+import { type Config, type NewConfig, type NewConfigRef, configs, configsRefs, SortOption } from '../models/config';
 import type { ConfigReference } from '../models/configReference';
 import { ConfigNotFoundError } from '../models/errors';
 
@@ -271,9 +271,12 @@ export class ConfigRepository {
    */
   public async getConfigs(
     searchParams: ConfigSearchParams,
-    paginationParams: SqlPaginationParams = { limit: 1, offset: 0 }
+    paginationParams: SqlPaginationParams = { limit: 1, offset: 0 },
+    sortingParams: SortOption[] = []
   ): Promise<{ configs: Config[]; totalCount: number }> {
     const filterParams: SQLWrapper[] = this.getFilterParams(searchParams);
+
+    const orderByParams = sortingParams.map((sort) => (sort.order === 'asc' ? asc(configs[sort.field]) : desc(configs[sort.field])));
 
     const configsQuery = this.drizzle
       .select({
@@ -289,7 +292,8 @@ export class ConfigRepository {
       .from(configs)
       .where(and(...filterParams))
       .offset(paginationParams.offset ?? DEFAULT_OFFSET)
-      .limit(paginationParams.limit ?? DEFAULT_LIMIT);
+      .limit(paginationParams.limit ?? DEFAULT_LIMIT)
+      .orderBy(...orderByParams);
 
     const configsResult = await configsQuery.execute();
 

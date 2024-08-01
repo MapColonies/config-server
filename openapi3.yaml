@@ -19,6 +19,7 @@ paths:
         - $ref: '#/components/parameters/CreatedByQuery'
         - $ref: '#/components/parameters/OffsetQuery'
         - $ref: '#/components/parameters/LimitQuery'
+        - $ref: '#/components/parameters/SortQuery'
       operationId: getConfigs
       summary: get configs based on filters
       responses:
@@ -36,9 +37,10 @@ paths:
                       $ref: '#/components/schemas/config'
                   total:
                     type: integer
-
         '400':
           $ref: '#/components/responses/400BadRequest'
+        '422':
+          $ref: '#/components/responses/422UnprocessableEntity'
         '500':
           $ref: '#/components/responses/500InternalServerError'
     post:
@@ -197,6 +199,12 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/error'
+    422UnprocessableEntity:
+      description: Unprocessable Entity
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/error'
     500InternalServerError:
       description: Internal Server Error
       content:
@@ -274,6 +282,23 @@ components:
       required: false
       schema:
         type: string
+    SortQuery:
+      name: sort
+      in: query
+      description: "Sorts the results based on the value of one or more properties.\n
+        The value is a comma-separated list of property names and sort order.\n
+        properties should be separated by a colon and sort order should be either asc or desc. For example: configName:asc,schemaId:desc\n
+        The default sort order is ascending. If the sort order is not specified, the default sort order is used.
+        Each property is only allowed to appear once in the list."
+      example: [config-name:asc, schema-id:desc, version]
+      required: false
+      schema:
+        type: array
+        uniqueItems: true
+        items:
+          example: config-name:asc
+          type: string
+          pattern: ^(config-name|schema-id|version|created-at|created-by)(:asc|:desc){0,1}$
     ShouldDereferenceConfigQuery:
       name: shouldDereference
       in: query

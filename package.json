@@ -102,6 +102,7 @@
     "jest-extended": "^4.0.2",
     "jest-html-reporters": "^3.1.4",
     "jest-openapi": "^0.14.2",
+    "jest-sorted": "^1.0.15",
     "openapi-typescript": "^6.7.5",
     "prettier": "^3.2.5",
     "prettier-plugin-embed": "^0.4.15",

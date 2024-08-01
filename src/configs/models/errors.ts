@@ -25,3 +25,10 @@ export class ConfigValidationError extends Error {
     Object.setPrototypeOf(this, ConfigValidationError.prototype);
   }
 }
+
+export class SortQueryRepeatError extends Error {
+  public constructor(message: string) {
+    super(message);
+    Object.setPrototypeOf(this, SortQueryRepeatError.prototype);
+  }
+}

@@ -14,7 +14,8 @@ import { Drizzle } from '../../../src/db/createConnection';
 import { getApp } from '../../../src/app';
 import { SERVICES } from '../../../src/common/constants';
 import { Config, configs, configsRefs } from '../../../src/configs/models/config';
-import { ConfigRequestSender } from './helpers/requestSender';
+// import { ConfigRequestSender as RequestSender } from './helpers/requestSender';
+import { RequestSender } from '../helpers/requestSender';
 import { configsMockData, refs, schemaWithRef, simpleSchema, primitiveRefSchema, primitiveSchema } from './helpers/data';
 
 async function getSchemaMock(id: string): Promise<JSONSchema> {
@@ -33,7 +34,7 @@ async function getSchemaMock(id: string): Promise<JSONSchema> {
 }
 
 describe('config', function () {
-  let requestSender: ConfigRequestSender;
+  let requestSender: ReturnType<typeof RequestSender>;
   let dependencyContainer: DependencyContainer;
   beforeAll(async function () {
     const [app, container] = await getApp({
@@ -54,7 +55,7 @@ describe('config', function () {
       ],
       useChild: true,
     });
-    requestSender = new ConfigRequestSender(app);
+    requestSender = RequestSender('openapi3.yaml', app);
     dependencyContainer = container;
     const drizzle = dependencyContainer.resolve<Drizzle>(SERVICES.DRIZZLE);
     await drizzle.insert(configs).values(configsMockData);
@@ -69,7 +70,12 @@ describe('config', function () {
   describe('GET /config', function () {
     describe('Happy Path', function () {
       it('should return 200 status code and the configs', async function () {
-        const response = await requestSender.getConfigs({});
+        // const response = await requestSender.getConfigs({});
+        const response = await requestSender.sendRequest({
+          method: 'get',
+          path: '/config',
+          queryParams: {},
+        });
 
         expect(response.status).toBe(httpStatusCodes.OK);
         expect(response).toSatisfyApiSpec();
@@ -78,7 +84,12 @@ describe('config', function () {
       });
 
       it('should return 200 status code and the configs with pagination', async function () {
-        const response = await requestSender.getConfigs({ limit: 1, offset: 1 });
+        // const response = await requestSender.getConfigs({ limit: 1, offset: 1 });
+        const response = await requestSender.sendRequest({
+          method: 'get',
+          path: '/config',
+          queryParams: { limit: 1, offset: 1 },
+        });
 
         expect(response.status).toBe(httpStatusCodes.OK);
         expect(response).toSatisfyApiSpec();
@@ -89,13 +100,25 @@ describe('config', function () {
 
       it('should return 200 status code and filter the configs', async function () {
         /* eslint-disable @typescript-eslint/naming-convention */
-        const response = await requestSender.getConfigs({
-          config_name: 'config2',
-          version: 1,
-          schema_id: 'https://mapcolonies.com/simpleSchema/v1',
-          created_by: 'user3',
-          created_at_gt: '2000-01-01T00:00:00Z',
-          created_at_lt: '2002-01-02T00:00:00Z',
+        // const response = await requestSender.getConfigs({
+        //   config_name: 'config2',
+        //   version: 1,
+        //   schema_id: 'https://mapcolonies.com/simpleSchema/v1',
+        //   created_by: 'user3',
+        //   created_at_gt: '2000-01-01T00:00:00Z',
+        //   created_at_lt: '2002-01-02T00:00:00Z',
+        // });
+        const response = await requestSender.sendRequest({
+          method: 'get',
+          path: '/config',
+          queryParams: {
+            config_name: 'config2',
+            version: 1,
+            schema_id: 'https://mapcolonies.com/simpleSchema/v1',
+            created_by: 'user3',
+            created_at_gt: '2000-01-01T00:00:00Z',
+            created_at_lt: '2002-01-02T00:00:00Z',
+          },
         });
         /* eslint-enable @typescript-eslint/naming-convention */
 
@@ -291,7 +314,13 @@ describe('config', function () {
   describe('GET /config/{name}/{version}', function () {
     describe('Happy Path', function () {
       it('should return 200 status code and the configs', async function () {
-        const response = await requestSender.getConfigByVersion('config1', 1);
+        // const response = await requestSender.getConfigByVersion('config1', 1);
+        const response = await requestSender.sendRequest({
+          method: 'get',
+          path: '/config/{name}/{version}',
+          pathParams: { name: 'config1', version: 1 },
+          queryParams: {},
+        });
 
         expect(response.status).toBe(httpStatusCodes.OK);
         expect(response).toSatisfyApiSpec();

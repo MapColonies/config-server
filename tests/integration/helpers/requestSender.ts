@@ -85,7 +85,7 @@ type RequestSenderObj = {
 const methods = ['get', 'post', 'put', 'delete', 'patch'] as const;
 
 function getOperationPathAndMethod(openapi: Awaited<ReturnType<OASNormalize['deref']>>): Record<OperationsNames, { path: string; method: string }> {
-  const result = {};
+  const result = {} as Record<OperationsNames, { path: string; method: string }>;
 
   if (openapi.paths === undefined) {
     throw new Error('No paths found in the OpenAPI file');
@@ -106,6 +106,7 @@ function getOperationPathAndMethod(openapi: Awaited<ReturnType<OASNormalize['der
           throw new Error(`OperationId is not defined for ${method} method on ${path}`);
         }
 
+        // @ts-ignore
         result[operationId] = {
           path,
           method,
@@ -121,14 +122,22 @@ function getOperationPathAndMethod(openapi: Awaited<ReturnType<OASNormalize['der
 export async function RequestSender(openapiFilePath: string, app: Express.Application): Promise<RequestSenderObj> {
   const fileContent = readFileSync(openapiFilePath, 'utf-8');
   const normalized = new OASNormalize(fileContent);
-  const bundled = await normalized.deref();
+  const derefed = await normalized.deref();
+  const operationPathAndMethod = getOperationPathAndMethod(derefed);
+  
   // const openapi = await parse(fileContent);
-  openapi.paths;
   // @ts-ignore
-  return {
+  const returnObj: RequestSenderObj = {
     // eslint-disable-next-line @typescript-eslint/promise-function-async
     sendRequest: (options) => sendRequest(app, options),
-  };
+  }
+
+  for (const [operation, { path, method }] of Object.entries(operationPathAndMethod)) {
+    // @ts-ignore
+    returnObj[operation] = async (options) => sendRequest(app, { path, method, ...options});
+  }
+
+  return returnObj;
 }
 
 // const requestSender = await RequestSender();

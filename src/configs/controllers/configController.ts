@@ -35,7 +35,7 @@ const sortFieldsMap = new Map<string, SortableFields>(
   })
 );
 
-function sortOptionParser(sortArray: components['parameters']['SortQuery']): SortOption[] {
+function sortOptionParser(sortArray?: components['parameters']['SortQuery']): SortOption[] {
   if (!sortArray) {
     return [];
   }

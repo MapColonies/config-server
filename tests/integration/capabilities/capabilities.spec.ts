@@ -4,10 +4,12 @@ import httpStatusCodes from 'http-status-codes';
 import { DependencyContainer } from 'tsyringe';
 import { getApp } from '../../../src/app';
 import { SERVICES } from '../../../src/common/constants';
-import { SchemaRequestSender } from './helpers/requestSender';
+import { RequestSender } from '../helpers/requestSender';
+
+// import { SchemaRequestSender } from './helpers/requestSender';
 
 describe('capabilities', function () {
-  let requestSender: SchemaRequestSender;
+  let requestSender: Awaited<ReturnType<typeof RequestSender>>;
   let dependencyContainer: DependencyContainer;
   beforeEach(async function () {
     const [app, container] = await getApp({
@@ -17,7 +19,7 @@ describe('capabilities', function () {
       ],
       useChild: true,
     });
-    requestSender = new SchemaRequestSender(app);
+    requestSender = await RequestSender('openapi3.yaml', app);
     dependencyContainer = container;
   });
 
@@ -29,7 +31,7 @@ describe('capabilities', function () {
   describe('/capabilities', function () {
     describe('Happy Path', function () {
       it('should return 200 status code and the capabilities', async function () {
-        const response = await requestSender.getCapabilities();
+        const response = await requestSender.getCapabilities({});
 
         expect(response.status).toBe(httpStatusCodes.OK);
 

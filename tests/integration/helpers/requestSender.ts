@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import supertest from 'supertest';
 import { OpenAPIV3 } from 'openapi-types';
 import OASNormalize from 'oas-normalize';
+import type { IsNever, NonNever, OptionalKeys, RequiredKeys, WritableKeys } from 'ts-essentials';
 import { paths, operations } from '../../../src/openapiTypes';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -9,13 +10,28 @@ import { paths, operations } from '../../../src/openapiTypes';
 // type HasRequestBody<T> = T extends { requestBody: any } ? T['requestBody']['content']['application/json'] : undefined;
 // type HasQueryParams<T> = T extends { parameters: { query?: NonNullable<any> } } ? T['parameters']['query'] : undefined;
 
+type Methods = 'get' | 'post' | 'put' | 'delete' | 'patch';
+
 type HasResponse<T> = T extends { responses: { ['200']: any } } ? T['responses']['200']['content']['application/json'] : undefined;
 type PathParamsObj<T> = T extends { parameters: { path: NonNullable<any> } } ? { pathParams: T['parameters']['path'] } : { pathParams?: undefined };
+
+// type QueryParamsObj<T> = T extends { parameters: { query?: NonNullable<any> } }
+//   ? // ? RequiredKeys<T['parameters']['query']> extends OptionalKeys<T['parameters']['query']>
+//     T extends { parameters: { query?: never } }
+//     ? { queryParams?: any }
+//     : { queryParams: T['parameters']['query'] }
+//   : { queryParams?: any };
+
 type QueryParamsObj<T> = T extends { parameters: { query?: NonNullable<any> } }
-  ? { queryParams: T['parameters']['query'] }
+  ? T extends { parameters: { query?: never } }
+    ? { queryParams?: Record<string, string> }
+    : RequiredKeys<T['parameters']['query']> extends OptionalKeys<T['parameters']['query']>
+      ? { queryParams?: T['parameters']['query'] }
+      : { queryParams: T['parameters']['query'] }
   : { queryParams?: Record<string, string> };
+
 type RequestBodyObj<T> = T extends { requestBody: { content: any } }
-  ? { requestBody: T['requestBody']['content']['application/json'] }
+  ? { requestBody: Pick<T['requestBody']['content']['application/json'], WritableKeys<T['requestBody']['content']['application/json']>> }
   : { requestBody?: any };
 
 type PathRequestOptions<Path extends keyof paths, Method extends keyof paths[Path]> = { path: Path; method: Method } & PathParamsObj<
@@ -35,7 +51,7 @@ function sendRequest<Path extends keyof paths, Method extends keyof paths[Path]>
   app: Express.Application,
   options: PathRequestOptions<Path, Method>
 ): PathRequestReturn<Path, Method> {
-  const method = options.method as 'get' | 'post' | 'put' | 'delete' | 'patch';
+  const method = options.method as Methods;
 
   let actualPath = options.path as string;
 
@@ -84,7 +100,9 @@ type RequestSenderObj = {
 
 const methods = ['get', 'post', 'put', 'delete', 'patch'] as const;
 
-function getOperationPathAndMethod(openapi: Awaited<ReturnType<OASNormalize['deref']>>): Record<OperationsNames, { path: string; method: string }> {
+function getOperationPathAndMethod(
+  openapi: Awaited<ReturnType<OASNormalize['deref']>>
+): Record<OperationsNames, { path: keyof paths; method: Methods }> {
   const result = {} as Record<OperationsNames, { path: string; method: string }>;
 
   if (openapi.paths === undefined) {
@@ -115,7 +133,7 @@ function getOperationPathAndMethod(openapi: Awaited<ReturnType<OASNormalize['der
     }
   }
 
-  return result as Record<OperationsNames, { path: string; method: string }>;
+  return result as Record<OperationsNames, { path: keyof paths; method: Methods }>;
 }
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -124,26 +142,19 @@ export async function RequestSender(openapiFilePath: string, app: Express.Applic
   const normalized = new OASNormalize(fileContent);
   const derefed = await normalized.deref();
   const operationPathAndMethod = getOperationPathAndMethod(derefed);
-  
+
   // const openapi = await parse(fileContent);
-  // @ts-ignore
-  const returnObj: RequestSenderObj = {
+  const returnObj = {
     // eslint-disable-next-line @typescript-eslint/promise-function-async
-    sendRequest: (options) => sendRequest(app, options),
-  }
+    sendRequest: <Path extends keyof paths, Method extends keyof paths[Path]>(options: PathRequestOptions<Path, Method>) => sendRequest(app, options),
+  };
 
   for (const [operation, { path, method }] of Object.entries(operationPathAndMethod)) {
     // @ts-ignore
-    returnObj[operation] = async (options) => sendRequest(app, { path, method, ...options});
+    // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+    returnObj[operation] = async <Operation extends OperationsNames>(options: OperationRequestOptions<Operation>) =>
+      sendRequest(app, { path, method: method as 'get', ...options });
   }
 
-  return returnObj;
+  return returnObj as RequestSenderObj;
 }
-
-// const requestSender = await RequestSender();
-
-// const a = requestSender.getConfigs({
-//   queryParams: {
-
-//   }
-// });

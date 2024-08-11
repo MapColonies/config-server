@@ -1,11 +1,13 @@
 /* eslint-disable */
 import fs from 'node:fs';
 import { format, resolveConfig } from 'prettier';
-import openapiTS from 'openapi-typescript';
+import openapiTS, { astToString } from 'openapi-typescript';
 
 const ESLINT_DISABLE = '/* eslint-disable */\n';
 
-const content = ESLINT_DISABLE + (await openapiTS(new URL('../openapi3.yaml', import.meta.url)));
+const ast = await openapiTS(new URL('../openapi3.yaml', import.meta.url));
+
+const content = ESLINT_DISABLE + astToString(ast);
 
 const prettierOptions = await resolveConfig('./src/index.ts');
 

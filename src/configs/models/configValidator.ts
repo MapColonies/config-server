@@ -1,4 +1,5 @@
-import Ajv, { AnySchemaObject, ErrorObject, ValidateFunction } from 'ajv';
+import { readFileSync } from 'node:fs';
+import Ajv, { AnySchemaObject, ErrorObject, ValidateFunction } from 'ajv/dist/2019';
 import { injectable } from 'tsyringe';
 import addFormats from 'ajv-formats';
 import betterAjvErrors, { type IOutputError } from '@sidvind/better-ajv-errors';
@@ -11,6 +12,9 @@ export class Validator {
   private readonly ajvRefValidator: ValidateFunction;
 
   public constructor(private readonly schemaManager: SchemaManager) {
+    const draft7MetaSchema = JSON.parse(
+      readFileSync(require.resolve('ajv/dist/refs/json-schema-draft-07.json'), { encoding: 'utf-8' })
+    ) as AnySchemaObject;
     this.ajv = addFormats(
       new Ajv({
         loadSchema: async (uri): Promise<AnySchemaObject> => {
@@ -18,9 +22,10 @@ export class Validator {
         },
         keywords: ['x-env-value'],
         useDefaults: true,
-      }),
-      ['date-time', 'time', 'date', 'email', 'hostname', 'ipv4', 'ipv6', 'uri', 'uuid', 'regex', 'uri-template']
+      })
     );
+
+    this.ajv.addMetaSchema(draft7MetaSchema, 'http://json-schema.org/draft-07/schema#');
 
     this.ajvRefValidator = this.ajv.compile(configReferenceSchema);
   }

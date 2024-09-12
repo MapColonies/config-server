@@ -44,7 +44,7 @@ paths:
         '500':
           $ref: '#/components/responses/500InternalServerError'
     post:
-      operationId: getConfigsByName
+      operationId: upsertConfig
       summary: Create a new config or a new version of an existing config
       requestBody:
         required: true

@@ -24,6 +24,12 @@
     }
   },
   "server": {
+    "staticAssets": {
+      "enabled": {
+        "__name": "SERVER_ENABLE_STATIC",
+        "__format": "boolean"
+      }
+    },
     "port": "SERVER_PORT",
     "request": {
       "payload": {

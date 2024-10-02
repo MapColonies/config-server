@@ -46,9 +46,12 @@ export class ServerBuilder {
   }
 
   private buildRoutes(): void {
-    this.serverInstance.use('/schema', this.schemaRouter);
-    this.serverInstance.use('/capabilities', this.capabilitiesRouter);
-    this.serverInstance.use('/config', this.configRouter);
+    const router = Router();
+    router.use('/schema', this.schemaRouter);
+    router.use('/capabilities', this.capabilitiesRouter);
+    router.use('/config', this.configRouter);
+    this.serverInstance.use(this.config.get('server.apiPrefix'), router);
+
     this.buildDocsRoutes();
   }
 
@@ -62,6 +65,12 @@ export class ServerBuilder {
 
     this.serverInstance.use(bodyParser.json(this.config.get<bodyParser.Options>('server.request.payload')));
     this.serverInstance.use(getTraceContexHeaderMiddleware());
+
+    const isStaticEnabled = this.config.get<boolean>('server.staticAssets.enabled');
+    if (isStaticEnabled) {
+      const staticPath = this.config.get<string>('server.staticAssets.folder');
+      this.serverInstance.use(express.static(staticPath));
+    }
 
     const ignorePathRegex = new RegExp(`^${this.config.get<string>('openapiConfig.basePath')}/.*`, 'i');
     const apiSpecPath = this.config.get<string>('openapiConfig.filePath');

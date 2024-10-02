@@ -5,7 +5,7 @@ WORKDIR /tmp/buildApp
 
 COPY ./package*.json ./
 
-RUN npm install
+RUN npm ci
 COPY . .
 RUN npm run build
 
@@ -15,7 +15,7 @@ RUN apk add dumb-init
 
 ENV NODE_ENV=production
 ENV SERVER_PORT=8080
-
+ENV SERVER_ENABLE_STATIC=true
 
 WORKDIR /usr/src/app
 

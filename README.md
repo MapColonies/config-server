@@ -1,118 +1,52 @@
-# Map Colonies typescript service template
+# Config-Server
+This server is the API for MapColonies configuration management system. It is responsible for managing the configuration of the services in the system.
 
-----------------------------------
+## Schemas package
+The server depends on the [schemas package](https://github.com/MapColonies/schemas) to load and validate the configuration schemas. The schemas package is a separate package and the server should be updated when a new version of the schemas package is released.
 
-This is a basic repo template for building new MapColonies web services in Typescript.
+## Development
+To run the server locally the following steps are required.
 
-### Template Features:
-
-- eslint configuration by [@map-colonies/eslint-config](https://github.com/MapColonies/eslint-config)
-
-- prettier configuration by [@map-colonies/prettier-config](https://github.com/MapColonies/prettier-config)
-
-- jest
-
-- .nvmrc
-
-- Multi stage production-ready Dockerfile
-
-- commitlint
-
-- git hooks
-
-- logging by [@map-colonies/js-logger](https://github.com/MapColonies/js-logger)
-
-- OpenAPI request validation
-
-- config load with [node-config](https://www.npmjs.com/package/node-config)
-
-- Tracing and metrics by [@map-colonies/telemetry](https://github.com/MapColonies/telemetry)
-
-- github templates
-
-- bug report
-
-- feature request
-
-- pull request
-
-- github actions
-
-- on pull_request
-
-- LGTM
-
-- test
-
-- lint
-
-- snyk
-
-## API
-Checkout the OpenAPI spec [here](/openapi3.yaml)
-
-## Installation
-
-Install deps with npm
-
+1. Clone the repository
+```bash
+git clone git@github.com:MapColonies/config-server.git
+```
+2. Install the dependencies
 ```bash
 npm install
 ```
-### Install Git Hooks
+3. create a local configuration file under the config folder named `local.json` and fill it with the required configuration. Check the `config/default.json` file for the required configuration.
+4. Run the migrations
 ```bash
-npx husky install
+npm run migration:run
+```
+5. Run the server
+```bash
+npm run start:dev
 ```
 
-## Run Locally
-
-Clone the project
-
+### Creating a new migration
+To create a new migration file run the following command:
 ```bash
-
-git clone https://link-to-project
-
+npm run migration:create
 ```
 
-Go to the project directory
-
+## Testing
+To run the tests run the following command:
 ```bash
-
-cd my-project
-
-```
-
-Install dependencies
-
-```bash
-
-npm install
-
-```
-
-Start the server
-
-```bash
-
-npm run start
-
-```
-
-## Running Tests
-
-To run tests, run the following command
-
-```bash
-
 npm run test
-
 ```
+Make sure you have set the testing configuration.
 
-To only run unit tests:
+## Deployment
+The server is deployed using docker and a helm chart. To build the docker image run the following command:
 ```bash
-npm run test:unit
+docker build -t <your-org>/config-server:<tag> .
 ```
 
-To only run integration tests:
+If needed, it's possible to run the migrations straight from the docker image by running the following command:
 ```bash
-npm run test:integration
+docker run --rm <your-org>/config-server:<tag> node ./db/runMi
+grations.js
 ```
+Don't forget to set the required environment variables.

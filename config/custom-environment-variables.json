@@ -24,11 +24,13 @@
     }
   },
   "server": {
+    "apiPrefix": "SERVER_API_PREFIX",
     "staticAssets": {
       "enabled": {
         "__name": "SERVER_ENABLE_STATIC",
         "__format": "boolean"
-      }
+      },
+      "folder": "SERVER_STATIC_FOLDER"
     },
     "port": "SERVER_PORT",
     "request": {

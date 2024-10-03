@@ -72,15 +72,30 @@ env:
     enabled: false
     url: http://localhost:55681/v1/metrics
 
+dbConfig:
+  host: localhost
+  username: postgres
+  password: postgres
+  database: config-server
+  # port: 5432
+  externalSecretName: ''
+  useExternalSecret: false
+  sslAuth:
+    enabled: false
+    secretName: secret-name
+    certFileName: certFile
+    keyFileName: keyFile
+    caFileName: caFile
+
 resources:
   enabled: true
   value:
     limits:
-      cpu: 100m
-      memory: 128Mi
+      cpu: 600m
+      memory: 256Mi
     requests:
-      cpu: 100m
-      memory: 128Mi
+      cpu: 150m
+      memory: 256Mi
 
 route:
   enabled: true

@@ -58,6 +58,11 @@ spec:
           {{- end }}
           {{- end }}
           volumeMounts:
+            {{- if .Values.dbConfig.sslAuth.enabled }}
+            - name: cert-conf
+              mountPath: /tmp/certs
+              readOnly: true
+            {{- end }}
             {{- if .Values.caSecretName }}
             - mountPath: {{ printf "%s/%s" .Values.caPath .Values.caKey | quote }}
               name: root-ca
@@ -81,6 +86,8 @@ spec:
           envFrom:
             - configMapRef:
                 name: {{ printf "%s-configmap" (include "config-server.fullname" .) }}
+            - secretRef:
+                name: {{ printf "%s-secret" (include "config-server.fullname" .) }}
           ports:
             - name: http
               containerPort: {{ .Values.env.targetPort }}
@@ -113,7 +120,12 @@ spec:
       volumes:
         - name: nginx-config
           configMap:
-            name: 'nginx-extra-configmap'      
+            name: 'nginx-extra-configmap'
+      {{- if .Values.dbConfig.sslAuth.enabled }}
+        - name: cert-conf
+          secret:
+            secretName: {{ .Values.dbConfig.sslAuth.secretName }}
+      {{- end }}
         {{- if .Values.caSecretName }}
         - name: root-ca
           secret:

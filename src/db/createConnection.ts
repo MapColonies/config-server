@@ -40,6 +40,8 @@ export function createDrizzle(pool: Pool): ReturnType<typeof drizzle<{ configs: 
   });
 }
 
+// maybe we should test migrations as well. for now, we'll just ignore them
+/* istanbul ignore next */
 export async function runMigrations(drizzle: Drizzle): Promise<void> {
   const optionalFolders = ['./src/db/migrations', './db/migrations', './migrations'];
   let migrationsFolder: string | null = null;

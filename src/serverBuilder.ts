@@ -27,7 +27,7 @@ export class ServerBuilder {
     @inject(CONFIG_ROUTER_SYMBOL) private readonly configRouter: Router
   ) {
     this.serverInstance = express();
-    this.openapiFilePath = this.config.get<string>('openapiConfig.filePath')
+    this.openapiFilePath = this.config.get<string>('openapiConfig.filePath');
   }
 
   public build(): express.Application {
@@ -69,13 +69,16 @@ export class ServerBuilder {
     this.serverInstance.use(getTraceContexHeaderMiddleware());
 
     const ignorePathRegex = new RegExp(`^${this.config.get<string>('openapiConfig.basePath')}/.*`, 'i');
-    this.serverInstance.use(this.config.get<string>('server.apiPrefix'), OpenApiMiddleware({ apiSpec: this.openapiFilePath, validateRequests: true, ignorePaths: ignorePathRegex }));
+    this.serverInstance.use(
+      this.config.get<string>('server.apiPrefix'),
+      OpenApiMiddleware({ apiSpec: this.openapiFilePath, validateRequests: true, ignorePaths: ignorePathRegex })
+    );
   }
 
   private registerPostRoutesMiddleware(): void {
     const isStaticEnabled = this.config.get<boolean>('server.staticAssets.enabled');
     console.log('isStaticEnabled', isStaticEnabled);
-    
+
     if (isStaticEnabled) {
       const staticPath = this.config.get<string>('server.staticAssets.folder');
       // we use the static middleware twice. the second one is to catch subpath requests and serve the index.html

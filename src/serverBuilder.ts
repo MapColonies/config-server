@@ -17,6 +17,7 @@ import { CONFIG_ROUTER_SYMBOL } from './configs/routes/configRouter';
 @injectable()
 export class ServerBuilder {
   private readonly serverInstance: express.Application;
+  private readonly openapiFilePath: string;
 
   public constructor(
     @inject(SERVICES.CONFIG) private readonly config: IConfig,
@@ -26,6 +27,7 @@ export class ServerBuilder {
     @inject(CONFIG_ROUTER_SYMBOL) private readonly configRouter: Router
   ) {
     this.serverInstance = express();
+    this.openapiFilePath = this.config.get<string>('openapiConfig.filePath');
   }
 
   public build(): express.Application {
@@ -39,16 +41,19 @@ export class ServerBuilder {
   private buildDocsRoutes(): void {
     const openapiRouter = new OpenapiViewerRouter({
       ...this.config.get<OpenapiRouterConfig>('openapiConfig'),
-      filePathOrSpec: this.config.get<string>('openapiConfig.filePath'),
+      filePathOrSpec: this.openapiFilePath,
     });
     openapiRouter.setup();
     this.serverInstance.use(this.config.get<string>('openapiConfig.basePath'), openapiRouter.getRouter());
   }
 
   private buildRoutes(): void {
-    this.serverInstance.use('/schema', this.schemaRouter);
-    this.serverInstance.use('/capabilities', this.capabilitiesRouter);
-    this.serverInstance.use('/config', this.configRouter);
+    const router = Router();
+    router.use('/schema', this.schemaRouter);
+    router.use('/capabilities', this.capabilitiesRouter);
+    router.use('/config', this.configRouter);
+    this.serverInstance.use(this.config.get('server.apiPrefix'), router);
+
     this.buildDocsRoutes();
   }
 
@@ -64,11 +69,24 @@ export class ServerBuilder {
     this.serverInstance.use(getTraceContexHeaderMiddleware());
 
     const ignorePathRegex = new RegExp(`^${this.config.get<string>('openapiConfig.basePath')}/.*`, 'i');
-    const apiSpecPath = this.config.get<string>('openapiConfig.filePath');
-    this.serverInstance.use(OpenApiMiddleware({ apiSpec: apiSpecPath, validateRequests: true, ignorePaths: ignorePathRegex }));
+    this.serverInstance.use(
+      this.config.get<string>('server.apiPrefix'),
+      OpenApiMiddleware({ apiSpec: this.openapiFilePath, validateRequests: true, ignorePaths: ignorePathRegex })
+    );
   }
 
   private registerPostRoutesMiddleware(): void {
+    const isStaticEnabled = this.config.get<boolean>('server.staticAssets.enabled');
+    console.log('isStaticEnabled', isStaticEnabled);
+
+    if (isStaticEnabled) {
+      const staticPath = this.config.get<string>('server.staticAssets.folder');
+      // we use the static middleware twice. the second one is to catch subpath requests and serve the index.html
+      // api is not affected by this middleware as the OpenApiMiddleware is registered before and sets 404 for all api misses
+      this.serverInstance.use(express.static(staticPath));
+      this.serverInstance.use('*', express.static(staticPath));
+    }
+
     this.serverInstance.use(getErrorHandlerMiddleware());
   }
 }

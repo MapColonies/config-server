@@ -12,6 +12,11 @@
     }
   },
   "server": {
+    "apiPrefix": "/",
+    "staticAssets": {
+      "enabled": false,
+      "folder": "static"
+    },
     "port": "8080",
     "request": {
       "payload": {

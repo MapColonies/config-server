@@ -18,11 +18,15 @@ void getApp()
     // eslint-disable-next-line @typescript-eslint/naming-convention
     const server = createTerminus(createServer(app), { healthChecks: { '/liveness': stubHealthCheck, onSignal: container.resolve('onSignal') } });
 
+    const isStaticAssetsEnabled = config.get<boolean>('server.staticAssets.enabled');
+    const apiPrefix = config.get<string>('server.apiPrefix');
+
     server.listen(port, () => {
-      logger.info(`app started on port ${port}`);
+      logger.info(`app started on port ${port} with api prefix ${apiPrefix} and static assets ${isStaticAssetsEnabled ? 'enabled' : 'disabled'}`);
     });
   })
   .catch((error: Error) => {
     console.error('😢 - failed initializing the server');
     console.error(error.message);
+    process.exit(1);
   });

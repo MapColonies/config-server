@@ -1,1 +1,3 @@
-{}
+{
+  "server": { "apiPrefix": "/api" }
+}

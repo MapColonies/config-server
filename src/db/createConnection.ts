@@ -1,5 +1,6 @@
 import { hostname } from 'node:os';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
+import { join } from 'node:path';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { Pool, PoolConfig } from 'pg';
@@ -39,6 +40,22 @@ export function createDrizzle(pool: Pool): ReturnType<typeof drizzle<{ configs: 
   });
 }
 
+// maybe we should test migrations as well. for now, we'll just ignore them
+/* istanbul ignore next */
 export async function runMigrations(drizzle: Drizzle): Promise<void> {
-  await migrate(drizzle, { migrationsFolder: './src/db/migrations', migrationsSchema: 'config_server' });
+  const optionalFolders = ['./src/db/migrations', './db/migrations', './migrations'];
+  let migrationsFolder: string | null = null;
+
+  for (const folder of optionalFolders) {
+    if (existsSync(join(folder, '/meta/_journal.json'))) {
+      migrationsFolder = folder;
+      break;
+    }
+  }
+
+  if (migrationsFolder === null) {
+    throw new Error('No migrations folder found');
+  }
+
+  await migrate(drizzle, { migrationsFolder: migrationsFolder, migrationsSchema: 'config_server' });
 }

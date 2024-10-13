@@ -1,4 +1,7 @@
 openapi: 3.0.1
+servers:
+  - url: /api
+  - url: /
 info:
   title: config-server
   description: This is a config server that provides the means to manage all the configurations

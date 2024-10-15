@@ -77,7 +77,6 @@ export class ServerBuilder {
 
   private registerPostRoutesMiddleware(): void {
     const isStaticEnabled = this.config.get<boolean>('server.staticAssets.enabled');
-    console.log('isStaticEnabled', isStaticEnabled);
 
     if (isStaticEnabled) {
       const staticPath = this.config.get<string>('server.staticAssets.folder');

@@ -14,6 +14,7 @@ import { Drizzle } from '../../../src/db/createConnection';
 import { getApp } from '../../../src/app';
 import { SERVICES } from '../../../src/common/constants';
 import { Config, configs, configsRefs } from '../../../src/configs/models/config';
+import { SchemaNotFoundError } from '../../../src/schemas/models/errors';
 import { ConfigRequestSender } from './helpers/requestSender';
 import { configsMockData, refs, schemaWithRef, simpleSchema, primitiveRefSchema, primitiveSchema } from './helpers/data';
 
@@ -28,7 +29,7 @@ async function getSchemaMock(id: string): Promise<JSONSchema> {
     case primitiveRefSchema.$id:
       return Promise.resolve(primitiveRefSchema);
     default:
-      throw new Error('Schema not found');
+      throw new SchemaNotFoundError('Schema not found');
   }
 }
 
@@ -531,6 +532,23 @@ describe('config', function () {
             role: 'unknown',
           },
         });
+
+        expect(response.status).toBe(httpStatusCodes.BAD_REQUEST);
+        expect(response).toSatisfyApiSpec();
+      });
+
+      it('should return 400 if the schemaId of the config does not exist', async function () {
+        const response = await requestSender.postConfig({
+          configName: 'config-not-exists',
+          schemaId: 'https://mapcolonies.com/not-exists/v1',
+          version: 1,
+          config: {
+            manager: 'null',
+            role: 'unknown',
+          },
+        });
+
+        console.log(response.body);
 
         expect(response.status).toBe(httpStatusCodes.BAD_REQUEST);
         expect(response).toSatisfyApiSpec();

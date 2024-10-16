@@ -36,7 +36,7 @@ export class SchemaManager {
     const schemaContent = await this.loadSchema(id.split(SCHEMA_DOMAIN)[1], dereference);
 
     if (dereference) {
-      return refParser.bundle(schemaContent, {
+      return refParser.dereference(schemaContent, {
         dereference: { circular: false },
         resolve: {
           mapcolonies: {

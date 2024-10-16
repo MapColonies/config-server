@@ -548,8 +548,6 @@ describe('config', function () {
           },
         });
 
-        console.log(response.body);
-
         expect(response.status).toBe(httpStatusCodes.BAD_REQUEST);
         expect(response).toSatisfyApiSpec();
       });

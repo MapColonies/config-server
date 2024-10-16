@@ -15,6 +15,7 @@ import {
   ConfigVersionMismatchError,
   SortQueryRepeatError,
 } from '../models/errors';
+import { SchemaNotFoundError } from '../../schemas/models/errors';
 
 function configMapper(config: Config): components['schemas']['config'] {
   return {
@@ -113,7 +114,7 @@ export class ConfigController {
       await this.manager.createConfig(req.body);
       return res.status(httpStatus.CREATED).json();
     } catch (error) {
-      if (error instanceof ConfigValidationError || error instanceof ConfigNotFoundError) {
+      if (error instanceof ConfigValidationError || error instanceof ConfigNotFoundError || error instanceof SchemaNotFoundError) {
         (error as HttpError).status = httpStatus.BAD_REQUEST;
       } else if (error instanceof ConfigVersionMismatchError || error instanceof ConfigSchemaMismatchError) {
         (error as HttpError).status = httpStatus.CONFLICT;

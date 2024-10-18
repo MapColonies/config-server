@@ -47,7 +47,7 @@ export class ServerBuilder {
       filePathOrSpec: this.openapiFilePath,
     });
     openapiRouter.setup();
-    this.serverInstance.use(this.apiPrefix, openapiRouter.getRouter());
+    this.serverInstance.use(this.config.get<string>('openapiConfig.basePath'), openapiRouter.getRouter());
   }
 
   private buildRoutes(): void {
@@ -55,13 +55,13 @@ export class ServerBuilder {
     router.use('/schema', this.schemaRouter);
     router.use('/capabilities', this.capabilitiesRouter);
     router.use('/config', this.configRouter);
-    this.serverInstance.use(this.config.get('server.apiPrefix'), router);
-
-    this.buildDocsRoutes();
+    this.serverInstance.use(this.apiPrefix, router);
   }
 
   private registerPreRoutesMiddleware(): void {
-    this.serverInstance.use(new RegExp(`(/metrics)|${this.apiPrefix}.*`),collectMetricsExpressMiddleware({}));
+    this.buildDocsRoutes();
+
+    this.serverInstance.use(new RegExp(`(/metrics)|${this.apiPrefix}.*`), collectMetricsExpressMiddleware({}));
     this.serverInstance.use(httpLogger({ logger: this.logger, ignorePaths: ['/metrics'] }));
 
     if (this.config.get<boolean>('server.response.compression.enabled')) {

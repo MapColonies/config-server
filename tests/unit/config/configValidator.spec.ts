@@ -1,4 +1,5 @@
 import betterAjvErrors from '@sidvind/better-ajv-errors';
+import jsLogger from '@map-colonies/js-logger';
 import { Validator } from '../../../src/configs/models/configValidator';
 import { SchemaManager } from '../../../src/schemas/models/schemaManager';
 
@@ -10,7 +11,7 @@ describe('Validator', () => {
 
   beforeEach(() => {
     schemaManager = {} as SchemaManager;
-    validator = new Validator(schemaManager);
+    validator = new Validator(schemaManager, jsLogger({ enabled: false }));
   });
 
   describe('isValid', () => {

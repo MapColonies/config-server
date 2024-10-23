@@ -14,6 +14,7 @@ import { IConfig } from './common/interfaces';
 import { SCHEMA_ROUTER_SYMBOL } from './schemas/routes/schemaRouter';
 import { CAPABILITIES_ROUTER_SYMBOL } from './capabilities/routes/capabilitiesRouter';
 import { CONFIG_ROUTER_SYMBOL } from './configs/routes/configRouter';
+import { logContextInjectionMiddleware } from './common/logger';
 
 @injectable()
 export class ServerBuilder {
@@ -42,6 +43,8 @@ export class ServerBuilder {
   }
 
   private buildDocsRoutes(): void {
+    this.logger.info('Building docs routes');
+
     const openapiRouter = new OpenapiViewerRouter({
       ...this.config.get<OpenapiRouterConfig>('openapiConfig'),
       filePathOrSpec: this.openapiFilePath,
@@ -59,7 +62,16 @@ export class ServerBuilder {
   }
 
   private registerPreRoutesMiddleware(): void {
+    this.serverInstance.use(logContextInjectionMiddleware);
+
     this.buildDocsRoutes();
+
+    // function addOperationIdToLog (req: express.Request, res: express.Response, loggableObject: object): void {
+    //   const operationId = get(req, 'openapi.schema.operationId') as string | undefined;
+    //   if (operationId) {
+    //     loggableObject['operationId'] = operation
+    //   }
+    // }
 
     this.serverInstance.use(new RegExp(`(/metrics)|${this.apiPrefix}.*`), collectMetricsExpressMiddleware({}));
     this.serverInstance.use(httpLogger({ logger: this.logger, ignorePaths: ['/metrics'] }));

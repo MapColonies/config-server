@@ -16,6 +16,7 @@ import {
   SortQueryRepeatError,
 } from '../models/errors';
 import { SchemaNotFoundError } from '../../schemas/models/errors';
+import { enrichLogContext } from '../../common/logger';
 
 function configMapper(config: Config): components['schemas']['config'] {
   return {
@@ -111,6 +112,8 @@ export class ConfigController {
 
   public postConfig: TypedRequestHandler<'/config', 'post'> = async (req, res, next) => {
     try {
+      enrichLogContext({ configName: req.body.configName, version: req.body.version, schemaId: req.body.schemaId });
+
       await this.manager.createConfig(req.body);
       return res.status(httpStatus.CREATED).json();
     } catch (error) {

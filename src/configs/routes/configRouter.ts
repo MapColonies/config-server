@@ -1,10 +1,14 @@
 import { Router } from 'express';
 import { FactoryFunction } from 'tsyringe';
 import { ConfigController } from '../controllers/configController';
+import { logEnrichmentParamMiddlewareFactory } from '../../common/logger';
 
 export const configRouterFactory: FactoryFunction<Router> = (dependencyContainer) => {
   const router = Router();
   const controller = dependencyContainer.resolve(ConfigController);
+
+  router.param('name', logEnrichmentParamMiddlewareFactory('configName'));
+  router.param('version', logEnrichmentParamMiddlewareFactory('version'));
 
   router.get('/', controller.getConfigs);
   router.post('/', controller.postConfig);

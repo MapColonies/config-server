@@ -83,13 +83,14 @@ export class SchemaManager {
     const cacheKey = String(isDereferenced) + ':' + relativePath;
 
     if (this.schemaMap.has(cacheKey)) {
+      this.logger.debug('schema loaded from cache');
       return this.schemaMap.get(cacheKey) as JSONSchema;
     }
 
     const fullPath = path.join(schemasBasePath, relativePath + '.schema.json');
 
     if (!fs.existsSync(fullPath)) {
-      this.logger.error({ msg: 'schema not found', path: fullPath });
+      this.logger.warn({ msg: 'schema not found', path: fullPath });
       throw new SchemaNotFoundError();
     }
 

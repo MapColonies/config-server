@@ -6,6 +6,7 @@ import { inject, injectable } from 'tsyringe';
 import { JSONSchema, $RefParser } from '@apidevtools/json-schema-ref-parser';
 import { SERVICES } from '../../common/constants';
 import { components } from '../../openapiTypes';
+import { newWithSpanV4 } from '../../common/tracing';
 import { SchemaNotFoundError, SchemaPathIsInvalidError } from './errors';
 
 const schemasPackageResolvedPath = require.resolve('@map-colonies/schemas');
@@ -24,6 +25,7 @@ export class SchemaManager {
   public constructor(@inject(SERVICES.LOGGER) private readonly logger: Logger) {}
 
   // TODO: still undecided between input being id or path. will decide later
+  @newWithSpanV4()
   public async getSchema(id: string, dereference = false): Promise<JSONSchema> {
     this.logger.info({ msg: 'loading schema', schemaId: id });
 
@@ -55,11 +57,13 @@ export class SchemaManager {
     return schemaContent;
   }
 
+  @newWithSpanV4()
   public async getSchemas(): Promise<components['schemas']['schemaTree']> {
     this.logger.info({ msg: 'generating schema tree' });
     return this.createSchemaTreeNode(schemasBasePath);
   }
 
+  @newWithSpanV4()
   private async createSchemaTreeNode(dirPath: string): Promise<components['schemas']['schemaTree']> {
     const dir = (await fsPromise.readdir(dirPath, { withFileTypes: true })).filter(
       (dirent) => dirent.isDirectory() || (dirent.isFile() && dirent.name.endsWith('.schema.json'))
@@ -79,6 +83,7 @@ export class SchemaManager {
     return Promise.all(resPromises);
   }
 
+  @newWithSpanV4()
   private async loadSchema(relativePath: string, isDereferenced = false): Promise<JSONSchema> {
     const cacheKey = String(isDereferenced) + ':' + relativePath;
 

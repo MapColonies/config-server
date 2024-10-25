@@ -3,7 +3,6 @@ import 'jest-openapi';
 import 'jest-sorted';
 
 import jsLogger, { Logger } from '@map-colonies/js-logger';
-import { trace } from '@opentelemetry/api';
 import httpStatusCodes from 'http-status-codes';
 import { DependencyContainer } from 'tsyringe';
 import { faker } from '@faker-js/faker';
@@ -40,7 +39,6 @@ describe('config', function () {
     const [app, container] = await getApp({
       override: [
         { token: SERVICES.LOGGER, provider: { useValue: jsLogger({ enabled: false }) } },
-        { token: SERVICES.TRACER, provider: { useValue: trace.getTracer('testTracer') } },
         {
           token: SchemaManager,
           provider: {

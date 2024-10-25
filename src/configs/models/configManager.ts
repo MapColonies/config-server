@@ -7,6 +7,7 @@ import type { Prettify } from '../../common/interfaces';
 import { ConfigRepository, ConfigSearchParams, SqlPaginationParams } from '../repositories/configRepository';
 import { SERVICES } from '../../common/constants';
 import { enrichLogContext } from '../../common/logger';
+import { newWithSpanV4 } from '../../common/tracing';
 import { paths, components } from '../../openapiTypes';
 import { Config, SortOption } from './config';
 import { Validator } from './configValidator';
@@ -23,6 +24,7 @@ export class ConfigManager {
     private readonly configValidator: Validator
   ) {}
 
+  @newWithSpanV4()
   public async getConfig(name: string, version?: number, shouldDereferenceConfig?: boolean): Promise<Config> {
     if (shouldDereferenceConfig !== true) {
       this.logger.debug('Retrieving config from the database with unresolved refs');
@@ -55,6 +57,7 @@ export class ConfigManager {
     return config;
   }
 
+  @newWithSpanV4()
   public async getConfigs(options?: GetConfigOptions): Promise<{ configs: Config[]; totalCount: number }> {
     this.logger.debug('Preparing search params and retrieving configs from the database');
 
@@ -85,6 +88,7 @@ export class ConfigManager {
     return this.configRepository.getConfigs(searchParams, paginationParams, sortParams);
   }
 
+  @newWithSpanV4()
   public async createConfig(config: Omit<components['schemas']['config'], 'createdAt' | 'createdBy'>): Promise<void> {
     this.logger.debug('Creating a new config');
 
@@ -133,6 +137,7 @@ export class ConfigManager {
    * @returns An array of config references.
    * @throws {ConfigValidationError} If the config reference is not valid.
    */
+  @newWithSpanV4()
   private listConfigRefs(config: components['schemas']['config']['config']): ConfigReference[] {
     this.logger.debug('Listing all the config references in the config object');
     const refs: ConfigReference[] = [];
@@ -158,6 +163,7 @@ export class ConfigManager {
    * @param refs - The list of configuration references.
    * @throws {ConfigValidationError} If the configuration is not valid.
    */
+  @newWithSpanV4()
   private replaceRefs(obj: JsonObject, refs: Awaited<ReturnType<typeof this.configRepository.getAllConfigRefs>>): void {
     this.logger.debug('Replacing all the references in the object with the corresponding values');
 

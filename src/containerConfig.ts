@@ -22,9 +22,6 @@ export async function registerExternalValues(options?: RegisterOptions): Promise
   const metrics = new Metrics();
   metrics.start();
 
-  tracing.start();
-  const tracer = trace.getTracer(SERVICE_NAME);
-
   let pool: Pool;
   try {
     pool = await initConnection(createConnectionOptions(config.get<DbConfig>('db')));
@@ -35,7 +32,6 @@ export async function registerExternalValues(options?: RegisterOptions): Promise
   const dependencies: InjectionObject<unknown>[] = [
     { token: SERVICES.CONFIG, provider: { useValue: config } },
     { token: SERVICES.LOGGER, provider: { useFactory: instancePerContainerCachingFactory(loggerFactory) } },
-    { token: SERVICES.TRACER, provider: { useValue: tracer } },
     { token: SERVICES.METER, provider: { useValue: OtelMetrics.getMeterProvider().getMeter(SERVICE_NAME) } },
     { token: SCHEMA_ROUTER_SYMBOL, provider: { useFactory: schemaRouterFactory } },
     { token: CAPABILITIES_ROUTER_SYMBOL, provider: { useFactory: capabilitiesRouterFactory } },

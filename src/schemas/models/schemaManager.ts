@@ -6,7 +6,8 @@ import { inject, injectable } from 'tsyringe';
 import { JSONSchema, $RefParser } from '@apidevtools/json-schema-ref-parser';
 import { SERVICES } from '../../common/constants';
 import { components } from '../../openapiTypes';
-import { newWithSpanV4 } from '../../common/tracing';
+import { setSpanAttributes, withSpan } from '../../common/tracing';
+import { enrichLogContext } from '../../common/logger';
 import { SchemaNotFoundError, SchemaPathIsInvalidError } from './errors';
 
 const schemasPackageResolvedPath = require.resolve('@map-colonies/schemas');
@@ -17,6 +18,7 @@ const refParser = new $RefParser();
 type ArrayElement<ArrayType extends readonly unknown[]> = ArrayType extends readonly (infer ElementType)[] ? ElementType : never;
 
 const SCHEMA_DOMAIN = 'https://mapcolonies.com/';
+const SCHEMA_TRACING_CACHE_KEY = 'schema.cache';
 const LAST_ARRAY_ELEMENT = -1;
 
 @injectable()
@@ -25,9 +27,10 @@ export class SchemaManager {
   public constructor(@inject(SERVICES.LOGGER) private readonly logger: Logger) {}
 
   // TODO: still undecided between input being id or path. will decide later
-  @newWithSpanV4()
+  @withSpan()
   public async getSchema(id: string, dereference = false): Promise<JSONSchema> {
     this.logger.info({ msg: 'loading schema', schemaId: id });
+    enrichLogContext({ schemaId: id }, true);
 
     // check for path traversal, if path starts with .. it is invalid
     if (path.normalize(id.split(SCHEMA_DOMAIN)[1]).startsWith('..')) {
@@ -57,13 +60,13 @@ export class SchemaManager {
     return schemaContent;
   }
 
-  @newWithSpanV4()
+  @withSpan()
   public async getSchemas(): Promise<components['schemas']['schemaTree']> {
     this.logger.info({ msg: 'generating schema tree' });
     return this.createSchemaTreeNode(schemasBasePath);
   }
 
-  @newWithSpanV4()
+  @withSpan()
   private async createSchemaTreeNode(dirPath: string): Promise<components['schemas']['schemaTree']> {
     const dir = (await fsPromise.readdir(dirPath, { withFileTypes: true })).filter(
       (dirent) => dirent.isDirectory() || (dirent.isFile() && dirent.name.endsWith('.schema.json'))
@@ -83,14 +86,16 @@ export class SchemaManager {
     return Promise.all(resPromises);
   }
 
-  @newWithSpanV4()
+  @withSpan()
   private async loadSchema(relativePath: string, isDereferenced = false): Promise<JSONSchema> {
     const cacheKey = String(isDereferenced) + ':' + relativePath;
 
     if (this.schemaMap.has(cacheKey)) {
       this.logger.debug('schema loaded from cache');
+      setSpanAttributes({ [SCHEMA_TRACING_CACHE_KEY]: 'hit' });
       return this.schemaMap.get(cacheKey) as JSONSchema;
     }
+    setSpanAttributes({ [SCHEMA_TRACING_CACHE_KEY]: 'miss' });
 
     const fullPath = path.join(schemasBasePath, relativePath + '.schema.json');
 

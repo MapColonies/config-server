@@ -7,7 +7,7 @@ import type { Prettify } from '../../common/interfaces';
 import { ConfigRepository, ConfigSearchParams, SqlPaginationParams } from '../repositories/configRepository';
 import { SERVICES } from '../../common/constants';
 import { enrichLogContext } from '../../common/logger';
-import { newWithSpanV4 } from '../../common/tracing';
+import { setSpanAttributes, withSpan } from '../../common/tracing';
 import { paths, components } from '../../openapiTypes';
 import { Config, SortOption } from './config';
 import { Validator } from './configValidator';
@@ -24,7 +24,7 @@ export class ConfigManager {
     private readonly configValidator: Validator
   ) {}
 
-  @newWithSpanV4()
+  @withSpan()
   public async getConfig(name: string, version?: number, shouldDereferenceConfig?: boolean): Promise<Config> {
     if (shouldDereferenceConfig !== true) {
       this.logger.debug('Retrieving config from the database with unresolved refs');
@@ -51,13 +51,14 @@ export class ConfigManager {
 
     if (refs.length > 0) {
       this.logger.debug('Resolving refs for config', { refCount: refs.length });
+      setSpanAttributes({ refCount: refs.length });
       this.replaceRefs(config.config, refs);
     }
 
     return config;
   }
 
-  @newWithSpanV4()
+  @withSpan()
   public async getConfigs(options?: GetConfigOptions): Promise<{ configs: Config[]; totalCount: number }> {
     this.logger.debug('Preparing search params and retrieving configs from the database');
 
@@ -67,7 +68,7 @@ export class ConfigManager {
     if (options) {
       const { offset, limit, sort, ...querySearchParams } = options;
       paginationParams = { offset, limit };
-
+      enrichLogContext({ offset, limit }, true);
       if (sort !== undefined) {
         sortParams = sort;
       }
@@ -88,7 +89,7 @@ export class ConfigManager {
     return this.configRepository.getConfigs(searchParams, paginationParams, sortParams);
   }
 
-  @newWithSpanV4()
+  @withSpan()
   public async createConfig(config: Omit<components['schemas']['config'], 'createdAt' | 'createdBy'>): Promise<void> {
     this.logger.debug('Creating a new config');
 
@@ -129,6 +130,7 @@ export class ConfigManager {
     }
 
     await this.configRepository.createConfig({ ...config, createdBy: 'TBD', refs });
+    enrichLogContext({ createdVersion: config.version }, true);
   }
 
   /**
@@ -137,7 +139,7 @@ export class ConfigManager {
    * @returns An array of config references.
    * @throws {ConfigValidationError} If the config reference is not valid.
    */
-  @newWithSpanV4()
+  @withSpan()
   private listConfigRefs(config: components['schemas']['config']['config']): ConfigReference[] {
     this.logger.debug('Listing all the config references in the config object');
     const refs: ConfigReference[] = [];
@@ -163,7 +165,7 @@ export class ConfigManager {
    * @param refs - The list of configuration references.
    * @throws {ConfigValidationError} If the configuration is not valid.
    */
-  @newWithSpanV4()
+  @withSpan()
   private replaceRefs(obj: JsonObject, refs: Awaited<ReturnType<typeof this.configRepository.getAllConfigRefs>>): void {
     this.logger.debug('Replacing all the references in the object with the corresponding values');
 

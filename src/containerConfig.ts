@@ -1,5 +1,5 @@
 import config from 'config';
-import { trace, metrics as OtelMetrics } from '@opentelemetry/api';
+import { metrics as OtelMetrics } from '@opentelemetry/api';
 import { DependencyContainer } from 'tsyringe/dist/typings/types';
 import { instancePerContainerCachingFactory } from 'tsyringe';
 import type { Pool } from 'pg';

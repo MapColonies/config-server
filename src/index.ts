@@ -24,7 +24,9 @@ void getApp()
     const apiPrefix = config.get<string>('server.apiPrefix');
 
     server.listen(port, () => {
-      logger.info(`app started in ${(performance.now() / MILLISECONDS_IN_SECOND).toFixed(TIME_PRECISION)} seconds, on port ${port} with api prefix ${apiPrefix} and static assets ${isStaticAssetsEnabled ? 'enabled' : 'disabled'}`);
+      logger.info(
+        `app started in ${(performance.now() / MILLISECONDS_IN_SECOND).toFixed(TIME_PRECISION)} seconds, on port ${port} with api prefix ${apiPrefix} and static assets ${isStaticAssetsEnabled ? 'enabled' : 'disabled'}`
+      );
     });
   })
   .catch((error: Error) => {

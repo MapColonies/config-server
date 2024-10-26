@@ -18,7 +18,8 @@ const fsFunctionMap = new Map([
 ]);
 
 /* eslint-disable @typescript-eslint/naming-convention */
-const tracing = new Tracing({attributes: { 'schemas.version': schemasPackageVersion },
+const tracing = new Tracing({
+  attributes: { 'schemas.version': schemasPackageVersion },
   autoInstrumentationsConfigMap: {
     '@opentelemetry/instrumentation-http': {
       ignoreIncomingRequestHook: (request): boolean =>
@@ -61,7 +62,7 @@ const tracer = trace.getTracer(SERVICE_NAME);
 
 export { tracing };
 
-export function callWithSpan<T>(fn: (span?: Span) => T, spanName: string, spanOptions?: SpanOptions): T  {
+export function callWithSpan<T>(fn: (span: Span) => T, spanName: string, spanOptions?: SpanOptions): T {
   return tracer.startActiveSpan(spanName, spanOptions ?? {}, (span) => {
     try {
       const result = fn(span);
@@ -104,8 +105,10 @@ export function handleSpanOnError(span: Span, error?: unknown): void {
 }
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-export function newWithSpanV4(options: { spanName?: string; attributes?: Attributes } = {}) {
-  return function <This extends {constructor: {name: string}}, Args extends any[]>(
+export function withSpan<Args extends any[]>(
+  options: { spanName?: string; attributes?: Attributes; postSpanCreationHook?: (span: Span, args: Args) => void } = {}
+) {
+  return function <This extends { constructor: { name: string } }>(
     target: This,
     propertyKey: string | symbol,
     descriptor: TypedPropertyDescriptor<(this: This, ...args: Args) => any>
@@ -119,9 +122,26 @@ export function newWithSpanV4(options: { spanName?: string; attributes?: Attribu
     // eslint-disable-next-line @typescript-eslint/require-await
     descriptor.value = function (this: This, ...args: Args): any {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-      return callWithSpan(() => originalMethod.call(this, ...args), options.spanName ?? `${target.constructor.name}:${String(propertyKey)}`, { attributes: options.attributes });
+      return callWithSpan(
+        (span) => {
+          if (options.postSpanCreationHook !== undefined) {
+            options.postSpanCreationHook(span, args);
+          }
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+          return originalMethod.call(this, ...args);
+        },
+        options.spanName ?? `${target.constructor.name}:${String(propertyKey)}`,
+        { attributes: options.attributes }
+      );
     };
 
     return descriptor;
   };
+}
+
+export function setSpanAttributes(attributes: Attributes): void {
+  const currentSpan = trace.getActiveSpan();
+  if (currentSpan !== undefined) {
+    currentSpan.setAttributes(attributes);
+  }
 }

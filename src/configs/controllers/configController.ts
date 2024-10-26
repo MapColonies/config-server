@@ -1,9 +1,7 @@
-import { Logger } from '@map-colonies/js-logger';
 import { formatISO } from 'date-fns';
 import httpStatus from 'http-status-codes';
 import { injectable, inject } from 'tsyringe';
 import { HttpError } from '@map-colonies/error-express-handler';
-import { SERVICES } from '../../common/constants';
 import { ConfigManager } from '../models/configManager';
 import { TypedRequestHandler } from '../../common/interfaces';
 import type { components } from '../../openapiTypes';
@@ -63,10 +61,7 @@ function sortOptionParser(sortArray: components['parameters']['SortQuery']): Sor
 
 @injectable()
 export class ConfigController {
-  public constructor(
-    @inject(SERVICES.LOGGER) private readonly logger: Logger,
-    @inject(ConfigManager) private readonly manager: ConfigManager
-  ) {}
+  public constructor(@inject(ConfigManager) private readonly manager: ConfigManager) {}
 
   public getConfigs: TypedRequestHandler<'/config', 'get'> = async (req, res, next) => {
     try {
@@ -112,7 +107,7 @@ export class ConfigController {
 
   public postConfig: TypedRequestHandler<'/config', 'post'> = async (req, res, next) => {
     try {
-      enrichLogContext({ configName: req.body.configName, version: req.body.version, schemaId: req.body.schemaId });
+      enrichLogContext({ configName: req.body.configName, schemaId: req.body.schemaId });
 
       await this.manager.createConfig(req.body);
       return res.status(httpStatus.CREATED).json();

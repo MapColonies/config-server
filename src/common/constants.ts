@@ -11,7 +11,6 @@ export const MILLISECONDS_IN_SECOND = 1000;
 export const IGNORED_OUTGOING_TRACE_ROUTES = [/^.*\/v1\/metrics.*$/];
 export const IGNORED_INCOMING_TRACE_ROUTES = [/^.*\/docs.*$/];
 
-
 /* eslint-disable @typescript-eslint/naming-convention */
 export const SERVICES = {
   LOGGER: Symbol('Logger'),

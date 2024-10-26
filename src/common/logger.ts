@@ -1,5 +1,5 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
-import type { IncomingMessage, ServerResponse } from 'node:http';
+import { type IncomingMessage, ServerResponse } from 'node:http';
 import { get } from 'lodash';
 import * as api from '@opentelemetry/api';
 import jsLogger, { Logger, LoggerOptions } from '@map-colonies/js-logger';
@@ -20,10 +20,15 @@ export function addOperationIdToLog(req: IncomingMessage, res: ServerResponse, l
   return loggableObject;
 }
 
-export function enrichLogContext(values: Attributes): void {
+export function enrichLogContext(values: Attributes, addToCurrentTrace = false): void {
   const store = logContext.getStore();
   if (store) {
     Object.assign(store, values);
+  }
+
+  if (addToCurrentTrace) {
+    const span = api.trace.getActiveSpan();
+    span?.setAttributes(values);
   }
 }
 
@@ -38,13 +43,15 @@ export function loggerFactory(container: DependencyContainer): Logger {
   const logger = jsLogger({
     ...loggerConfig,
     mixin: (mergeObj, level) => {
-      const span = api.trace.getActiveSpan();
       const otelMixin = getOtelMixin();
-
       const store = logContext.getStore();
 
-      if (store) {        
-        span?.setAttributes(store);
+      if ('res' in mergeObj && mergeObj.res instanceof ServerResponse) {
+        const span = api.trace.getActiveSpan();
+
+        if (store) {
+          span?.setAttributes(store);
+        }
       }
 
       return { ...otelMixin(mergeObj, level), ...store };

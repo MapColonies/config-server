@@ -1,4 +1,6 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
+import type { IncomingMessage, ServerResponse } from 'node:http';
+import { get } from 'lodash';
 import jsLogger, { Logger, LoggerOptions } from '@map-colonies/js-logger';
 import { getOtelMixin } from '@map-colonies/telemetry';
 import { NextFunction, Request, Response } from 'express';
@@ -7,6 +9,14 @@ import { SERVICES } from './constants';
 import { IConfig } from './interfaces';
 
 const logContext = new AsyncLocalStorage<object>();
+
+export function addOperationIdToLog(req: IncomingMessage, res: ServerResponse, loggableObject: Record<string, unknown>): unknown {
+  const operationId = get(req, 'openapi.schema.operationId') as string | undefined;
+  if (operationId !== undefined) {
+    loggableObject['operationId'] = operationId;
+  }
+  return loggableObject;
+}
 
 export function enrichLogContext(values: object): void {
   const store = logContext.getStore();

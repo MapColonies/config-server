@@ -14,7 +14,7 @@ import { IConfig } from './common/interfaces';
 import { SCHEMA_ROUTER_SYMBOL } from './schemas/routes/schemaRouter';
 import { CAPABILITIES_ROUTER_SYMBOL } from './capabilities/routes/capabilitiesRouter';
 import { CONFIG_ROUTER_SYMBOL } from './configs/routes/configRouter';
-import { logContextInjectionMiddleware } from './common/logger';
+import { addOperationIdToLog, logContextInjectionMiddleware } from './common/logger';
 
 @injectable()
 export class ServerBuilder {
@@ -66,15 +66,15 @@ export class ServerBuilder {
 
     this.buildDocsRoutes();
 
-    // function addOperationIdToLog (req: express.Request, res: express.Response, loggableObject: object): void {
-    //   const operationId = get(req, 'openapi.schema.operationId') as string | undefined;
-    //   if (operationId) {
-    //     loggableObject['operationId'] = operation
-    //   }
-    // }
-
     this.serverInstance.use(new RegExp(`(/metrics)|${this.apiPrefix}.*`), collectMetricsExpressMiddleware({}));
-    this.serverInstance.use(httpLogger({ logger: this.logger, ignorePaths: ['/metrics'] }));
+    this.serverInstance.use(
+      httpLogger({
+        logger: this.logger,
+        ignorePaths: ['/metrics'],
+        customSuccessObject: addOperationIdToLog,
+        customErrorObject: (req, res, err, val) => addOperationIdToLog(req, res, val as Record<string, unknown>),
+      })
+    );
 
     if (this.config.get<boolean>('server.response.compression.enabled')) {
       this.serverInstance.use(compression(this.config.get<compression.CompressionFilter>('server.response.compression.options')));

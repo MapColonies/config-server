@@ -51,7 +51,7 @@
     "@map-colonies/openapi-express-viewer": "^3.0.0",
     "@map-colonies/read-pkg": "0.0.1",
     "@map-colonies/schemas": "^1.0.1",
-    "@map-colonies/telemetry": "./map-colonies-telemetry-7.0.1.tgz",
+    "@map-colonies/telemetry": "^8.0.0",
     "@opentelemetry/api": "^1.4.1",
     "@opentelemetry/api-metrics": "0.23.0",
     "@opentelemetry/instrumentation-express": "0.32.1",

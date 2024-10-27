@@ -4,13 +4,15 @@ servers:
   - url: /
 info:
   title: config-server
-  description: This is a config server that provides the means to manage all the configurations
-  version: 1.0.0
+  description: >-
+    This is a config server that provides the means to manage all the
+    configurations
+  version: 1.0.1
   license:
     name: MIT
     url: https://opensource.org/licenses/MIT
 paths:
-  '/config':
+  /config:
     get:
       parameters:
         - $ref: '#/components/parameters/FullTextQuery'
@@ -51,7 +53,11 @@ paths:
       summary: Create a new config or a new version of an existing config
       requestBody:
         required: true
-        description: If no version is provided and no version with the same name exists, a new config will be created. If a version is provided, a new version of an existing config will be created. The version provided should match the latest version of the existing config.
+        description: >-
+          If no version is provided and no version with the same name exists, a
+          new config will be created. If a version is provided, a new version of
+          an existing config will be created. The version provided should match
+          the latest version of the existing config.
         content:
           application/json:
             schema:
@@ -65,8 +71,7 @@ paths:
           $ref: '#/components/responses/409Conflict'
         '500':
           $ref: '#/components/responses/500InternalServerError'
-
-  '/config/{name}':
+  /config/{name}:
     get:
       parameters:
         - in: path
@@ -90,7 +95,7 @@ paths:
           $ref: '#/components/responses/404NotFound'
         '500':
           $ref: '#/components/responses/500InternalServerError'
-  '/config/{name}/{version}':
+  /config/{name}/{version}:
     parameters:
       - in: path
         name: name
@@ -103,7 +108,8 @@ paths:
         schema:
           oneOf:
             - type: string
-              enum: ['latest']
+              enum:
+                - latest
             - $ref: '#/components/schemas/version'
       - $ref: '#/components/parameters/ShouldDereferenceConfigQuery'
     get:
@@ -111,7 +117,9 @@ paths:
       summary: get a specific version of a config
       responses:
         '200':
-          description: Object containing the config with the specific name and version or the latest version
+          description: >-
+            Object containing the config with the specific name and version or
+            the latest version
           content:
             application/json:
               schema:
@@ -139,7 +147,7 @@ paths:
       operationId: getSchema
       summary: returns the requested schema
       responses:
-        200:
+        '200':
           description: OK
           content:
             application/json:
@@ -156,7 +164,7 @@ paths:
       operationId: getSchemasTree
       summary: return a tree representation of all the schemas
       responses:
-        200:
+        '200':
           description: OK
           content:
             application/json:
@@ -171,7 +179,7 @@ paths:
       operationId: getCapabilities
       summary: get all capabilities about the server
       responses:
-        200:
+        '200':
           description: OK
           content:
             application/json:
@@ -218,52 +226,61 @@ components:
     ConfigNameQuery:
       name: config_name
       in: query
-      description: 'Filters objects based on the exact value of the configName property.'
+      description: Filters objects based on the exact value of the configName property.
       required: false
       schema:
         $ref: '#/components/schemas/configName'
     SchemaIdQuery:
       name: schema_id
       in: query
-      description: 'Filters objects where the schemaId property exactly matches the specified URL.'
+      description: >-
+        Filters objects where the schemaId property exactly matches the
+        specified URL.
       required: false
       schema:
         $ref: '#/components/schemas/schemaId'
     VersionQuery:
       name: version
       in: query
-      description: 'Filters objects where the version property exactly matches the specified version string.'
+      description: >-
+        Filters objects where the version property exactly matches the specified
+        version string.
       required: false
       schema:
         oneOf:
           - $ref: '#/components/schemas/version'
           - type: string
-            enum: ['latest']
+            enum:
+              - latest
     CreatedAtGreaterThanQuery:
       name: created_at_gt
       in: query
-      description: 'Filters objects where the createdAt property is greater than the specified date-time value (format: ISO 8601).'
+      description: >-
+        Filters objects where the createdAt property is greater than the
+        specified date-time value (format: ISO 8601).
       required: false
       schema:
         $ref: '#/components/schemas/createdAt'
     CreatedAtLessThanQuery:
       name: created_at_lt
       in: query
-      description: 'Filters objects where the createdAt property is less than the specified date-time value (format: ISO 8601).'
+      description: >-
+        Filters objects where the createdAt property is less than the specified
+        date-time value (format: ISO 8601).
       required: false
       schema:
         $ref: '#/components/schemas/createdAt'
     CreatedByQuery:
       name: created_by
       in: query
-      description: 'Filters objects based on the exact value of the createdBy property.'
+      description: Filters objects based on the exact value of the createdBy property.
       required: false
       schema:
         $ref: '#/components/schemas/createdBy'
     OffsetQuery:
       name: offset
       in: query
-      description: 'Specifies the number of items to skip before starting to return results.'
+      description: Specifies the number of items to skip before starting to return results.
       required: false
       schema:
         type: integer
@@ -271,7 +288,7 @@ components:
     LimitQuery:
       name: limit
       in: query
-      description: 'Specifies the maximum number of items to return.'
+      description: Specifies the maximum number of items to return.
       required: false
       schema:
         type: integer
@@ -281,19 +298,24 @@ components:
     FullTextQuery:
       name: q
       in: query
-      description: 'Search term for full-text search across relevant properties (implementation specific).'
+      description: >-
+        Search term for full-text search across relevant properties
+        (implementation specific).
       required: false
       schema:
         type: string
     SortQuery:
       name: sort
       in: query
-      description: "Sorts the results based on the value of one or more properties.\n
-        The value is a comma-separated list of property names and sort order.\n
-        properties should be separated by a colon and sort order should be either asc or desc. For example: configName:asc,schemaId:desc\n
-        The default sort order is ascending. If the sort order is not specified, the default sort order is used.
-        Each property is only allowed to appear once in the list."
-      example: [config-name:asc, schema-id:desc, version]
+      description: |-
+        Sorts the results based on the value of one or more properties.
+         The value is a comma-separated list of property names and sort order.
+         properties should be separated by a colon and sort order should be either asc or desc. For example: configName:asc,schemaId:desc
+         The default sort order is ascending. If the sort order is not specified, the default sort order is used. Each property is only allowed to appear once in the list.
+      example:
+        - config-name:asc
+        - schema-id:desc
+        - version
       required: false
       schema:
         type: array
@@ -301,7 +323,8 @@ components:
         items:
           example: config-name:asc
           type: string
-          pattern: ^(config-name|schema-id|version|created-at|created-by)(:asc|:desc){0,1}$
+          pattern: >-
+            ^(config-name|schema-id|version|created-at|created-by)(:asc|:desc){0,1}$
     ShouldDereferenceConfigQuery:
       name: shouldDereference
       in: query
@@ -318,16 +341,13 @@ components:
           type: string
     configName:
       type: string
-      pattern: '^([a-z0-9]+(-[a-z0-9]+)*)$'
+      pattern: ^([a-z0-9]+(-[a-z0-9]+)*)$
       maxLength: 50
     schemaId:
       type: string
-      pattern: "^https:\\/\\/mapcolonies\\.com\\/.+$"
-      example: 'https://mapcolonies.com/common/db/v1'
+      pattern: ^https:\/\/mapcolonies\.com\/.+$
+      example: https://mapcolonies.com/common/db/v1
     version:
-      # type: string
-      # pattern: '^v[1-9]+[0-9]*$'
-      # example: v1
       type: integer
       minimum: 1
     createdAt:
@@ -353,7 +373,6 @@ components:
               children:
                 - name: v1
                   url: https://mapcolonies.com/common/db/v1
-
       items:
         oneOf:
           - $ref: '#/components/schemas/schemaTreeItem'
@@ -375,7 +394,13 @@ components:
     config:
       type: object
       additionalProperties: false
-      required: [configName, schemaId, version, config, createdAt, createdBy]
+      required:
+        - configName
+        - schemaId
+        - version
+        - config
+        - createdAt
+        - createdBy
       properties:
         configName:
           $ref: '#/components/schemas/configName'
@@ -385,7 +410,9 @@ components:
           $ref: '#/components/schemas/version'
         config:
           additionalProperties: true
-          example: { host: 'localhost', port: 8080 }
+          example:
+            host: localhost
+            port: 8080
         createdAt:
           readOnly: true
           allOf:
@@ -399,7 +426,10 @@ components:
           readOnly: true
     capabilities:
       type: object
-      required: [serverVersion, schemasPackageVersion, pubSubEnabled]
+      required:
+        - serverVersion
+        - schemasPackageVersion
+        - pubSubEnabled
       properties:
         serverVersion:
           description: The version of the server
@@ -408,5 +438,7 @@ components:
           description: The version of the schemas package
           type: string
         pubSubEnabled:
-          description: a flag that indicates if the pubsub is enabled for config change notifications
+          description: >-
+            a flag that indicates if the pubsub is enabled for config change
+            notifications
           type: boolean

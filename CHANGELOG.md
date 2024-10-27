@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.0.1](https://github.com/MapColonies/config-server/compare/v1.0.0...v1.0.1) (2024-10-27)
+
+
+### Bug Fixes
+
+* changed schema bundle to dereference ([#51](https://github.com/MapColonies/config-server/issues/51)) ([4be6da0](https://github.com/MapColonies/config-server/commit/4be6da0fa000c40d5c6ab5fc2caf13e97f67a60f))
+* express metrics works ([#54](https://github.com/MapColonies/config-server/issues/54)) ([f96e053](https://github.com/MapColonies/config-server/commit/f96e053ec62af1f2ce44b48589022fa5f0a2810c))
+* when schema is not found in post config correct http code is returned ([#50](https://github.com/MapColonies/config-server/issues/50)) ([cec662a](https://github.com/MapColonies/config-server/commit/cec662a9f0081178b745415265b46c2b9cf35725))
+
 ## 1.0.0 (2024-10-13)
 
 

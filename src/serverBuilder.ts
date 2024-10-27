@@ -7,7 +7,8 @@ import { middleware as OpenApiMiddleware } from 'express-openapi-validator';
 import { inject, injectable } from 'tsyringe';
 import { Logger } from '@map-colonies/js-logger';
 import httpLogger from '@map-colonies/express-access-log-middleware';
-import { collectMetricsExpressMiddleware, getTraceContexHeaderMiddleware } from '@map-colonies/telemetry';
+import { getTraceContexHeaderMiddleware } from '@map-colonies/telemetry';
+import { collectMetricsExpressMiddleware } from '@map-colonies/telemetry/prom-metrics';
 import { SERVICES } from './common/constants';
 import { IConfig } from './common/interfaces';
 import { SCHEMA_ROUTER_SYMBOL } from './schemas/routes/schemaRouter';
@@ -18,6 +19,7 @@ import { CONFIG_ROUTER_SYMBOL } from './configs/routes/configRouter';
 export class ServerBuilder {
   private readonly serverInstance: express.Application;
   private readonly openapiFilePath: string;
+  private readonly apiPrefix: string;
 
   public constructor(
     @inject(SERVICES.CONFIG) private readonly config: IConfig,
@@ -28,6 +30,7 @@ export class ServerBuilder {
   ) {
     this.serverInstance = express();
     this.openapiFilePath = this.config.get<string>('openapiConfig.filePath');
+    this.apiPrefix = this.config.get<string>('server.apiPrefix');
   }
 
   public build(): express.Application {
@@ -52,13 +55,13 @@ export class ServerBuilder {
     router.use('/schema', this.schemaRouter);
     router.use('/capabilities', this.capabilitiesRouter);
     router.use('/config', this.configRouter);
-    this.serverInstance.use(this.config.get('server.apiPrefix'), router);
-
-    this.buildDocsRoutes();
+    this.serverInstance.use(this.apiPrefix, router);
   }
 
   private registerPreRoutesMiddleware(): void {
-    this.serverInstance.use('/metrics', collectMetricsExpressMiddleware({}));
+    this.buildDocsRoutes();
+
+    this.serverInstance.use(new RegExp(`(/metrics)|${this.apiPrefix}.*`), collectMetricsExpressMiddleware({}));
     this.serverInstance.use(httpLogger({ logger: this.logger, ignorePaths: ['/metrics'] }));
 
     if (this.config.get<boolean>('server.response.compression.enabled')) {

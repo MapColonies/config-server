@@ -17,6 +17,14 @@ export function addOperationIdToLog(req: IncomingMessage, res: ServerResponse, l
   if (operationId !== undefined) {
     loggableObject['operationId'] = operationId;
   }
+
+  const store = logContext.getStore();
+  const span = api.trace.getActiveSpan();
+
+  if (store) {
+    span?.setAttributes(store);
+  }
+
   return loggableObject;
 }
 
@@ -45,14 +53,6 @@ export function loggerFactory(container: DependencyContainer): Logger {
     mixin: (mergeObj, level) => {
       const otelMixin = getOtelMixin();
       const store = logContext.getStore();
-
-      if ('res' in mergeObj && mergeObj.res instanceof ServerResponse) {
-        const span = api.trace.getActiveSpan();
-
-        if (store) {
-          span?.setAttributes(store);
-        }
-      }
 
       return { ...otelMixin(mergeObj, level), ...store };
     },

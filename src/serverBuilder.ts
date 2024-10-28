@@ -14,6 +14,7 @@ import { IConfig } from './common/interfaces';
 import { SCHEMA_ROUTER_SYMBOL } from './schemas/routes/schemaRouter';
 import { CAPABILITIES_ROUTER_SYMBOL } from './capabilities/routes/capabilitiesRouter';
 import { CONFIG_ROUTER_SYMBOL } from './configs/routes/configRouter';
+import { addOperationIdToLog, logContextInjectionMiddleware } from './common/logger';
 
 @injectable()
 export class ServerBuilder {
@@ -42,6 +43,8 @@ export class ServerBuilder {
   }
 
   private buildDocsRoutes(): void {
+    this.logger.info('Building docs routes');
+
     const openapiRouter = new OpenapiViewerRouter({
       ...this.config.get<OpenapiRouterConfig>('openapiConfig'),
       filePathOrSpec: this.openapiFilePath,
@@ -59,10 +62,19 @@ export class ServerBuilder {
   }
 
   private registerPreRoutesMiddleware(): void {
+    this.serverInstance.use(logContextInjectionMiddleware);
+
     this.buildDocsRoutes();
 
     this.serverInstance.use(new RegExp(`(/metrics)|${this.apiPrefix}.*`), collectMetricsExpressMiddleware({}));
-    this.serverInstance.use(httpLogger({ logger: this.logger, ignorePaths: ['/metrics'] }));
+    this.serverInstance.use(
+      httpLogger({
+        logger: this.logger,
+        ignorePaths: ['/metrics'],
+        customSuccessObject: addOperationIdToLog,
+        customErrorObject: (req, res, err, val) => addOperationIdToLog(req, res, val as Record<string, unknown>),
+      })
+    );
 
     if (this.config.get<boolean>('server.response.compression.enabled')) {
       this.serverInstance.use(compression(this.config.get<compression.CompressionFilter>('server.response.compression.options')));

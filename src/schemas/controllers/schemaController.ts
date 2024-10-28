@@ -6,6 +6,7 @@ import { SERVICES } from '../../common/constants';
 import { SchemaManager } from '../models/schemaManager';
 import { SchemaNotFoundError, SchemaPathIsInvalidError } from '../models/errors';
 import { TypedRequestHandler } from '../../common/interfaces';
+import { enrichLogContext } from '../../common/logger';
 
 @injectable()
 export class SchemaController {
@@ -16,6 +17,7 @@ export class SchemaController {
 
   public getSchema: TypedRequestHandler<'/schema', 'get'> = async (req, res, next) => {
     try {
+      enrichLogContext({ schemaId: req.query.id });
       const schema = await this.manager.getSchema(req.query.id, req.query.shouldDereference);
 
       return res.status(httpStatus.OK).json(schema as unknown as Record<string, never>);

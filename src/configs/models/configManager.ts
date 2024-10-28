@@ -6,6 +6,7 @@ import { parseISO } from 'date-fns';
 import type { Prettify } from '../../common/interfaces';
 import { ConfigRepository, ConfigSearchParams, SqlPaginationParams } from '../repositories/configRepository';
 import { SERVICES } from '../../common/constants';
+import { enrichLogContext } from '../../common/logger';
 import { paths, components } from '../../openapiTypes';
 import { Config, SortOption } from './config';
 import { Validator } from './configValidator';
@@ -24,22 +25,30 @@ export class ConfigManager {
 
   public async getConfig(name: string, version?: number, shouldDereferenceConfig?: boolean): Promise<Config> {
     if (shouldDereferenceConfig !== true) {
+      this.logger.debug('Retrieving config from the database with unresolved refs');
       const config = await this.configRepository.getConfig(name, version);
 
       if (!config) {
         throw new ConfigNotFoundError('Config not found');
       }
+
+      enrichLogContext({ resolvedConfigVersion: config.version });
       return config;
     }
+
+    this.logger.debug('Retrieving config from the database with resolved refs');
 
     const res = await this.configRepository.getConfigRecursive(name, version);
     if (!res) {
       throw new ConfigNotFoundError('Config not found');
     }
 
+    enrichLogContext({ resolvedConfigVersion: res[0].version });
+
     const [config, refs] = res;
 
     if (refs.length > 0) {
+      this.logger.debug('Resolving refs for config', { refCount: refs.length });
       this.replaceRefs(config.config, refs);
     }
 
@@ -47,6 +56,8 @@ export class ConfigManager {
   }
 
   public async getConfigs(options?: GetConfigOptions): Promise<{ configs: Config[]; totalCount: number }> {
+    this.logger.debug('Preparing search params and retrieving configs from the database');
+
     const searchParams: ConfigSearchParams = {};
     let paginationParams: SqlPaginationParams = {};
     let sortParams: SortOption[] = [];
@@ -75,6 +86,9 @@ export class ConfigManager {
   }
 
   public async createConfig(config: Omit<components['schemas']['config'], 'createdAt' | 'createdBy'>): Promise<void> {
+    this.logger.debug('Creating a new config');
+
+    this.logger.debug('fetching latest config with same name for validations');
     const latestConfig = await this.configRepository.getConfig(config.configName);
 
     if (!latestConfig && config.version !== 1) {
@@ -106,6 +120,7 @@ export class ConfigManager {
     }
 
     if (latestConfig !== undefined) {
+      this.logger.debug('a config with the same name already exists, incrementing version');
       config.version++;
     }
 
@@ -119,6 +134,7 @@ export class ConfigManager {
    * @throws {ConfigValidationError} If the config reference is not valid.
    */
   private listConfigRefs(config: components['schemas']['config']['config']): ConfigReference[] {
+    this.logger.debug('Listing all the config references in the config object');
     const refs: ConfigReference[] = [];
 
     pointer.walk(config, (val, key) => {
@@ -143,19 +159,24 @@ export class ConfigManager {
    * @throws {ConfigValidationError} If the configuration is not valid.
    */
   private replaceRefs(obj: JsonObject, refs: Awaited<ReturnType<typeof this.configRepository.getAllConfigRefs>>): void {
+    this.logger.debug('Replacing all the references in the object with the corresponding values');
+
     // the input is not an object or an array so we don't need to do anything
     if (!Array.isArray(obj) && typeof obj !== 'object') {
+      this.logger.debug('The object is not an object or an array, skipping');
       return;
     }
 
     const paths = new Map<string, ConfigReference>();
 
+    this.logger.debug('Finding all the references in the object');
     // find all the references in the object
     pointer.walk(obj, (val, key) => {
       if (key.endsWith('$ref/configName')) {
         const refPath = key.slice(0, key.lastIndexOf('/'));
         const ref = pointer.get(obj, refPath) as unknown;
         if (!this.configValidator.validateRef(ref)) {
+          this.logger.debug('The reference in the following path is not valid', { refPath });
           throw new ConfigValidationError(`The reference in the following path ${refPath} is not valid`);
         }
 
@@ -164,6 +185,7 @@ export class ConfigManager {
     });
 
     for (const [path, ref] of paths) {
+      this.logger.debug('Replacing the reference in the object', { refPath: path, referenceObject: ref });
       const config = refs.find((r) => r.configName === ref.configName && (ref.version === 'latest' || r.version === ref.version));
       if (!config) {
         throw new Error(`could not find ref in db: ${JSON.stringify(ref)}`);
@@ -182,6 +204,7 @@ export class ConfigManager {
       }
 
       if (path === '') {
+        this.logger.debug('The reference is in the root of the object, replacing the object with the reference');
         Object.assign(obj, replacementValue);
         return;
       }

@@ -1,6 +1,7 @@
-import { Logger, SQL, SQLWrapper, and, asc, desc, eq, gt, isNull, lt, or, sql } from 'drizzle-orm';
+import { SQL, SQLWrapper, and, asc, desc, eq, gt, isNull, lt, or, sql } from 'drizzle-orm';
 import { inject, scoped, Lifecycle } from 'tsyringe';
 import { toDate } from 'date-fns-tz';
+import { Logger } from '@map-colonies/js-logger';
 import { SERVICES } from '../../common/constants';
 import type { Drizzle } from '../../db/createConnection';
 import { type Config, type NewConfig, type NewConfigRef, configs, configsRefs, SortOption } from '../models/config';
@@ -70,6 +71,7 @@ export class ConfigRepository {
   ) {}
 
   public async getAllConfigRefs(refs: ConfigReference[]): Promise<ConfigRefResponse[]> {
+    this.logger.debug('Retrieving all config references', { refCount: refs.length });
     const refsForSql = refs.map((ref) => ({ configName: ref.configName, version: ref.version === 'latest' ? null : ref.version }));
     // query to transform the input into a postgresql recordset so it can be joined with the data
     const inputCTE = sql`
@@ -153,17 +155,20 @@ export class ConfigRepository {
     }));
 
     await this.drizzle.transaction(async (tx) => {
+      this.logger.debug('Inserting the config into the database');
       await tx
         .insert(configs)
         .values({ ...configData, isLatest: true })
         .execute();
 
       if (dbRefs.length > 0) {
+        this.logger.debug('Inserting the config references into the database');
         await tx.insert(configsRefs).values(dbRefs).execute();
       }
 
       // set the previous version of the config to not be the latest if a previous version exists
       if (config.version !== 1) {
+        this.logger.debug('Setting the previous version of the config to not be the latest');
         await tx
           .update(configs)
           .set({ isLatest: false })
@@ -181,6 +186,7 @@ export class ConfigRepository {
    * @returns A Promise that resolves to the retrieved configuration, or undefined if not found.
    */
   public async getConfig(name: string, version?: number): Promise<Config | undefined> {
+    this.logger.debug('Retrieving the config from the database without resolving references');
     const comparators = [eq(configs.configName, name)];
 
     if (version !== undefined) {
@@ -208,6 +214,7 @@ export class ConfigRepository {
    * @returns A promise that resolves to an array containing the configuration and its references, or undefined if not found.
    */
   public async getConfigRecursive(name: string, version?: number): Promise<[Config, ConfigRefResponse[]] | undefined> {
+    this.logger.debug('Retrieving config and its references from the database');
     // const maxVersion = maxVersionQueryBuilder(this.drizzle, name);
 
     const versionOperator = version !== undefined ? eq(configs.version, version) : eq(configs.isLatest, true);
@@ -246,6 +253,7 @@ export class ConfigRepository {
 
     const configResult = res.rows.shift();
     if (!configResult) {
+      this.logger.debug('No config found with the specified name and version');
       return undefined;
     }
 
@@ -274,6 +282,7 @@ export class ConfigRepository {
     paginationParams: SqlPaginationParams = { limit: 1, offset: 0 },
     sortingParams: SortOption[] = []
   ): Promise<{ configs: Config[]; totalCount: number }> {
+    this.logger.debug('Retrieving configs with filters from the database');
     const filterParams: SQLWrapper[] = this.getFilterParams(searchParams);
 
     const orderByParams = sortingParams.map((sort) => (sort.order === 'asc' ? asc(configs[sort.field]) : desc(configs[sort.field])));
@@ -298,6 +307,7 @@ export class ConfigRepository {
     const configsResult = await configsQuery.execute();
 
     if (configsResult.length === 0) {
+      this.logger.debug('No configs found with the specified filters');
       return { configs: [], totalCount: 0 };
     }
 
@@ -317,6 +327,7 @@ export class ConfigRepository {
   }
 
   private getFilterParams(searchParams: ConfigSearchParams): SQLWrapper[] {
+    this.logger.debug('Building SQL filter params for the config search');
     const filterParams: SQLWrapper[] = [];
 
     if (searchParams.q !== undefined && searchParams.q !== '') {

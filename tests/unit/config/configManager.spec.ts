@@ -1,4 +1,4 @@
-import { Logger } from '@map-colonies/js-logger';
+import jsLogger, { Logger } from '@map-colonies/js-logger';
 import { ConfigManager } from '../../../src/configs/models/configManager';
 import { ConfigRefResponse, ConfigRepository } from '../../../src/configs/repositories/configRepository';
 import { Validator } from '../../../src/configs/models/configValidator';
@@ -16,7 +16,7 @@ describe('ConfigManager', () => {
   let logger: Logger;
 
   beforeEach(() => {
-    logger = {} as Logger;
+    logger = jsLogger({ enabled: false });
     configRepository = {} as ConfigRepository;
     configValidator = {} as Validator;
     configManager = new ConfigManager(logger, configRepository, configValidator);

@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.1.0](https://github.com/MapColonies/config-server/compare/v1.0.1...v1.1.0) (2024-10-30)
+
+
+### Features
+
+* logs pass ([#57](https://github.com/MapColonies/config-server/issues/57)) ([3d2fc0e](https://github.com/MapColonies/config-server/commit/3d2fc0e56a38c04436981d56a39483552d973919))
+* tracing pass ([#58](https://github.com/MapColonies/config-server/issues/58)) ([95134b5](https://github.com/MapColonies/config-server/commit/95134b53eeec9c66f717ca791ee43237b0ad5ba3))
+
 ### [1.0.1](https://github.com/MapColonies/config-server/compare/v1.0.0...v1.0.1) (2024-10-27)
 
 

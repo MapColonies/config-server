@@ -7,40 +7,43 @@ import type { Drizzle } from '../../db/createConnection';
 import { type Config, type NewConfig, type NewConfigRef, configs, configsRefs, SortOption } from '../models/config';
 import type { ConfigReference } from '../models/configReference';
 import { ConfigNotFoundError } from '../models/errors';
+import { callWithSpan, withSpan } from '../../common/tracing';
 
 const DEFAULT_LIMIT = 10;
 const DEFAULT_OFFSET = 0;
 
 // eslint-disable-next-line @typescript-eslint/no-magic-numbers
 function recursiveQueryBuilder(drizzle: Drizzle, baseQuery: SQLWrapper, recursiveSelectParameters: Parameters<typeof drizzle.select>[0]): SQL {
-  const recursiveQuery = drizzle
-    .select(recursiveSelectParameters)
-    .from(sql`rec`)
-    .innerJoin(configsRefs, and(eq(configsRefs.configName, sql`rec."configName"`), eq(configsRefs.version, sql`rec."version"`)))
-    .innerJoin(
-      configs,
-      and(
-        eq(configsRefs.refConfigName, configs.configName),
-        or(eq(configs.version, configsRefs.refVersion), and(isNull(configsRefs.refVersion), eq(configs.isLatest, true)))
-      )
-    );
+  return callWithSpan(() => {
+    const recursiveQuery = drizzle
+      .select(recursiveSelectParameters)
+      .from(sql`rec`)
+      .innerJoin(configsRefs, and(eq(configsRefs.configName, sql`rec."configName"`), eq(configsRefs.version, sql`rec."version"`)))
+      .innerJoin(
+        configs,
+        and(
+          eq(configsRefs.refConfigName, configs.configName),
+          or(eq(configs.version, configsRefs.refVersion), and(isNull(configsRefs.refVersion), eq(configs.isLatest, true)))
+        )
+      );
 
-  return sql`
-    WITH RECURSIVE
-      BASE_QUERY AS ${baseQuery},
-      REC AS (
-        SELECT
-          *
-        FROM
-          BASE_QUERY
-        UNION
-        ${recursiveQuery}
-      )
-    SELECT
-      *
-    FROM
-      REC
-  `;
+    return sql`
+      WITH RECURSIVE
+        BASE_QUERY AS ${baseQuery},
+        REC AS (
+          SELECT
+            *
+          FROM
+            BASE_QUERY
+          UNION
+          ${recursiveQuery}
+        )
+      SELECT
+        *
+      FROM
+        REC
+    `;
+  }, 'recursiveQueryBuilder');
 }
 
 export interface ConfigSearchParams {
@@ -70,6 +73,7 @@ export class ConfigRepository {
     @inject(SERVICES.DRIZZLE) private readonly drizzle: Drizzle
   ) {}
 
+  @withSpan()
   public async getAllConfigRefs(refs: ConfigReference[]): Promise<ConfigRefResponse[]> {
     this.logger.debug('Retrieving all config references', { refCount: refs.length });
     const refsForSql = refs.map((ref) => ({ configName: ref.configName, version: ref.version === 'latest' ? null : ref.version }));
@@ -145,6 +149,7 @@ export class ConfigRepository {
    * @param config - The configuration data to be created.
    * @returns A Promise that resolves when the configuration is created.
    */
+  @withSpan()
   public async createConfig(config: Omit<NewConfig, 'createdAt' | 'isLatest'> & { refs: ConfigReference[] }): Promise<void> {
     const { refs, ...configData } = config;
     const dbRefs = config.refs.map<NewConfigRef>((ref) => ({
@@ -185,6 +190,7 @@ export class ConfigRepository {
    * @param version - The version of the configuration (optional).
    * @returns A Promise that resolves to the retrieved configuration, or undefined if not found.
    */
+  @withSpan()
   public async getConfig(name: string, version?: number): Promise<Config | undefined> {
     this.logger.debug('Retrieving the config from the database without resolving references');
     const comparators = [eq(configs.configName, name)];
@@ -213,6 +219,7 @@ export class ConfigRepository {
    * @param version - The version of the configuration (optional).
    * @returns A promise that resolves to an array containing the configuration and its references, or undefined if not found.
    */
+  @withSpan()
   public async getConfigRecursive(name: string, version?: number): Promise<[Config, ConfigRefResponse[]] | undefined> {
     this.logger.debug('Retrieving config and its references from the database');
     // const maxVersion = maxVersionQueryBuilder(this.drizzle, name);
@@ -277,6 +284,7 @@ export class ConfigRepository {
    * @param paginationParams - The pagination options for the query (default: { limit: 1, offset: 0 }).
    * @returns A promise that resolves to an object containing the retrieved configurations and the total count.
    */
+  @withSpan()
   public async getConfigs(
     searchParams: ConfigSearchParams,
     paginationParams: SqlPaginationParams = { limit: 1, offset: 0 },
@@ -325,7 +333,7 @@ export class ConfigRepository {
 
     return { configs: mappedConfig, totalCount };
   }
-
+  @withSpan()
   private getFilterParams(searchParams: ConfigSearchParams): SQLWrapper[] {
     this.logger.debug('Building SQL filter params for the config search');
     const filterParams: SQLWrapper[] = [];

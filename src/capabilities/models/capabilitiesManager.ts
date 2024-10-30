@@ -1,17 +1,14 @@
-import { Logger } from '@map-colonies/js-logger';
-import { inject, injectable } from 'tsyringe';
+import { injectable } from 'tsyringe';
 import { readPackageJsonSync } from '@map-colonies/read-pkg';
-import { SERVICES } from '../../common/constants';
+import { schemasPackageVersion } from '../../common/constants';
 import { paths } from '../../openapiTypes';
+import { withSpan } from '../../common/tracing';
 
-const schemasPackagePath = require.resolve('@map-colonies/schemas').substring(0, require.resolve('@map-colonies/schemas').indexOf('build'));
-const schemasPackageVersion = readPackageJsonSync(schemasPackagePath + 'package.json').version as string;
 const serverVersion = readPackageJsonSync('package.json').version as string;
 
 @injectable()
 export class CapabilitiesManager {
-  public constructor(@inject(SERVICES.LOGGER) private readonly logger: Logger) {}
-
+  @withSpan()
   public getCapabilities(): paths['/capabilities']['get']['responses']['200']['content']['application/json'] {
     return {
       serverVersion,

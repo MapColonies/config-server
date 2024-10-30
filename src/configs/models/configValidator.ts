@@ -3,8 +3,10 @@ import Ajv, { AnySchemaObject, ErrorObject, ValidateFunction } from 'ajv/dist/20
 import { inject, injectable } from 'tsyringe';
 import addFormats from 'ajv-formats';
 import { Logger } from '@map-colonies/js-logger';
+import { SpanStatusCode, trace } from '@opentelemetry/api';
 import betterAjvErrors, { type IOutputError } from '@sidvind/better-ajv-errors';
 import { SchemaManager } from '../../schemas/models/schemaManager';
+import { setSpanAttributes, withSpan } from '../../common/tracing';
 import { SERVICES } from '../../common/constants';
 import { ConfigReference, configReferenceSchema } from './configReference';
 
@@ -35,6 +37,7 @@ export class Validator {
     this.ajvRefValidator = this.ajv.compile(configReferenceSchema);
   }
 
+  @withSpan()
   public async isValid(schemaId: string, data: unknown): Promise<[boolean, IOutputError[]?]> {
     this.logger.info('Validating config data', { schemaId });
     const validate = await this.ajv.compileAsync(await this.schemaManager.getSchema(schemaId));
@@ -43,11 +46,16 @@ export class Validator {
     if (!valid) {
       const schema = this.ajv.getSchema(schemaId)?.schema;
       const betterErrors = betterAjvErrors(schema as AnySchemaObject, data, validate.errors as ErrorObject[], { format: 'js' });
+      trace.getActiveSpan()?.setStatus({ code: SpanStatusCode.ERROR });
+      setSpanAttributes({ validationResult: 'invalid' });
       return [false, betterErrors];
     }
+    setSpanAttributes({ validationResult: 'valid' });
     return [true];
   }
 
+  //@ts-expect-error typescript does not like the decorator with type guard
+  @withSpan()
   public validateRef(ref: unknown): ref is ConfigReference {
     return this.ajvRefValidator(ref);
   }

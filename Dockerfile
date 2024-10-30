@@ -1,4 +1,4 @@
-ARG CONFIG_UI_TAG_OR_HASH=265e3598b17417ed4becbfc067fe12ec2fcbf665
+ARG CONFIG_UI_TAG_OR_HASH=a132252dda4dbe7ab0b14a92d0af06a9f50d7bd4
 
 FROM node:20 as build
 
@@ -42,4 +42,4 @@ COPY --chown=node:node --from=build-ui /tmp/buildApp/config-ui/dist ./static
 
 USER node
 EXPOSE 8080
-CMD ["dumb-init", "node", "--max_old_space_size=512", "./index.js"]
+CMD ["dumb-init", "node", "--max_old_space_size=512", "--require", "./common/tracing.js", "./index.js"]

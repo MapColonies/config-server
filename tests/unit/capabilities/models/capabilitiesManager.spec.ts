@@ -1,12 +1,11 @@
 import 'jest-openapi';
-import jsLogger from '@map-colonies/js-logger';
 import { CapabilitiesManager } from '../../../../src/capabilities/models/capabilitiesManager';
 
 describe('CapabilitiesManager', () => {
   let capabilitiesManager: CapabilitiesManager;
 
   beforeEach(() => {
-    capabilitiesManager = new CapabilitiesManager(jsLogger({ enabled: false }));
+    capabilitiesManager = new CapabilitiesManager();
   });
 
   describe('#getCapabilities', () => {

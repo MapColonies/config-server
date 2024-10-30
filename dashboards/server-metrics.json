@@ -82,9 +82,7 @@
       "icon": "external link",
       "includeVars": true,
       "keepTime": true,
-      "tags": [
-        "nodejs"
-      ],
+      "tags": ["nodejs"],
       "targetBlank": true,
       "title": "NodeJS",
       "tooltip": "",
@@ -135,9 +133,7 @@
         "justifyMode": "auto",
         "orientation": "vertical",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -219,9 +215,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -1188,16 +1182,8 @@
       {
         "current": {
           "selected": false,
-          "text": [
-            "status_code",
-            "operation",
-            "method"
-          ],
-          "value": [
-            "status_code",
-            "operation",
-            "method"
-          ]
+          "text": ["status_code", "operation", "method"],
+          "value": ["status_code", "operation", "method"]
         },
         "hide": 2,
         "includeAll": false,

@@ -1,5 +1,6 @@
 import { Tracing } from '@map-colonies/telemetry';
 import config from 'config';
+import { get } from 'lodash';
 import { type Attributes, type Span, type SpanOptions, SpanStatusCode, trace } from '@opentelemetry/api';
 import { IGNORED_INCOMING_TRACE_ROUTES, IGNORED_OUTGOING_TRACE_ROUTES, SERVICE_NAME, schemasPackageVersion } from './constants';
 
@@ -44,9 +45,8 @@ const tracing = new Tracing({
     },
     '@opentelemetry/instrumentation-express': {
       requestHook: (span, info): void => {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-        const operationId = info.request?.openapi?.schema?.operationId;
-        if (info.layerType === 'request_handler' && typeof operationId === 'string') {
+        const operationId = get(info, 'request.openapi.schema.operationId') as string | undefined;
+        if (info.layerType === 'request_handler' && typeof operationId === 'string' && operationId !== '') {
           span.updateName('request handler - ' + operationId);
           span.setAttribute('http.openapi.operation-id', operationId);
         }
@@ -67,16 +67,12 @@ export function callWithSpan<T>(fn: (span: Span) => T, spanName: string, spanOpt
     try {
       const result = fn(span);
       if (result instanceof Promise) {
-        // return new Promise<T>((resolve, reject) => {
         result
           .then(() => {
             handleSpanOnSuccess(span);
-            // return resolve(r);
           })
           .catch((e) => {
             handleSpanOnError(span, e);
-            // return reject(e);
-            // });
           });
         return result;
       }
@@ -119,7 +115,6 @@ export function withSpan<Args extends any[]>(
       throw new Error('Decorated method is undefined');
     }
 
-    // eslint-disable-next-line @typescript-eslint/require-await
     descriptor.value = function (this: This, ...args: Args): any {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-return
       return callWithSpan(

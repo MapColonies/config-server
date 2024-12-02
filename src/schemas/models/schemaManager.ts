@@ -21,6 +21,7 @@ const SCHEMA_DOMAIN = 'https://mapcolonies.com/';
 const SCHEMA_TRACING_CACHE_KEY = 'schema.cache';
 const LAST_ARRAY_ELEMENT = -1;
 
+export { schemasBasePath };
 @injectable()
 export class SchemaManager {
   private readonly schemaMap: Map<string, JSONSchema> = new Map();

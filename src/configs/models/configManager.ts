@@ -1,3 +1,6 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import posixPath from 'node:path/posix';
 import { Logger } from '@map-colonies/js-logger';
 import { inject, injectable } from 'tsyringe';
 import { Clone } from '@sinclair/typebox/value';
@@ -9,6 +12,8 @@ import { SERVICES } from '../../common/constants';
 import { enrichLogContext } from '../../common/logger';
 import { setSpanAttributes, withSpan } from '../../common/tracing';
 import { paths, components } from '../../openapiTypes';
+import { filesTreeGenerator } from '../../common/utils';
+import { schemasBasePath } from '../../schemas/models/schemaManager';
 import { Config, SortOption } from './config';
 import { Validator } from './configValidator';
 import { ConfigNotFoundError, ConfigSchemaMismatchError, ConfigValidationError, ConfigVersionMismatchError } from './errors';
@@ -90,7 +95,7 @@ export class ConfigManager {
   }
 
   @withSpan()
-  public async createConfig(config: Omit<components['schemas']['config'], 'createdAt' | 'createdBy'>): Promise<void> {
+  public async createConfig(config: Omit<components['schemas']['config'], 'createdAt' | 'createdBy' | 'isLatest'>): Promise<void> {
     this.logger.debug('Creating a new config');
 
     this.logger.debug('fetching latest config with same name for validations');
@@ -220,4 +225,23 @@ export class ConfigManager {
       pointer.set(obj, path, replacementValue);
     }
   }
+
+  public async insertDefaultConfigs(): Promise<void> {
+    this.logger.debug('Inserting default configs');
+    // eslint-disable-next-line @typescript-eslint/no-magic-numbers
+    const configsToInsert: Parameters<ConfigManager['createConfig']>[0][] = []
+    for await (const file of filesTreeGenerator(schemasBasePath, (path) => path.endsWith('.configs.json'))) {
+      const configs = JSON.parse(fs.readFileSync(path.join(file.parentPath, file.name), 'utf-8')) as { name: string, value: unknown }[];
+      const schemaId = "https://mapcolonies.com" + file.parentPath.split('schemas/build/schemas')[1] + '/' + file.name.replace('.configs.json', '.schema.json');
+      for (const config of configs) {
+        const obj = {
+          configName: config.name,
+          schemaId,
+          version: 1,
+          config: config.value as Config['config']
+        }
+      }
+    }
+  }
+
 }

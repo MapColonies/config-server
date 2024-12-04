@@ -214,7 +214,7 @@ export class ConfigManager {
       if (path === '') {
         this.logger.debug('The reference is in the root of the object, replacing the object with the reference');
         Object.assign(obj, replacementValue);
-        return;
+        continue;
       }
 
       pointer.set(obj, path, replacementValue);

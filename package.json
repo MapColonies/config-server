@@ -50,7 +50,7 @@
     "@map-colonies/js-logger": "^1.0.1",
     "@map-colonies/openapi-express-viewer": "^3.0.0",
     "@map-colonies/read-pkg": "0.0.1",
-    "@map-colonies/schemas": "/home/schnitz/repos/libot/schemas/map-colonies-schemas-1.0.1.tgz",
+    "@map-colonies/schemas": "/home/oferade/repos/schemas/map-colonies-schemas-1.0.1.tgz",
     "@map-colonies/telemetry": "^8.0.0",
     "@opentelemetry/api": "^1.7.0",
     "@opentelemetry/api-metrics": "0.23.0",

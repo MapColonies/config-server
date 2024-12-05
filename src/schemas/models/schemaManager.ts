@@ -30,7 +30,7 @@ export class SchemaManager {
   // TODO: still undecided between input being id or path. will decide later
   @withSpan()
   public async getSchema(id: string, dereference = false): Promise<JSONSchema> {
-    this.logger.info({ msg: 'loading schema', schemaId: id });
+    this.logger.debug({ msg: 'loading schema', schemaId: id });
     enrichLogContext({ schemaId: id }, true);
 
     // check for path traversal, if path starts with .. it is invalid

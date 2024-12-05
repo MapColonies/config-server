@@ -26,22 +26,6 @@ type DefaultConfigToInsert = Parameters<ConfigManager['createConfig']>[0] & {
   visited: boolean;
 };
 
-// function insertDefaultConfigToTheCorrectIndex(configsToInsert: DefaultConfigToInsert[], config: DefaultConfigToInsert): void {
-//   if (config.ref.length === 0) {
-//     configsToInsert.unshift(config);
-//     return;
-//   }
-
-//   for (let i = 0; i < configsToInsert.length; i++) {
-//     if (configsToInsert[i].ref.some((ref) => config.ref.some((configRef) => ref.configName === configRef.configName))) {
-//       configsToInsert.splice(i, 0, config);
-//       return;
-//     }
-//   }
-
-//   configsToInsert.push(config);
-// }
-
 @injectable()
 export class ConfigManager {
   public constructor(
@@ -254,7 +238,6 @@ export class ConfigManager {
     for await (const file of filesTreeGenerator(schemasBasePath, (path) => path.endsWith('.configs.json'))) {
       const configs = JSON.parse(fs.readFileSync(path.join(file.parentPath, file.name), 'utf-8')) as { name: string; value: unknown }[];
       const schemaId = 'https://mapcolonies.com' + file.parentPath.split('schemas/build/schemas')[1] + '/' + file.name.replace('.configs.json', '');
-      console.log(file.parentPath, file.name, schemaId);
       for (const config of configs) {
         configsToInsert.set(config.name, {
           configName: config.name,
@@ -283,6 +266,13 @@ export class ConfigManager {
       return;
     }
 
+    config.visited = true;
+
+    const existingConfig = await this.configRepository.getConfig(config.configName);
+    if (existingConfig) {
+      return;
+    }
+
     if (config.refs.length > 0) {
       for (const ref of config.refs) {
         await this.insertDefaultConfig(ref.configName, configs);
@@ -290,5 +280,6 @@ export class ConfigManager {
     }
 
     await this.createConfig(config);
+    this.logger.info(`Inserted default config ${name}`);
   }
 }

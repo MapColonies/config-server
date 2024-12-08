@@ -47,6 +47,10 @@
       }
     }
   },
+  "insertDefaultConfigs": {
+    "__name": "INSERT_DEFAULT_CONFIGS",
+    "__format": "boolean"
+  },
   "db": {
     "host": "DB_HOST",
     "port": {

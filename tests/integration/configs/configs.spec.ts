@@ -11,6 +11,7 @@ import { ConfigRepository } from '../../../src/configs/repositories/configReposi
 import { SchemaManager } from '../../../src/schemas/models/schemaManager';
 import { Drizzle } from '../../../src/db/createConnection';
 import { getApp } from '../../../src/app';
+import { ConfigManager } from '../../../src/configs/models/configManager';
 import { SERVICES } from '../../../src/common/constants';
 import { Config, configs, configsRefs } from '../../../src/configs/models/config';
 import { SchemaNotFoundError } from '../../../src/schemas/models/errors';
@@ -63,6 +64,16 @@ describe('config', function () {
   afterAll(async function () {
     const onSignal = dependencyContainer.resolve<() => Promise<void>>('onSignal');
     await onSignal();
+  });
+
+  describe('insertDefaultConfigs', function () {
+    it('should insert all the default configs in the current schemas package', async function () {
+      const configManager = dependencyContainer.resolve(ConfigManager);
+
+      const action = configManager.insertDefaultConfigs();
+
+      await expect(action).resolves.not.toThrow();
+    });
   });
 
   describe('GET /config', function () {

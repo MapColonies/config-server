@@ -39,7 +39,7 @@ export class Validator {
 
   @withSpan()
   public async isValid(schemaId: string, data: unknown): Promise<[boolean, IOutputError[]?]> {
-    this.logger.info('Validating config data', { schemaId });
+    this.logger.debug('Validating config data', { schemaId });
     const validate = await this.ajv.compileAsync(await this.schemaManager.getSchema(schemaId));
     const valid = validate(data);
 

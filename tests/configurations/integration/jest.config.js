@@ -1,6 +1,6 @@
 module.exports = {
   transform: {
-    '^.+\\.ts$': ['ts-jest', { tsconfig: 'tsconfig.test.json' }],
+    '^.+\\.ts$': ['@swc/jest'],
   },
   coverageReporters: ['text', 'html'],
   collectCoverage: true,
@@ -12,7 +12,7 @@ module.exports = {
     '!**/models/**',
     'src/**/*Manager*.ts',
     '!<rootDir>/src/*',
-    '!**/db/runMigrations.ts',
+    '!**/db/**/*',
   ],
   coverageDirectory: '<rootDir>/coverage',
   rootDir: '../../../.',

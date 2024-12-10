@@ -14,7 +14,7 @@
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
     "release": "standard-version",
-    "test": "npm run test:unit && npm run test:integration",
+    "test": "tsc --noEmit -p tsconfig.test.json && npm run test:unit && npm run test:integration",
     "prebuild": "npm run clean",
     "build": "tsc --project tsconfig.build.json  && npm run assets:copy",
     "start": "npm run build && cd dist && node --require ./common/tracing.js  ./index.js",
@@ -81,6 +81,8 @@
     "@map-colonies/standard-version-update-helm-version": "^2.0.1",
     "@map-colonies/standard-version-update-openapi3-version": "0.0.2",
     "@redocly/cli": "^1.24.0",
+    "@swc/core": "^1.7.26",
+    "@swc/jest": "^0.2.36",
     "@types/compression": "^1.7.2",
     "@types/config": "^3.3.0",
     "@types/express": "^4.17.17",
@@ -97,8 +99,7 @@
     "drizzle-kit": "^0.20.17",
     "eslint": "^8.43.0",
     "husky": "^8.0.3",
-    "jest": "^29.5.0",
-    "jest-create-mock-instance": "^2.0.0",
+    "jest": "^29.7.0",
     "jest-extended": "^4.0.2",
     "jest-html-reporters": "^3.1.4",
     "jest-openapi": "^0.14.2",
@@ -113,6 +114,6 @@
     "supertest": "^6.3.3",
     "ts-jest": "^29.1.2",
     "ts-node": "10.9.2",
-    "typescript": "^5.4.5"
+    "typescript": "^5.7.2"
   }
 }

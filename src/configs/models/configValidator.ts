@@ -16,7 +16,7 @@ export class Validator {
   private readonly ajvRefValidator: ValidateFunction;
 
   public constructor(
-    private readonly schemaManager: SchemaManager,
+    @inject(SchemaManager) private readonly schemaManager: SchemaManager,
     @inject(SERVICES.LOGGER) private readonly logger: Logger
   ) {
     const draft7MetaSchema = JSON.parse(

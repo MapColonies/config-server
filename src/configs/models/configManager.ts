@@ -20,8 +20,8 @@ type GetConfigOptions = Prettify<Omit<NonNullable<paths['/config']['get']['param
 export class ConfigManager {
   public constructor(
     @inject(SERVICES.LOGGER) private readonly logger: Logger,
-    private readonly configRepository: ConfigRepository,
-    private readonly configValidator: Validator
+    @inject(ConfigRepository) private readonly configRepository: ConfigRepository,
+    @inject(Validator) private readonly configValidator: Validator
   ) {}
 
   @withSpan()

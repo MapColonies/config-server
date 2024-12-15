@@ -2,6 +2,7 @@ import 'jest-extended';
 import 'jest-openapi';
 import 'jest-sorted';
 
+import fs from 'node:fs';
 import jsLogger, { Logger } from '@map-colonies/js-logger';
 import httpStatusCodes from 'http-status-codes';
 import { DependencyContainer } from 'tsyringe';
@@ -14,9 +15,12 @@ import { getApp } from '../../../src/app';
 import { ConfigManager } from '../../../src/configs/models/configManager';
 import { SERVICES } from '../../../src/common/constants';
 import { Config, configs, configsRefs } from '../../../src/configs/models/config';
+import * as utils from '../../../src/common/utils';
 import { SchemaNotFoundError } from '../../../src/schemas/models/errors';
 import { ConfigRequestSender } from './helpers/requestSender';
 import { configsMockData, refs, schemaWithRef, simpleSchema, primitiveRefSchema, primitiveSchema } from './helpers/data';
+
+// jest.mock('../../../src/common/utils');
 
 async function getSchemaMock(id: string): Promise<JSONSchema> {
   switch (id) {
@@ -67,6 +71,28 @@ describe('config', function () {
   });
 
   describe('insertDefaultConfigs', function () {
+    it.only('should insert a config without errors', async function () {
+      jest.spyOn(utils, 'filesTreeGenerator').mockImplementation(async function* () {
+        await Promise.resolve();
+        yield {
+          name: 'v1.configs.json',
+          parentPath: 'schemas/build/schemas',
+        } as fs.Dirent;
+      });
+
+      const fsSpy = jest.spyOn(fs, 'readFileSync').mockReturnValue(JSON.stringify(simpleSchema));
+
+      fsSpy.mockImplementationOnce(() => JSON.stringify([{ name: 'default-simple-config', value: { name: 'name1', age: 1 } }]));
+
+      const configManager = dependencyContainer.resolve(ConfigManager);
+
+      await configManager.insertDefaultConfigs();
+
+      const defaultConfig = await configManager.getConfig('default-simple-config', 1);
+
+      expect(defaultConfig).toHaveProperty('config', { name: 'name1', age: 1 });
+    });
+
     it('should insert all the default configs in the current schemas package', async function () {
       const configManager = dependencyContainer.resolve(ConfigManager);
 

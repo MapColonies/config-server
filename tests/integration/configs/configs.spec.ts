@@ -20,8 +20,6 @@ import { SchemaNotFoundError } from '../../../src/schemas/models/errors';
 import { ConfigRequestSender } from './helpers/requestSender';
 import { configsMockData, refs, schemaWithRef, simpleSchema, primitiveRefSchema, primitiveSchema } from './helpers/data';
 
-// jest.mock('../../../src/common/utils');
-
 async function getSchemaMock(id: string): Promise<JSONSchema> {
   switch (id) {
     case schemaWithRef.$id:
@@ -71,26 +69,73 @@ describe('config', function () {
   });
 
   describe('insertDefaultConfigs', function () {
-    it.only('should insert a config without errors', async function () {
-      jest.spyOn(utils, 'filesTreeGenerator').mockImplementation(async function* () {
+    it('should insert a config without errors', async function () {
+      jest.spyOn(utils, 'filesTreeGenerator').mockImplementationOnce(async function* () {
         await Promise.resolve();
         yield {
           name: 'v1.configs.json',
-          parentPath: 'schemas/build/schemas',
+          parentPath: 'schemas/build/schemas/simpleSchema',
         } as fs.Dirent;
       });
 
-      const fsSpy = jest.spyOn(fs, 'readFileSync').mockReturnValue(JSON.stringify(simpleSchema));
-
-      fsSpy.mockImplementationOnce(() => JSON.stringify([{ name: 'default-simple-config', value: { name: 'name1', age: 1 } }]));
+      const fsSpy = jest.spyOn(fs, 'readFileSync');
 
       const configManager = dependencyContainer.resolve(ConfigManager);
+
+      fsSpy.mockReturnValueOnce(JSON.stringify([{ name: 'default-simple-config', value: { name: 'name1', age: 1 } }]));
 
       await configManager.insertDefaultConfigs();
 
       const defaultConfig = await configManager.getConfig('default-simple-config', 1);
-
       expect(defaultConfig).toHaveProperty('config', { name: 'name1', age: 1 });
+    });
+
+    it('should not insert config if it already exists', async function () {
+      jest.spyOn(utils, 'filesTreeGenerator').mockImplementationOnce(async function* () {
+        await Promise.resolve();
+        yield {
+          name: 'v1.configs.json',
+          parentPath: 'schemas/build/schemas/simpleSchema',
+        } as fs.Dirent;
+      });
+
+      const fsSpy = jest.spyOn(fs, 'readFileSync');
+
+      const configManager = dependencyContainer.resolve(ConfigManager);
+      await configManager.createConfig({
+        config: { name: 'name1', age: 1 },
+        configName: 'already-exists',
+        schemaId: 'https://mapcolonies.com/simpleSchema/v1',
+        version: 1,
+      });
+
+      fsSpy.mockReturnValueOnce(JSON.stringify([{ name: 'already-exists', value: { name: 'name1', age: 1 } }]));
+
+      await configManager.insertDefaultConfigs();
+
+      const defaultConfig = await configManager.getConfig('default-simple-config');
+      expect(defaultConfig).toHaveProperty('config', { name: 'name1', age: 1 });
+      expect(defaultConfig).toHaveProperty('version', 1);
+    });
+
+    it('should throw an error if there is a ref for a config that does not exists', async function () {
+      jest.spyOn(utils, 'filesTreeGenerator').mockImplementationOnce(async function* () {
+        await Promise.resolve();
+        yield {
+          name: 'v1.configs.json',
+          parentPath: 'schemas/build/schemas/simpleSchema',
+        } as fs.Dirent;
+      });
+
+      const fsSpy = jest.spyOn(fs, 'readFileSync');
+
+      const configManager = dependencyContainer.resolve(ConfigManager);
+
+      fsSpy.mockReturnValueOnce(JSON.stringify([{ name: 'bad-ref', value: { $ref: { configName: 'avi', version: 'latest' } } }]));
+
+      const action = configManager.insertDefaultConfigs();
+
+      await expect(action).rejects.toThrow();
     });
 
     it('should insert all the default configs in the current schemas package', async function () {

@@ -1,5 +1,5 @@
 import * as supertest from 'supertest';
-import { paths } from '../../../../src/openapiTypes';
+import { paths } from '@openapi';
 
 export class SchemaRequestSender {
   public constructor(private readonly app: Express.Application) {}

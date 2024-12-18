@@ -1,5 +1,5 @@
 import type { RequestHandler } from 'express';
-import type { paths } from '../openapiTypes';
+import type { paths } from '@openapi';
 
 // The types only work with any, so we need to disable the eslint rule
 // It doesn't affect the resulting types as its only used for the condition

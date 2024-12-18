@@ -1,7 +1,7 @@
 import betterAjvErrors from '@sidvind/better-ajv-errors';
 import jsLogger from '@map-colonies/js-logger';
-import { Validator } from '../../../src/configs/models/configValidator';
-import { SchemaManager } from '../../../src/schemas/models/schemaManager';
+import { Validator } from '@src/configs/models/configValidator';
+import { SchemaManager } from '@src/schemas/models/schemaManager';
 
 jest.mock('@sidvind/better-ajv-errors');
 

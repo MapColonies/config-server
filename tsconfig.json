@@ -10,7 +10,15 @@
     "skipLibCheck": true,
     "allowSyntheticDefaultImports": true,
     "experimentalDecorators": true,
-    "emitDecoratorMetadata": true
+    "emitDecoratorMetadata": true,
+    "baseUrl": ".",
+    "paths": {
+      "@src/*": ["src/*"],
+      "@tests/*": ["tests/*"],
+      "@common/*": ["src/common/*"],
+      "@openapi": ["src/openapiTypes"],
+      "@db": ["src/db/createConnection"]
+    }
   },
   "include": ["src"],
   "exclude": ["node_modules", "dist", "tests"]

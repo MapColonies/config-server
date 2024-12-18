@@ -1,5 +1,5 @@
 import { JSONSchema } from '@apidevtools/json-schema-ref-parser';
-import { ConfigRef, NewConfig } from '../../../../src/configs/models/config';
+import { ConfigRef, NewConfig } from '@src/configs/models/config';
 
 export const simpleSchema: JSONSchema = {
   type: 'object',

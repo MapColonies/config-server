@@ -1,7 +1,7 @@
 import httpStatus from 'http-status-codes';
 import { injectable, inject } from 'tsyringe';
+import { TypedRequestHandler } from '@common/interfaces';
 import { CapabilitiesManager } from '../models/capabilitiesManager';
-import { TypedRequestHandler } from '../../common/interfaces';
 
 @injectable()
 export class CapabilitiesController {

@@ -9,12 +9,12 @@ import { Logger } from '@map-colonies/js-logger';
 import httpLogger from '@map-colonies/express-access-log-middleware';
 import { getTraceContexHeaderMiddleware } from '@map-colonies/telemetry';
 import { collectMetricsExpressMiddleware } from '@map-colonies/telemetry/prom-metrics';
-import { SERVICES } from './common/constants';
-import { IConfig } from './common/interfaces';
+import { SERVICES } from '@common/constants';
+import { IConfig } from '@common/interfaces';
+import { addOperationIdToLog, logContextInjectionMiddleware } from '@common/logger';
 import { SCHEMA_ROUTER_SYMBOL } from './schemas/routes/schemaRouter';
 import { CAPABILITIES_ROUTER_SYMBOL } from './capabilities/routes/capabilitiesRouter';
 import { CONFIG_ROUTER_SYMBOL } from './configs/routes/configRouter';
-import { addOperationIdToLog, logContextInjectionMiddleware } from './common/logger';
 
 @injectable()
 export class ServerBuilder {

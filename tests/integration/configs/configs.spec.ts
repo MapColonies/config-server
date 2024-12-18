@@ -8,17 +8,26 @@ import httpStatusCodes from 'http-status-codes';
 import { DependencyContainer } from 'tsyringe';
 import { faker } from '@faker-js/faker';
 import { JSONSchema } from '@apidevtools/json-schema-ref-parser';
-import { ConfigRepository } from '../../../src/configs/repositories/configRepository';
-import { SchemaManager } from '../../../src/schemas/models/schemaManager';
-import { Drizzle } from '../../../src/db/createConnection';
-import { getApp } from '../../../src/app';
-import { ConfigManager } from '../../../src/configs/models/configManager';
-import { SERVICES } from '../../../src/common/constants';
-import { Config, configs, configsRefs } from '../../../src/configs/models/config';
-import * as utils from '../../../src/common/utils';
-import { SchemaNotFoundError } from '../../../src/schemas/models/errors';
+import { ConfigRepository } from '@src/configs/repositories/configRepository';
+import { SchemaManager } from '@src/schemas/models/schemaManager';
+import { Drizzle } from '@src/db/createConnection';
+import { getApp } from '@src/app';
+import { ConfigManager } from '@src/configs/models/configManager';
+import { SERVICES } from '@common/constants';
+import { Config, configs, configsRefs } from '@src/configs/models/config';
+import * as utils from '@common/utils';
+import { SchemaNotFoundError } from '@src/schemas/models/errors';
 import { ConfigRequestSender } from './helpers/requestSender';
 import { configsMockData, refs, schemaWithRef, simpleSchema, primitiveRefSchema, primitiveSchema } from './helpers/data';
+
+jest.mock('../../../src/common/utils', () => {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+  return {
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    __esModule: true,
+    ...jest.requireActual('../../../src/common/utils'),
+  };
+});
 
 async function getSchemaMock(id: string): Promise<JSONSchema> {
   switch (id) {

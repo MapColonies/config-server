@@ -1,3 +1,4 @@
+import fs, { Dirent } from 'node:fs';
 import jsLogger, { Logger } from '@map-colonies/js-logger';
 import { ConfigManager } from '../../../src/configs/models/configManager';
 import { ConfigRefResponse, ConfigRepository } from '../../../src/configs/repositories/configRepository';
@@ -8,6 +9,8 @@ import {
   ConfigValidationError,
   ConfigSchemaMismatchError,
 } from '../../../src/configs/models/errors';
+import * as utils from '../../../src/common/utils';
+import { ConfigReference } from '../../../src/configs/models/configReference';
 
 describe('ConfigManager', () => {
   let configManager: ConfigManager;
@@ -216,6 +219,94 @@ describe('ConfigManager', () => {
       configRepository.getConfig = jest.fn().mockResolvedValue({ version: 1, schemaId: 'https://mapcolonies.com/test/v2' });
 
       await expect(configManager.createConfig(config)).rejects.toThrow(ConfigSchemaMismatchError);
+    });
+  });
+
+  describe('insertDefaultConfigs', () => {
+    const treeGeneratorSpy = jest.spyOn(utils, 'filesTreeGenerator');
+    const readFileSyncSpy = jest.spyOn(fs, 'readFileSync');
+
+    beforeEach(() => {
+      jest.resetAllMocks();
+      configManager.createConfig = jest.fn();
+      configValidator.validateRef = jest.fn().mockReturnValue(true) as unknown as (ref: unknown) => ref is ConfigReference;
+    });
+
+    it('should insert the default configs', async () => {
+      treeGeneratorSpy.mockImplementation(async function* () {
+        await Promise.resolve();
+        const dir = new Dirent();
+        dir.name = 'avi.configs.json';
+        dir.parentPath = '/path/to/configs';
+
+        yield dir;
+      });
+
+      readFileSyncSpy.mockReturnValueOnce('[{"name": "avi", "value": {"avi":"avi"}}]');
+      configRepository.getConfig = jest.fn().mockResolvedValue(undefined);
+
+      await configManager.insertDefaultConfigs();
+
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(configManager.createConfig).toHaveBeenCalled();
+    });
+
+    it('should not insert the default configs if they already exist', async () => {
+      treeGeneratorSpy.mockImplementation(async function* () {
+        await Promise.resolve();
+        const dir = new Dirent();
+        dir.name = 'avi.configs.json';
+        dir.parentPath = '/path/to/configs';
+
+        yield dir;
+      });
+
+      readFileSyncSpy.mockReturnValueOnce('[{"name": "avi", "value": {"avi":"avi"}}]');
+      configRepository.getConfig = jest.fn().mockResolvedValue({ configName: 'avi' });
+
+      await configManager.insertDefaultConfigs();
+
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(configManager.createConfig).not.toHaveBeenCalled();
+    });
+
+    it('should insert referenced configs before the referencing ones', async () => {
+      treeGeneratorSpy.mockImplementation(async function* () {
+        await Promise.resolve();
+        const dir = new Dirent();
+        dir.name = 'avi.configs.json';
+        dir.parentPath = '/path/to/configs';
+
+        yield dir;
+      });
+
+      readFileSyncSpy.mockReturnValueOnce(
+        '[{"name": "avi", "value": {"avi":"avi"}},{"name": "ref", "value": {"$ref":{"configName": "avi", "version": "latest"}}}]'
+      );
+      configRepository.getConfig = jest.fn().mockResolvedValue(undefined);
+      await configManager.insertDefaultConfigs();
+
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(configManager.createConfig).toHaveBeenNthCalledWith(1, expect.objectContaining({ configName: 'avi' }));
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(configManager.createConfig).toHaveBeenNthCalledWith(2, expect.objectContaining({ configName: 'ref' }));
+    });
+
+    it('should throw an error if a referenced config does not exist', async () => {
+      treeGeneratorSpy.mockImplementation(async function* () {
+        await Promise.resolve();
+        const dir = new Dirent();
+        dir.name = 'avi.configs.json';
+        dir.parentPath = '/path/to/configs';
+
+        yield dir;
+      });
+
+      readFileSyncSpy.mockReturnValueOnce(
+        '[{"name": "avi", "value": {"avi":"avi"}},{"name": "ref", "value": {"$ref":{"configName": "xd", "version": "latest"}}}]'
+      );
+      configRepository.getConfig = jest.fn().mockResolvedValue(undefined);
+      await expect(configManager.insertDefaultConfigs()).rejects.toThrow('could not find config');
     });
   });
 });

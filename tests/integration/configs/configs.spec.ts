@@ -2,6 +2,7 @@ import 'jest-extended';
 import 'jest-openapi';
 import 'jest-sorted';
 
+import fs from 'node:fs';
 import jsLogger, { Logger } from '@map-colonies/js-logger';
 import httpStatusCodes from 'http-status-codes';
 import { DependencyContainer } from 'tsyringe';
@@ -11,8 +12,10 @@ import { ConfigRepository } from '../../../src/configs/repositories/configReposi
 import { SchemaManager } from '../../../src/schemas/models/schemaManager';
 import { Drizzle } from '../../../src/db/createConnection';
 import { getApp } from '../../../src/app';
+import { ConfigManager } from '../../../src/configs/models/configManager';
 import { SERVICES } from '../../../src/common/constants';
 import { Config, configs, configsRefs } from '../../../src/configs/models/config';
+import * as utils from '../../../src/common/utils';
 import { SchemaNotFoundError } from '../../../src/schemas/models/errors';
 import { ConfigRequestSender } from './helpers/requestSender';
 import { configsMockData, refs, schemaWithRef, simpleSchema, primitiveRefSchema, primitiveSchema } from './helpers/data';
@@ -63,6 +66,85 @@ describe('config', function () {
   afterAll(async function () {
     const onSignal = dependencyContainer.resolve<() => Promise<void>>('onSignal');
     await onSignal();
+  });
+
+  describe('insertDefaultConfigs', function () {
+    it('should insert a config without errors', async function () {
+      jest.spyOn(utils, 'filesTreeGenerator').mockImplementationOnce(async function* () {
+        await Promise.resolve();
+        yield {
+          name: 'v1.configs.json',
+          parentPath: 'schemas/build/schemas/simpleSchema',
+        } as fs.Dirent;
+      });
+
+      const fsSpy = jest.spyOn(fs, 'readFileSync');
+
+      const configManager = dependencyContainer.resolve(ConfigManager);
+
+      fsSpy.mockReturnValueOnce(JSON.stringify([{ name: 'default-simple-config', value: { name: 'name1', age: 1 } }]));
+
+      await configManager.insertDefaultConfigs();
+
+      const defaultConfig = await configManager.getConfig('default-simple-config', 1);
+      expect(defaultConfig).toHaveProperty('config', { name: 'name1', age: 1 });
+    });
+
+    it('should not insert config if it already exists', async function () {
+      jest.spyOn(utils, 'filesTreeGenerator').mockImplementationOnce(async function* () {
+        await Promise.resolve();
+        yield {
+          name: 'v1.configs.json',
+          parentPath: 'schemas/build/schemas/simpleSchema',
+        } as fs.Dirent;
+      });
+
+      const fsSpy = jest.spyOn(fs, 'readFileSync');
+
+      const configManager = dependencyContainer.resolve(ConfigManager);
+      await configManager.createConfig({
+        config: { name: 'name1', age: 1 },
+        configName: 'already-exists',
+        schemaId: 'https://mapcolonies.com/simpleSchema/v1',
+        version: 1,
+      });
+
+      fsSpy.mockReturnValueOnce(JSON.stringify([{ name: 'already-exists', value: { name: 'name1', age: 1 } }]));
+
+      await configManager.insertDefaultConfigs();
+
+      const defaultConfig = await configManager.getConfig('default-simple-config');
+      expect(defaultConfig).toHaveProperty('config', { name: 'name1', age: 1 });
+      expect(defaultConfig).toHaveProperty('version', 1);
+    });
+
+    it('should throw an error if there is a ref for a config that does not exists', async function () {
+      jest.spyOn(utils, 'filesTreeGenerator').mockImplementationOnce(async function* () {
+        await Promise.resolve();
+        yield {
+          name: 'v1.configs.json',
+          parentPath: 'schemas/build/schemas/simpleSchema',
+        } as fs.Dirent;
+      });
+
+      const fsSpy = jest.spyOn(fs, 'readFileSync');
+
+      const configManager = dependencyContainer.resolve(ConfigManager);
+
+      fsSpy.mockReturnValueOnce(JSON.stringify([{ name: 'bad-ref', value: { $ref: { configName: 'avi', version: 'latest' } } }]));
+
+      const action = configManager.insertDefaultConfigs();
+
+      await expect(action).rejects.toThrow();
+    });
+
+    it('should insert all the default configs in the current schemas package', async function () {
+      const configManager = dependencyContainer.resolve(ConfigManager);
+
+      const action = configManager.insertDefaultConfigs();
+
+      await expect(action).resolves.not.toThrow();
+    });
   });
 
   describe('GET /config', function () {

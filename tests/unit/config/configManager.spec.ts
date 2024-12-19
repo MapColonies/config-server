@@ -1,16 +1,20 @@
 import fs, { Dirent } from 'node:fs';
 import jsLogger, { Logger } from '@map-colonies/js-logger';
-import { ConfigManager } from '../../../src/configs/models/configManager';
-import { ConfigRefResponse, ConfigRepository } from '../../../src/configs/repositories/configRepository';
-import { Validator } from '../../../src/configs/models/configValidator';
-import {
-  ConfigNotFoundError,
-  ConfigVersionMismatchError,
-  ConfigValidationError,
-  ConfigSchemaMismatchError,
-} from '../../../src/configs/models/errors';
-import * as utils from '../../../src/common/utils';
-import { ConfigReference } from '../../../src/configs/models/configReference';
+import { ConfigManager } from '@src/configs/models/configManager';
+import { ConfigRefResponse, ConfigRepository } from '@src/configs/repositories/configRepository';
+import { Validator } from '@src/configs/models/configValidator';
+import { ConfigNotFoundError, ConfigVersionMismatchError, ConfigValidationError, ConfigSchemaMismatchError } from '@src/configs/models/errors';
+import * as utils from '@src/common/utils';
+import { ConfigReference } from '@src/configs/models/configReference';
+
+jest.mock('../../../src/common/utils', () => {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+  return {
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    __esModule: true,
+    ...jest.requireActual('../../../src/common/utils'),
+  };
+});
 
 describe('ConfigManager', () => {
   let configManager: ConfigManager;

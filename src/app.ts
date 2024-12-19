@@ -1,10 +1,10 @@
 import type { Application } from 'express';
 import type { DependencyContainer } from 'tsyringe';
 import type { Logger } from '@map-colonies/js-logger';
+import { SERVICES } from '@common/constants';
 import { registerExternalValues, type RegisterOptions } from './containerConfig';
 import { ServerBuilder } from './serverBuilder';
 import { ConfigManager } from './configs/models/configManager';
-import { SERVICES } from './common/constants';
 
 async function getApp(registerOptions?: RegisterOptions): Promise<[Application, DependencyContainer]> {
   const container = await registerExternalValues(registerOptions);

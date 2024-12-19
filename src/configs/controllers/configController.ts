@@ -2,9 +2,9 @@ import { formatISO } from 'date-fns';
 import httpStatus from 'http-status-codes';
 import { injectable, inject } from 'tsyringe';
 import { HttpError } from '@map-colonies/error-express-handler';
+import type { components } from '@openapi';
+import { TypedRequestHandler } from '@common/interfaces';
 import { ConfigManager } from '../models/configManager';
-import { TypedRequestHandler } from '../../common/interfaces';
-import type { components } from '../../openapiTypes';
 import { Config, SortOption, SortableFields } from '../models/config';
 import {
   ConfigNotFoundError,

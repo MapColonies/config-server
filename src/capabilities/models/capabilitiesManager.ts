@@ -1,8 +1,8 @@
 import { injectable } from 'tsyringe';
 import { readPackageJsonSync } from '@map-colonies/read-pkg';
-import { schemasPackageVersion } from '../../common/constants';
-import { paths } from '../../openapiTypes';
-import { withSpan } from '../../common/tracing';
+import { paths } from '@openapi';
+import { schemasPackageVersion } from '@common/constants';
+import { withSpan } from '@common/tracing';
 
 const serverVersion = readPackageJsonSync('package.json').version as string;
 

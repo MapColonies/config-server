@@ -4,10 +4,10 @@ import fsPromise from 'node:fs/promises';
 import { Logger } from '@map-colonies/js-logger';
 import { inject, injectable } from 'tsyringe';
 import { JSONSchema, $RefParser } from '@apidevtools/json-schema-ref-parser';
-import { SERVICES } from '../../common/constants';
-import { components } from '../../openapiTypes';
-import { setSpanAttributes, withSpan } from '../../common/tracing';
-import { enrichLogContext } from '../../common/logger';
+import { SERVICES } from '@common/constants';
+import { components } from '@openapi';
+import { setSpanAttributes, withSpan } from '@common/tracing';
+import { enrichLogContext } from '@common/logger';
 import { SchemaNotFoundError, SchemaPathIsInvalidError } from './errors';
 
 const schemasPackageResolvedPath = require.resolve('@map-colonies/schemas');

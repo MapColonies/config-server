@@ -1,5 +1,5 @@
 import * as supertest from 'supertest';
-import type { paths } from '../../../../src/openapiTypes';
+import type { paths } from '@openapi';
 
 export class ConfigRequestSender {
   public constructor(private readonly app: Express.Application) {}

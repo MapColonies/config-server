@@ -5,9 +5,9 @@ import addFormats from 'ajv-formats';
 import { Logger } from '@map-colonies/js-logger';
 import { SpanStatusCode, trace } from '@opentelemetry/api';
 import betterAjvErrors, { type IOutputError } from '@sidvind/better-ajv-errors';
+import { setSpanAttributes, withSpan } from '@common/tracing';
+import { SERVICES } from '@common/constants';
 import { SchemaManager } from '../../schemas/models/schemaManager';
-import { setSpanAttributes, withSpan } from '../../common/tracing';
-import { SERVICES } from '../../common/constants';
 import { ConfigReference, configReferenceSchema } from './configReference';
 
 @injectable()

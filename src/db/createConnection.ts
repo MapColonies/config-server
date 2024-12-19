@@ -3,7 +3,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
-import { Pool, PoolConfig } from 'pg';
+import { Pool, type PoolConfig } from 'pg';
 import { configs } from '../configs/models/config';
 
 export type DbConfig = {

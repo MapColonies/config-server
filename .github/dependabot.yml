@@ -8,6 +8,8 @@ updates:
     allow:
       - dependency-name: "@map-colonies/schemas"
     directory: /
+    labels:
+      - 'infra'
     commit-message:
       prefix: "build(schemas)"
   # deps
@@ -40,6 +42,8 @@ updates:
     ignore:
       - dependency-name: "@map-colonies/schemas"
     directory: /
+    labels:
+      - 'infra'
     commit-message:
       prefix: "build(dev-deps)"
     groups:
@@ -63,3 +67,5 @@ updates:
     commit-message:
       prefix: "ci(deps)"
     directory: "/"
+    labels:
+      - 'infra'

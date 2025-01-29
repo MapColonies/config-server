@@ -103,7 +103,7 @@ route:
   host: 
   timeout:
     enabled: false # defaults to 30s by openshift
-    duration: 60s # supported units (us, ms, s, m, h, d)
+    duration: 60s # Supported units (us, ms, s, m, h, d)
   rewriteTarget: ''
   tls:
     enabled: true

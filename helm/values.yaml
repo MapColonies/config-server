@@ -8,7 +8,7 @@ enabled: true
 environment: development
 replicaCount: 1
 revisionHistoryLimit: 5 # Amount of revisions we keep
-nodePort: 30030 #for minikube deployment only
+nodePort: 30030 # For minikube deployment only
 resetOnConfigChange: false
 
 nameOverride: ""

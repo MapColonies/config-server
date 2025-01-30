@@ -12,7 +12,7 @@ jobs:
 
     strategy:
       matrix:
-        node: [20.x, 22.x]
+        node: [22.13.1]
 
     steps:
       - name: Check out TS Project Git repository
@@ -53,7 +53,7 @@ jobs:
 
     strategy:
       matrix:
-        node: [20.x, 22.x]
+        node: [22.13.1]
 
     services:
       # Label used to access the service container

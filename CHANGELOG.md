@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.2.2](https://github.com/MapColonies/config-server/compare/v1.2.1...v1.2.2) (2025-01-30)
+
+
+### Build System
+
+* upgrade node to 22 ([#75](https://github.com/MapColonies/config-server/issues/75)) ([727fba0](https://github.com/MapColonies/config-server/commit/727fba04c714d869b0113bd3105502a7c4974042))
+
 ## [1.2.1](https://github.com/MapColonies/config-server/compare/v1.2.0...v1.2.1) (2025-01-29)
 
 

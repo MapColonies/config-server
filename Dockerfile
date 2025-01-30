@@ -1,6 +1,6 @@
 ARG CONFIG_UI_TAG_OR_HASH=a132252dda4dbe7ab0b14a92d0af06a9f50d7bd4
 
-FROM node:20 as build
+FROM node:22.13.1 as build
 
 WORKDIR /tmp/buildApp
 
@@ -10,7 +10,7 @@ RUN npm ci
 COPY . .
 RUN npm run build
 
-FROM node:20 as build-ui
+FROM node:22.13.1 as build-ui
 
 WORKDIR /tmp/buildApp
 RUN apt-get update && apt-get install -y git
@@ -20,7 +20,7 @@ RUN git clone https://github.com/MapColonies/config-ui.git && \
     npm ci && \
     npm run build
 
-FROM node:20.3.1-alpine3.17 as production
+FROM node:22.13.1-alpine3.21 as production
 
 RUN apk add dumb-init
 

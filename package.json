@@ -70,6 +70,7 @@
     "lodash": "^4.17.21",
     "pg": "^8.11.5",
     "reflect-metadata": "^0.1.13",
+    "ts-node": "10.9.2",
     "tsyringe": "^4.8.0"
   },
   "devDependencies": {
@@ -114,7 +115,6 @@
     "standard-version": "^9.5.0",
     "supertest": "^6.3.3",
     "ts-jest": "^29.1.2",
-    "ts-node": "10.9.2",
     "typescript": "^5.7.2",
     "tsc-alias": "^1.8.10"
   },

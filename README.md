@@ -46,7 +46,6 @@ docker build -t <your-org>/config-server:<tag> .
 
 If needed, it's possible to run the migrations straight from the docker image by running the following command:
 ```bash
-docker run --rm <your-org>/config-server:<tag> node ./db/runMi
-grations.js
+docker run --rm <your-org>/config-server:<tag> node ./db/runMigrations.js
 ```
 Don't forget to set the required environment variables.

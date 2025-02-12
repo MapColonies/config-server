@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.2.4](https://github.com/MapColonies/config-server/compare/v1.2.3...v1.2.4) (2025-02-12)
+
+
+### Helm Changes
+
+* comment image tag ([#82](https://github.com/MapColonies/config-server/issues/82)) ([e4d454d](https://github.com/MapColonies/config-server/commit/e4d454ddcdab3cce42b9452961fe94bdf43ba99b))
+
 ## [1.2.3](https://github.com/MapColonies/config-server/compare/v1.2.2...v1.2.3) (2025-02-12)
 
 

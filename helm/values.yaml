@@ -54,7 +54,7 @@ caKey: 'ca.crt'
 
 image:
   repository: config-server
-  tag: 'latest'
+  # tag: 'latest'
   pullPolicy: IfNotPresent
 
 env:

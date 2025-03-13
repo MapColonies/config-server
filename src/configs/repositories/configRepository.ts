@@ -2,9 +2,9 @@ import { SQL, SQLWrapper, and, asc, desc, eq, gt, isNull, lt, or, sql } from 'dr
 import { inject, scoped, Lifecycle } from 'tsyringe';
 import { toDate } from 'date-fns-tz';
 import { type Logger } from '@map-colonies/js-logger';
+import type { Drizzle } from '@db';
 import { SERVICES } from '@common/constants';
 import { callWithSpan, withSpan } from '@common/tracing';
-import type { Drizzle } from '@db';
 import { type Config, type NewConfig, type NewConfigRef, configs, configsRefs, SortOption } from '../models/config';
 import type { ConfigReference } from '../models/configReference';
 import { ConfigNotFoundError } from '../models/errors';
@@ -12,7 +12,6 @@ import { ConfigNotFoundError } from '../models/errors';
 const DEFAULT_LIMIT = 10;
 const DEFAULT_OFFSET = 0;
 
-// eslint-disable-next-line @typescript-eslint/no-magic-numbers
 function recursiveQueryBuilder(drizzle: Drizzle, baseQuery: SQLWrapper, recursiveSelectParameters: Parameters<typeof drizzle.select>[0]): SQL {
   return callWithSpan(() => {
     const recursiveQuery = drizzle

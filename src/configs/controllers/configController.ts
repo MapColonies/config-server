@@ -25,13 +25,11 @@ function configMapper(config: Config): components['schemas']['config'] {
 
 const sortFieldsMap = new Map<string, SortableFields>(
   Object.entries({
-    /* eslint-disable @typescript-eslint/naming-convention */
     'config-name': 'configName',
     version: 'version',
     'created-at': 'createdAt',
     'schema-id': 'schemaId',
     'created-by': 'createdBy',
-    /* eslint-enable @typescript-eslint/naming-convention */
   })
 );
 

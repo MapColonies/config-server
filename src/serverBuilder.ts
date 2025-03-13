@@ -1,4 +1,4 @@
-import express, { Router } from 'express';
+import express, { Router, type Application, static as expressStatic } from 'express';
 import bodyParser from 'body-parser';
 import compression from 'compression';
 import { OpenapiViewerRouter, OpenapiRouterConfig } from '@map-colonies/openapi-express-viewer';
@@ -18,7 +18,7 @@ import { CONFIG_ROUTER_SYMBOL } from './configs/routes/configRouter';
 
 @injectable()
 export class ServerBuilder {
-  private readonly serverInstance: express.Application;
+  private readonly serverInstance: Application;
   private readonly openapiFilePath: string;
   private readonly apiPrefix: string;
 
@@ -97,8 +97,8 @@ export class ServerBuilder {
       const staticPath = this.config.get<string>('server.staticAssets.folder');
       // we use the static middleware twice. the second one is to catch subpath requests and serve the index.html
       // api is not affected by this middleware as the OpenApiMiddleware is registered before and sets 404 for all api misses
-      this.serverInstance.use(express.static(staticPath));
-      this.serverInstance.use('*', express.static(staticPath));
+      this.serverInstance.use(expressStatic(staticPath));
+      this.serverInstance.use('*', expressStatic(staticPath));
     }
 
     this.serverInstance.use(getErrorHandlerMiddleware());

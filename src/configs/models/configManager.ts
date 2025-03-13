@@ -5,12 +5,12 @@ import { inject, injectable } from 'tsyringe';
 import { Clone } from '@sinclair/typebox/value';
 import pointer, { type JsonObject } from 'json-pointer';
 import { parseISO } from 'date-fns';
+import { paths, components } from '@openapi';
 import type { Prettify } from '@common/interfaces';
 import { SERVICES } from '@common/constants';
 import { enrichLogContext } from '@common/logger';
 import { setSpanAttributes, withSpan } from '@common/tracing';
 import { filesTreeGenerator } from '@common/utils';
-import { paths, components } from '@openapi';
 import { ConfigRepository, ConfigSearchParams, SqlPaginationParams } from '../repositories/configRepository';
 import { schemasBasePath } from '../../schemas/models/schemaManager';
 import { Config, SortOption } from './config';
@@ -20,7 +20,6 @@ import { ConfigReference } from './configReference';
 
 type GetConfigOptions = Prettify<Omit<NonNullable<paths['/config']['get']['parameters']['query']>, 'sort'> & { sort?: SortOption[] }>;
 
-// eslint-disable-next-line @typescript-eslint/no-magic-numbers
 type DefaultConfigToInsert = Parameters<ConfigManager['createConfig']>[0] & {
   refs: ConfigReference[];
   visited: boolean;

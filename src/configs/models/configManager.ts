@@ -1,9 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { Logger } from '@map-colonies/js-logger';
+import { type Logger } from '@map-colonies/js-logger';
 import { inject, injectable } from 'tsyringe';
 import { Clone } from '@sinclair/typebox/value';
-import pointer, { JsonObject } from 'json-pointer';
+import pointer, { type JsonObject } from 'json-pointer';
 import { parseISO } from 'date-fns';
 import type { Prettify } from '@common/interfaces';
 import { SERVICES } from '@common/constants';

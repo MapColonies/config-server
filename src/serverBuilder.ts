@@ -5,12 +5,12 @@ import { OpenapiViewerRouter, OpenapiRouterConfig } from '@map-colonies/openapi-
 import { getErrorHandlerMiddleware } from '@map-colonies/error-express-handler';
 import { middleware as OpenApiMiddleware } from 'express-openapi-validator';
 import { inject, injectable } from 'tsyringe';
-import { Logger } from '@map-colonies/js-logger';
+import { type Logger } from '@map-colonies/js-logger';
 import httpLogger from '@map-colonies/express-access-log-middleware';
 import { getTraceContexHeaderMiddleware } from '@map-colonies/telemetry';
 import { collectMetricsExpressMiddleware } from '@map-colonies/telemetry/prom-metrics';
 import { SERVICES } from '@common/constants';
-import { IConfig } from '@common/interfaces';
+import { type IConfig } from '@common/interfaces';
 import { addOperationIdToLog, logContextInjectionMiddleware } from '@common/logger';
 import { SCHEMA_ROUTER_SYMBOL } from './schemas/routes/schemaRouter';
 import { CAPABILITIES_ROUTER_SYMBOL } from './capabilities/routes/capabilitiesRouter';

@@ -1,7 +1,7 @@
 import { SQL, SQLWrapper, and, asc, desc, eq, gt, isNull, lt, or, sql } from 'drizzle-orm';
 import { inject, scoped, Lifecycle } from 'tsyringe';
 import { toDate } from 'date-fns-tz';
-import { Logger } from '@map-colonies/js-logger';
+import { type Logger } from '@map-colonies/js-logger';
 import { SERVICES } from '@common/constants';
 import { callWithSpan, withSpan } from '@common/tracing';
 import type { Drizzle } from '@db';
@@ -314,7 +314,7 @@ export class ConfigRepository {
 
     const configsResult = await configsQuery.execute();
 
-    if (configsResult.length === 0) {
+    if (!configsResult[0]) {
       this.logger.debug('No configs found with the specified filters');
       return { configs: [], totalCount: 0 };
     }

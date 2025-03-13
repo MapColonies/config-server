@@ -6,7 +6,7 @@ import { IGNORED_INCOMING_TRACE_ROUTES, IGNORED_OUTGOING_TRACE_ROUTES, SERVICE_N
 
 function maskSchemasPath(path: string): string {
   const split = path.split('node_modules/');
-  if (split.length > 1) {
+  if (split[1] !== undefined) {
     return split[1];
   }
   return '';

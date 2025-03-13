@@ -1,7 +1,7 @@
 import path from 'node:path';
 import fs from 'node:fs';
 import fsPromise from 'node:fs/promises';
-import { Logger } from '@map-colonies/js-logger';
+import { type Logger } from '@map-colonies/js-logger';
 import { inject, injectable } from 'tsyringe';
 import { JSONSchema, $RefParser } from '@apidevtools/json-schema-ref-parser';
 import { SERVICES } from '@common/constants';
@@ -33,13 +33,14 @@ export class SchemaManager {
     this.logger.debug({ msg: 'loading schema', schemaId: id });
     enrichLogContext({ schemaId: id }, true);
 
+    const schemaPathPart = id.split(SCHEMA_DOMAIN)[1] as string; // we assume that the schema id is a valid url;
     // check for path traversal, if path starts with .. it is invalid
-    if (path.normalize(id.split(SCHEMA_DOMAIN)[1]).startsWith('..')) {
+    if (path.normalize(schemaPathPart).startsWith('..')) {
       this.logger.error({ msg: 'schema path is invalid, path traversal' });
       throw new SchemaPathIsInvalidError('Schema path is invalid');
     }
 
-    const schemaContent = await this.loadSchema(id.split(SCHEMA_DOMAIN)[1], dereference);
+    const schemaContent = await this.loadSchema(schemaPathPart, dereference);
 
     if (dereference) {
       return refParser.dereference(schemaContent, {
@@ -49,7 +50,7 @@ export class SchemaManager {
             canRead: /^https:\/\/mapcolonies.com\/.*/,
             order: 1,
             read: async (file: { url: string; hash: string; extension: string }) => {
-              const subPath = file.url.split(SCHEMA_DOMAIN)[1];
+              const subPath = file.url.split(SCHEMA_DOMAIN)[1] as string;
 
               return this.loadSchema(subPath, dereference);
             },
@@ -80,7 +81,9 @@ export class SchemaManager {
 
       return {
         name: dirent.name,
-        id: SCHEMA_DOMAIN.slice(0, LAST_ARRAY_ELEMENT) + path.posix.join(dirPath.split(schemasBasePath)[1], dirent.name.split('.')[0]),
+        id:
+          SCHEMA_DOMAIN.slice(0, LAST_ARRAY_ELEMENT) +
+          path.posix.join(dirPath.split(schemasBasePath)[1] as string, dirent.name.split('.')[0] as string),
       };
     });
 

@@ -2,7 +2,7 @@ import mapColoniesPrettierConfig from '@map-colonies/prettier-config';
 
 /** @type {import('prettier').Config} */
 const prettierConfig = {
-  plugins: ['prettier-plugin-embed', 'prettier-plugin-sql'],
+  plugins: ['prettier-plugin-sql'],
 };
 
 /** @type {import('prettier-plugin-sql').SqlBaseOptions} */

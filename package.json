@@ -67,6 +67,7 @@
     "@map-colonies/prettier-config": "0.0.1",
     "@map-colonies/tsconfig": "^1.0.1",
     "@map-colonies/commitlint-config": "^1.1.1",
+    "@map-colonies/infra-copilot-instructions": "^1.0.0",
     "@redocly/cli": "^1.24.0",
     "@swc/core": "^1.7.26",
     "@swc/jest": "^0.2.36",

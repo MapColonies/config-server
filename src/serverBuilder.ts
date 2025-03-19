@@ -1,4 +1,4 @@
-import express, { Router, type Application, static as expressStatic } from 'express';
+import express, { Router, type Application, static as expressStatic, type Express } from 'express';
 import bodyParser from 'body-parser';
 import compression from 'compression';
 import { OpenapiViewerRouter, OpenapiRouterConfig } from '@map-colonies/openapi-express-viewer';
@@ -18,7 +18,7 @@ import { CONFIG_ROUTER_SYMBOL } from './configs/routes/configRouter';
 
 @injectable()
 export class ServerBuilder {
-  private readonly serverInstance: Application;
+  private readonly serverInstance: Express;
   private readonly openapiFilePath: string;
   private readonly apiPrefix: string;
 
@@ -34,7 +34,7 @@ export class ServerBuilder {
     this.apiPrefix = this.config.get<string>('server.apiPrefix');
   }
 
-  public build(): express.Application {
+  public build(): Express {
     this.registerPreRoutesMiddleware();
     this.buildRoutes();
     this.registerPostRoutesMiddleware();

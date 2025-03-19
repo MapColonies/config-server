@@ -1,8 +1,9 @@
-import * as supertest from 'supertest';
+import supertest from 'supertest';
+import type { Express } from 'express';
 import { paths } from '@openapi';
 
 export class SchemaRequestSender {
-  public constructor(private readonly app: Express.Application) {}
+  public constructor(private readonly app: Express) {}
 
   public async getSchemas(): Promise<supertest.Test> {
     return supertest.agent(this.app).get('/schema/tree').set('Content-Type', 'application/json');

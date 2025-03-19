@@ -1,8 +1,9 @@
-import * as supertest from 'supertest';
+import supertest from 'supertest';
+import type { Express } from 'express';
 import type { paths } from '@openapi';
 
 export class ConfigRequestSender {
-  public constructor(private readonly app: Express.Application) {}
+  public constructor(private readonly app: Express) {}
 
   public async getConfigs(params: paths['/config']['get']['parameters']['query']): Promise<supertest.Test> {
     return supertest

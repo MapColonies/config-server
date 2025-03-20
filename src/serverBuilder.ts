@@ -1,4 +1,4 @@
-import express, { Router, type Application, static as expressStatic, type Express } from 'express';
+import express, { Router, static as expressStatic, type Express } from 'express';
 import bodyParser from 'body-parser';
 import compression from 'compression';
 import { OpenapiViewerRouter, OpenapiRouterConfig } from '@map-colonies/openapi-express-viewer';

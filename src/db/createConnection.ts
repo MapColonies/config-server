@@ -13,7 +13,6 @@ export type DbConfig = {
 
 export function createConnectionOptions(dbConfig: DbConfig): PoolConfig {
   const { enableSslAuth, sslPaths, ...dataSourceOptions } = dbConfig;
-  // eslint-disable-next-line @typescript-eslint/naming-convention
   dataSourceOptions.application_name = `${hostname()}-${process.env.NODE_ENV ?? 'unknown_env'}`;
   if (enableSslAuth) {
     dataSourceOptions.password = undefined;

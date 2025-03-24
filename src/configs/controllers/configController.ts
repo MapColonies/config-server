@@ -25,13 +25,11 @@ function configMapper(config: Config): components['schemas']['config'] {
 
 const sortFieldsMap = new Map<string, SortableFields>(
   Object.entries({
-    /* eslint-disable @typescript-eslint/naming-convention */
     'config-name': 'configName',
     version: 'version',
     'created-at': 'createdAt',
     'schema-id': 'schemaId',
     'created-by': 'createdBy',
-    /* eslint-enable @typescript-eslint/naming-convention */
   })
 );
 
@@ -44,7 +42,7 @@ function sortOptionParser(sortArray: components['parameters']['SortQuery']): Sor
   const fieldSet = new Set<string>();
 
   for (const option of sortArray) {
-    const [field, order] = option.split(':');
+    const [field, order] = option.split(':') as [string, 'asc' | 'desc' | undefined]; // we assume that the options are already validated by the openapi validator;
 
     if (fieldSet.has(field)) {
       throw new SortQueryRepeatError(`Duplicate field in sort query: ${field}`);
@@ -53,7 +51,7 @@ function sortOptionParser(sortArray: components['parameters']['SortQuery']): Sor
 
     const parsedField = sortFieldsMap.get(field) as SortableFields;
 
-    parsedOptions.push({ field: parsedField, order: (order as 'asc' | 'desc' | undefined) ?? 'asc' });
+    parsedOptions.push({ field: parsedField, order: order ?? 'asc' });
   }
 
   return parsedOptions;

@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs';
-import Ajv, { AnySchemaObject, ErrorObject, ValidateFunction } from 'ajv/dist/2019';
+import ajv, { AnySchemaObject, ErrorObject, ValidateFunction } from 'ajv/dist/2019';
 import { inject, injectable } from 'tsyringe';
 import addFormats from 'ajv-formats';
-import { Logger } from '@map-colonies/js-logger';
+import { type Logger } from '@map-colonies/js-logger';
 import { SpanStatusCode, trace } from '@opentelemetry/api';
 import betterAjvErrors, { type IOutputError } from '@sidvind/better-ajv-errors';
 import { setSpanAttributes, withSpan } from '@common/tracing';
@@ -12,7 +12,7 @@ import { ConfigReference, configReferenceSchema } from './configReference';
 
 @injectable()
 export class Validator {
-  private readonly ajv: Ajv;
+  private readonly ajv: ajv;
   private readonly ajvRefValidator: ValidateFunction;
 
   public constructor(
@@ -23,7 +23,7 @@ export class Validator {
       readFileSync(require.resolve('ajv/dist/refs/json-schema-draft-07.json'), { encoding: 'utf-8' })
     ) as AnySchemaObject;
     this.ajv = addFormats(
-      new Ajv({
+      new ajv({
         loadSchema: async (uri): Promise<AnySchemaObject> => {
           return this.schemaManager.getSchema(uri);
         },

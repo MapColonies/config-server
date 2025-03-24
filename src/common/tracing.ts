@@ -6,7 +6,7 @@ import { IGNORED_INCOMING_TRACE_ROUTES, IGNORED_OUTGOING_TRACE_ROUTES, SERVICE_N
 
 function maskSchemasPath(path: string): string {
   const split = path.split('node_modules/');
-  if (split.length > 1) {
+  if (split[1] !== undefined) {
     return split[1];
   }
   return '';
@@ -18,7 +18,6 @@ const fsFunctionMap = new Map([
   ['readdir', 'directory'],
 ]);
 
-/* eslint-disable @typescript-eslint/naming-convention */
 const tracing = new Tracing({
   attributes: { 'schemas.version': schemasPackageVersion },
   autoInstrumentationsConfigMap: {
@@ -46,6 +45,8 @@ const tracing = new Tracing({
     '@opentelemetry/instrumentation-express': {
       requestHook: (span, info): void => {
         const operationId = get(info, 'request.openapi.schema.operationId') as string | undefined;
+        // rule disabled because the enum is not exported from the package
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
         if (info.layerType === 'request_handler' && typeof operationId === 'string' && operationId !== '') {
           span.updateName('request handler - ' + operationId);
           span.setAttribute('http.openapi.operation-id', operationId);
@@ -54,7 +55,6 @@ const tracing = new Tracing({
     },
   },
 });
-/* eslint-enable @typescript-eslint/naming-convention */
 
 tracing.start();
 
@@ -116,7 +116,6 @@ export function withSpan<Args extends any[]>(
     }
 
     descriptor.value = function (this: This, ...args: Args): any {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
       return callWithSpan(
         (span) => {
           if (options.postSpanCreationHook !== undefined) {

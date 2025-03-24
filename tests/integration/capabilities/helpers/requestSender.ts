@@ -1,9 +1,10 @@
-import * as supertest from 'supertest';
+import { type Express } from 'express';
+import { agent, Test } from 'supertest';
 
 export class SchemaRequestSender {
-  public constructor(private readonly app: Express.Application) {}
+  public constructor(private readonly app: Express) {}
 
-  public async getCapabilities(): Promise<supertest.Test> {
-    return supertest.agent(this.app).get('/capabilities').set('Content-Type', 'application/json');
+  public async getCapabilities(): Promise<Test> {
+    return agent(this.app).get('/capabilities').set('Content-Type', 'application/json');
   }
 }

@@ -17,7 +17,6 @@ void getApp()
   .then(([app]) => {
     const logger = container.resolve<Logger>(SERVICES.LOGGER);
     const stubHealthCheck = async (): Promise<void> => Promise.resolve();
-    // eslint-disable-next-line @typescript-eslint/naming-convention
     const server = createTerminus(createServer(app), { healthChecks: { '/liveness': stubHealthCheck, onSignal: container.resolve('onSignal') } });
 
     const isStaticAssetsEnabled = config.get<boolean>('server.staticAssets.enabled');

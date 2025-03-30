@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.3.0](https://github.com/MapColonies/config-server/compare/v1.2.3...v1.3.0) (2025-03-30)
+
+
+### Features
+
+* modernize ([#84](https://github.com/MapColonies/config-server/issues/84)) ([5dc7b92](https://github.com/MapColonies/config-server/commit/5dc7b929b64dab75533d440ad1aabe70244a50a2))
+
+
+### Helm Changes
+
+* comment image tag ([#82](https://github.com/MapColonies/config-server/issues/82)) ([e4d454d](https://github.com/MapColonies/config-server/commit/e4d454ddcdab3cce42b9452961fe94bdf43ba99b))
+
+
+### Dependency Updates
+
+* bump @map-colonies/schemas in the schemas group ([#86](https://github.com/MapColonies/config-server/issues/86)) ([6703069](https://github.com/MapColonies/config-server/commit/6703069410d0c13d8ac5861ef89bae280f1db628))
+
 ## [1.2.3](https://github.com/MapColonies/config-server/compare/v1.2.2...v1.2.3) (2025-02-12)
 
 

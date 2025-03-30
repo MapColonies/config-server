@@ -5,6 +5,7 @@ FROM node:22.13.1 as build
 WORKDIR /tmp/buildApp
 
 COPY ./package*.json ./
+COPY .husky/ .husky/
 
 RUN npm ci
 COPY . .
@@ -32,6 +33,7 @@ ENV SERVER_API_PREFIX=/api
 WORKDIR /usr/src/app
 
 COPY --chown=node:node package*.json ./
+COPY .husky/ .husky/
 
 RUN npm ci --only=production
 

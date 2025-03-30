@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.3.1](https://github.com/MapColonies/config-server/compare/v1.3.0...v1.3.1) (2025-03-30)
+
+
+### Build System
+
+* add missing husky copy to dockerfile ([d527c81](https://github.com/MapColonies/config-server/commit/d527c816d76dea70c4eb5ec4e15c4a0ab24b00fa))
+
 ## [1.3.0](https://github.com/MapColonies/config-server/compare/v1.2.3...v1.3.0) (2025-03-30)
 
 

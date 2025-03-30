@@ -9,8 +9,11 @@ updates:
       - dependency-type: production
     directory: /
     commit-message:
-      prefix: "build(deps)"
+      prefix: "deps:"
     groups:
+      schemas:
+        patterns:
+          - "@map-colonies/schemas"
       map-colonies:
         patterns:
           - "@map-colonies/*"
@@ -30,7 +33,7 @@ updates:
       - dependency-name: "@map-colonies/schemas"
     directory: /
     commit-message:
-      prefix: "build(dev-deps)"
+      prefix: "devdeps:"
     groups:
       map-colonies:
         patterns:

@@ -1,9 +1,9 @@
 import httpStatus from 'http-status-codes';
 import { injectable, inject } from 'tsyringe';
 import { HttpError } from '@map-colonies/error-express-handler';
+import { TypedRequestHandler } from '@common/interfaces';
 import { SchemaManager } from '../models/schemaManager';
 import { SchemaNotFoundError, SchemaPathIsInvalidError } from '../models/errors';
-import { TypedRequestHandler } from '../../common/interfaces';
 
 @injectable()
 export class SchemaController {

@@ -12,7 +12,7 @@ jobs:
 
     strategy:
       matrix:
-        node: [20.x, 22.x]
+        node: [22.13.1]
 
     steps:
       - name: Check out TS Project Git repository
@@ -24,13 +24,7 @@ jobs:
           node-version: ${{ matrix.node }}
 
       - name: Run TS Project linters
-        uses: wearerequired/lint-action@v2
-        with:
-          github_token: ${{ secrets.github_token }}
-          # Enable linters
-          eslint: true
-          prettier: true
-          eslint_extensions: ts
+        run: npm run lint
 
   openapi-lint:
     name: Run OpenAPI lint Check
@@ -53,7 +47,7 @@ jobs:
 
     strategy:
       matrix:
-        node: [20.x, 22.x]
+        node: [22.13.1]
 
     services:
       # Label used to access the service container

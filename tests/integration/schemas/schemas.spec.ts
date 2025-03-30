@@ -1,8 +1,8 @@
 import jsLogger from '@map-colonies/js-logger';
 import httpStatusCodes from 'http-status-codes';
 import { DependencyContainer } from 'tsyringe';
-import { getApp } from '../../../src/app';
-import { SERVICES } from '../../../src/common/constants';
+import { getApp } from '@src/app';
+import { SERVICES } from '@common/constants';
 import { SchemaRequestSender } from './helpers/requestSender';
 
 describe('schema', function () {

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { FactoryFunction } from 'tsyringe';
+import { logEnrichmentParamMiddlewareFactory } from '@common/logger';
 import { ConfigController } from '../controllers/configController';
-import { logEnrichmentParamMiddlewareFactory } from '../../common/logger';
 
 export const configRouterFactory: FactoryFunction<Router> = (dependencyContainer) => {
   const router = Router();

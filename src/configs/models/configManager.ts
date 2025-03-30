@@ -1,14 +1,18 @@
-import { Logger } from '@map-colonies/js-logger';
+import fs from 'node:fs';
+import path from 'node:path';
+import { type Logger } from '@map-colonies/js-logger';
 import { inject, injectable } from 'tsyringe';
 import { Clone } from '@sinclair/typebox/value';
-import pointer, { JsonObject } from 'json-pointer';
+import pointer, { type JsonObject } from 'json-pointer';
 import { parseISO } from 'date-fns';
-import type { Prettify } from '../../common/interfaces';
+import { paths, components } from '@openapi';
+import type { Prettify } from '@common/interfaces';
+import { SERVICES } from '@common/constants';
+import { enrichLogContext } from '@common/logger';
+import { setSpanAttributes, withSpan } from '@common/tracing';
+import { filesTreeGenerator } from '@common/utils';
 import { ConfigRepository, ConfigSearchParams, SqlPaginationParams } from '../repositories/configRepository';
-import { SERVICES } from '../../common/constants';
-import { enrichLogContext } from '../../common/logger';
-import { setSpanAttributes, withSpan } from '../../common/tracing';
-import { paths, components } from '../../openapiTypes';
+import { schemasBasePath } from '../../schemas/models/schemaManager';
 import { Config, SortOption } from './config';
 import { Validator } from './configValidator';
 import { ConfigNotFoundError, ConfigSchemaMismatchError, ConfigValidationError, ConfigVersionMismatchError } from './errors';
@@ -16,12 +20,17 @@ import { ConfigReference } from './configReference';
 
 type GetConfigOptions = Prettify<Omit<NonNullable<paths['/config']['get']['parameters']['query']>, 'sort'> & { sort?: SortOption[] }>;
 
+type DefaultConfigToInsert = Parameters<ConfigManager['createConfig']>[0] & {
+  refs: ConfigReference[];
+  visited: boolean;
+};
+
 @injectable()
 export class ConfigManager {
   public constructor(
     @inject(SERVICES.LOGGER) private readonly logger: Logger,
-    private readonly configRepository: ConfigRepository,
-    private readonly configValidator: Validator
+    @inject(ConfigRepository) private readonly configRepository: ConfigRepository,
+    @inject(Validator) private readonly configValidator: Validator
   ) {}
 
   @withSpan()
@@ -90,7 +99,7 @@ export class ConfigManager {
   }
 
   @withSpan()
-  public async createConfig(config: Omit<components['schemas']['config'], 'createdAt' | 'createdBy'>): Promise<void> {
+  public async createConfig(config: Omit<components['schemas']['config'], 'createdAt' | 'createdBy' | 'isLatest'>): Promise<void> {
     this.logger.debug('Creating a new config');
 
     this.logger.debug('fetching latest config with same name for validations');
@@ -219,5 +228,57 @@ export class ConfigManager {
 
       pointer.set(obj, path, replacementValue);
     }
+  }
+
+  public async insertDefaultConfigs(): Promise<void> {
+    this.logger.info('Inserting default configs');
+
+    const configsToInsert = new Map<string, DefaultConfigToInsert>();
+    for await (const file of filesTreeGenerator(schemasBasePath, (path) => path.endsWith('.configs.json'))) {
+      const configs = JSON.parse(fs.readFileSync(path.join(file.parentPath, file.name), 'utf-8')) as { name: string; value: unknown }[];
+      const schemaId = 'https://mapcolonies.com' + file.parentPath.split('schemas/build/schemas')[1] + '/' + file.name.replace('.configs.json', '');
+      for (const config of configs) {
+        configsToInsert.set(config.name, {
+          configName: config.name,
+          schemaId,
+          version: 1,
+          config: config.value as Config['config'],
+          refs: this.listConfigRefs(config.value as Config['config']),
+          visited: false,
+        });
+      }
+    }
+
+    for (const [name] of configsToInsert) {
+      await this.insertDefaultConfig(name, configsToInsert);
+    }
+  }
+
+  private async insertDefaultConfig(name: string, configs: Map<string, DefaultConfigToInsert>): Promise<void> {
+    const config = configs.get(name);
+
+    if (!config) {
+      throw new Error(`could not find config ${name}`);
+    }
+
+    if (config.visited) {
+      return;
+    }
+
+    config.visited = true;
+
+    const existingConfig = await this.configRepository.getConfig(config.configName);
+    if (existingConfig) {
+      return;
+    }
+
+    if (config.refs.length > 0) {
+      for (const ref of config.refs) {
+        await this.insertDefaultConfig(ref.configName, configs);
+      }
+    }
+
+    await this.createConfig(config);
+    this.logger.info(`Inserted default config ${name}`);
   }
 }

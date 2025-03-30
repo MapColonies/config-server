@@ -1,5 +1,5 @@
 import 'jest-openapi';
-import { CapabilitiesManager } from '../../../../src/capabilities/models/capabilitiesManager';
+import { CapabilitiesManager } from '@src/capabilities/models/capabilitiesManager';
 
 describe('CapabilitiesManager', () => {
   let capabilitiesManager: CapabilitiesManager;

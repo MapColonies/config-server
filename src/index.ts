@@ -6,7 +6,7 @@ import { createTerminus } from '@godaddy/terminus';
 import { Logger } from '@map-colonies/js-logger';
 import { container } from 'tsyringe';
 import config from 'config';
-import { DEFAULT_SERVER_PORT, MILLISECONDS_IN_SECOND, SERVICES } from './common/constants';
+import { DEFAULT_SERVER_PORT, MILLISECONDS_IN_SECOND, SERVICES } from '@common/constants';
 
 import { getApp } from './app';
 
@@ -17,7 +17,6 @@ void getApp()
   .then(([app]) => {
     const logger = container.resolve<Logger>(SERVICES.LOGGER);
     const stubHealthCheck = async (): Promise<void> => Promise.resolve();
-    // eslint-disable-next-line @typescript-eslint/naming-convention
     const server = createTerminus(createServer(app), { healthChecks: { '/liveness': stubHealthCheck, onSignal: container.resolve('onSignal') } });
 
     const isStaticAssetsEnabled = config.get<boolean>('server.staticAssets.enabled');

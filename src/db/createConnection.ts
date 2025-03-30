@@ -3,7 +3,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
-import { Pool, PoolConfig } from 'pg';
+import { Pool, type PoolConfig } from 'pg';
 import { configs } from '../configs/models/config';
 
 export type DbConfig = {
@@ -13,7 +13,6 @@ export type DbConfig = {
 
 export function createConnectionOptions(dbConfig: DbConfig): PoolConfig {
   const { enableSslAuth, sslPaths, ...dataSourceOptions } = dbConfig;
-  // eslint-disable-next-line @typescript-eslint/naming-convention
   dataSourceOptions.application_name = `${hostname()}-${process.env.NODE_ENV ?? 'unknown_env'}`;
   if (enableSslAuth) {
     dataSourceOptions.password = undefined;

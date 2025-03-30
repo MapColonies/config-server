@@ -1,18 +1,17 @@
 import { SQL, SQLWrapper, and, asc, desc, eq, gt, isNull, lt, or, sql } from 'drizzle-orm';
 import { inject, scoped, Lifecycle } from 'tsyringe';
 import { toDate } from 'date-fns-tz';
-import { Logger } from '@map-colonies/js-logger';
-import { SERVICES } from '../../common/constants';
-import type { Drizzle } from '../../db/createConnection';
+import { type Logger } from '@map-colonies/js-logger';
+import type { Drizzle } from '@db';
+import { SERVICES } from '@common/constants';
+import { callWithSpan, withSpan } from '@common/tracing';
 import { type Config, type NewConfig, type NewConfigRef, configs, configsRefs, SortOption } from '../models/config';
 import type { ConfigReference } from '../models/configReference';
 import { ConfigNotFoundError } from '../models/errors';
-import { callWithSpan, withSpan } from '../../common/tracing';
 
 const DEFAULT_LIMIT = 10;
 const DEFAULT_OFFSET = 0;
 
-// eslint-disable-next-line @typescript-eslint/no-magic-numbers
 function recursiveQueryBuilder(drizzle: Drizzle, baseQuery: SQLWrapper, recursiveSelectParameters: Parameters<typeof drizzle.select>[0]): SQL {
   return callWithSpan(() => {
     const recursiveQuery = drizzle
@@ -314,7 +313,7 @@ export class ConfigRepository {
 
     const configsResult = await configsQuery.execute();
 
-    if (configsResult.length === 0) {
+    if (!configsResult[0]) {
       this.logger.debug('No configs found with the specified filters');
       return { configs: [], totalCount: 0 };
     }

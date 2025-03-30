@@ -9,7 +9,7 @@ updates:
       - dependency-type: production
     directory: /
     commit-message:
-      prefix: "deps:"
+      prefix: "deps"
     groups:
       schemas:
         patterns:
@@ -32,8 +32,10 @@ updates:
     ignore:
       - dependency-name: "@map-colonies/schemas"
     directory: /
+    labels:
+      - 'infra'
     commit-message:
-      prefix: "devdeps:"
+      prefix: "devdeps"
     groups:
       map-colonies:
         patterns:
@@ -53,5 +55,7 @@ updates:
     schedule: 
       interval: weekly
     commit-message:
-      prefix: "ci(deps)"
+      prefix: "ci"
     directory: "/"
+    labels:
+      - 'infra'

@@ -2,6 +2,40 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.2.3](https://github.com/MapColonies/config-server/compare/v1.2.2...v1.2.3) (2025-02-12)
+
+
+### Build System
+
+* update config ui tag ([#79](https://github.com/MapColonies/config-server/issues/79)) ([0334eec](https://github.com/MapColonies/config-server/commit/0334eec920b05771fa337c7ef7703d040274ec80))
+
+## [1.2.2](https://github.com/MapColonies/config-server/compare/v1.2.1...v1.2.2) (2025-01-30)
+
+
+### Build System
+
+* upgrade node to 22 ([#75](https://github.com/MapColonies/config-server/issues/75)) ([727fba0](https://github.com/MapColonies/config-server/commit/727fba04c714d869b0113bd3105502a7c4974042))
+
+## [1.2.1](https://github.com/MapColonies/config-server/compare/v1.2.0...v1.2.1) (2025-01-29)
+
+
+### Reverts
+
+* trigger release-please ([3709689](https://github.com/MapColonies/config-server/commit/37096899d16ee7c10374cff1fc2d4888332c4700))
+
+## [1.2.0](https://github.com/MapColonies/config-server/compare/v1.1.1...v1.2.0) (2024-12-19)
+
+
+### Features
+
+* added typescript paths ([#67](https://github.com/MapColonies/config-server/issues/67)) ([8e1f267](https://github.com/MapColonies/config-server/commit/8e1f2676acca53e92de04d890307f20adaaf78bf))
+* default configs ([#64](https://github.com/MapColonies/config-server/issues/64)) ([701d003](https://github.com/MapColonies/config-server/commit/701d0034108ef67896160746d0b6c923ce217d34))
+
+
+### Bug Fixes
+
+* changed ref replacement loop not to break on root ref ([#63](https://github.com/MapColonies/config-server/issues/63)) ([a857d5f](https://github.com/MapColonies/config-server/commit/a857d5f59584881aa2f84b03fd7e2b729d360efe))
+
 ### [1.1.1](https://github.com/MapColonies/config-server/compare/v1.1.0...v1.1.1) (2024-11-28)
 
 ## [1.1.0](https://github.com/MapColonies/config-server/compare/v1.0.1...v1.1.0) (2024-10-30)

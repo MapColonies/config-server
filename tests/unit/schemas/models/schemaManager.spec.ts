@@ -1,7 +1,7 @@
 import 'jest-openapi';
 import jsLogger from '@map-colonies/js-logger';
-import { SchemaManager } from '../../../../src/schemas/models/schemaManager';
-import { SchemaNotFoundError, SchemaPathIsInvalidError } from '../../../../src/schemas/models/errors';
+import { SchemaManager } from '@src/schemas/models/schemaManager';
+import { SchemaNotFoundError, SchemaPathIsInvalidError } from '@src/schemas/models/errors';
 
 describe('SchemaManager', () => {
   let schemaManager: SchemaManager;

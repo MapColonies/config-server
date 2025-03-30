@@ -1,24 +1,24 @@
-import express, { Router } from 'express';
+import express, { Router, static as expressStatic, type Express } from 'express';
 import bodyParser from 'body-parser';
 import compression from 'compression';
 import { OpenapiViewerRouter, OpenapiRouterConfig } from '@map-colonies/openapi-express-viewer';
 import { getErrorHandlerMiddleware } from '@map-colonies/error-express-handler';
 import { middleware as OpenApiMiddleware } from 'express-openapi-validator';
 import { inject, injectable } from 'tsyringe';
-import { Logger } from '@map-colonies/js-logger';
+import { type Logger } from '@map-colonies/js-logger';
 import httpLogger from '@map-colonies/express-access-log-middleware';
 import { getTraceContexHeaderMiddleware } from '@map-colonies/telemetry';
 import { collectMetricsExpressMiddleware } from '@map-colonies/telemetry/prom-metrics';
-import { SERVICES } from './common/constants';
-import { IConfig } from './common/interfaces';
+import { SERVICES } from '@common/constants';
+import { type IConfig } from '@common/interfaces';
+import { addOperationIdToLog, logContextInjectionMiddleware } from '@common/logger';
 import { SCHEMA_ROUTER_SYMBOL } from './schemas/routes/schemaRouter';
 import { CAPABILITIES_ROUTER_SYMBOL } from './capabilities/routes/capabilitiesRouter';
 import { CONFIG_ROUTER_SYMBOL } from './configs/routes/configRouter';
-import { addOperationIdToLog, logContextInjectionMiddleware } from './common/logger';
 
 @injectable()
 export class ServerBuilder {
-  private readonly serverInstance: express.Application;
+  private readonly serverInstance: Express;
   private readonly openapiFilePath: string;
   private readonly apiPrefix: string;
 
@@ -34,7 +34,7 @@ export class ServerBuilder {
     this.apiPrefix = this.config.get<string>('server.apiPrefix');
   }
 
-  public build(): express.Application {
+  public build(): Express {
     this.registerPreRoutesMiddleware();
     this.buildRoutes();
     this.registerPostRoutesMiddleware();
@@ -97,8 +97,8 @@ export class ServerBuilder {
       const staticPath = this.config.get<string>('server.staticAssets.folder');
       // we use the static middleware twice. the second one is to catch subpath requests and serve the index.html
       // api is not affected by this middleware as the OpenApiMiddleware is registered before and sets 404 for all api misses
-      this.serverInstance.use(express.static(staticPath));
-      this.serverInstance.use('*', express.static(staticPath));
+      this.serverInstance.use(expressStatic(staticPath));
+      this.serverInstance.use('*', expressStatic(staticPath));
     }
 
     this.serverInstance.use(getErrorHandlerMiddleware());

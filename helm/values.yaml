@@ -8,7 +8,7 @@ enabled: true
 environment: development
 replicaCount: 1
 revisionHistoryLimit: 5 # Amount of revisions we keep
-nodePort: 30030 #for minikube deployment only
+nodePort: 30030 # For minikube deployment only
 resetOnConfigChange: false
 
 nameOverride: ""
@@ -54,7 +54,7 @@ caKey: 'ca.crt'
 
 image:
   repository: config-server
-  tag: 'latest'
+  # tag: 'latest'
   pullPolicy: IfNotPresent
 
 env:
@@ -103,7 +103,7 @@ route:
   host: 
   timeout:
     enabled: false # defaults to 30s by openshift
-    duration: 60s # supported units (us, ms, s, m, h, d)
+    duration: 60s # Supported units (us, ms, s, m, h, d)
   rewriteTarget: ''
   tls:
     enabled: true

@@ -4,13 +4,13 @@ import { DependencyContainer } from 'tsyringe/dist/typings/types';
 import { instancePerContainerCachingFactory } from 'tsyringe';
 import type { Pool } from 'pg';
 import { Metrics } from '@map-colonies/telemetry';
-import { SERVICES, SERVICE_NAME } from './common/constants';
-import { tracing } from './common/tracing';
+import { initConnection, createDrizzle, createConnectionOptions, DbConfig } from '@db';
+import { InjectionObject, registerDependencies } from '@common/dependencyRegistration';
+import { SERVICES, SERVICE_NAME } from '@common/constants';
+import { tracing } from '@common/tracing';
 import { SCHEMA_ROUTER_SYMBOL, schemaRouterFactory } from './schemas/routes/schemaRouter';
-import { InjectionObject, registerDependencies } from './common/dependencyRegistration';
 import { CAPABILITIES_ROUTER_SYMBOL, capabilitiesRouterFactory } from './capabilities/routes/capabilitiesRouter';
 import { CONFIG_ROUTER_SYMBOL, configRouterFactory } from './configs/routes/configRouter';
-import { initConnection, createDrizzle, createConnectionOptions, DbConfig } from './db/createConnection';
 import { loggerFactory } from './common/logger';
 
 export interface RegisterOptions {

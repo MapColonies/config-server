@@ -364,21 +364,24 @@ components:
             - name: boilerplate
               children:
                 - name: v1
-                  url: https://mapcolonies.com/common/boilerplate/v1
+                  id: https://mapcolonies.com/common/boilerplate/v1
                 - name: v2
-                  url: https://mapcolonies.com/common/boilerplate/v2
+                  id: https://mapcolonies.com/common/boilerplate/v2
                 - name: v3
-                  url: https://mapcolonies.com/common/boilerplate/v3
+                  id: https://mapcolonies.com/common/boilerplate/v3
             - name: db
               children:
                 - name: v1
-                  url: https://mapcolonies.com/common/db/v1
+                  id: https://mapcolonies.com/common/db/v1
       items:
         oneOf:
           - $ref: '#/components/schemas/schemaTreeItem'
           - $ref: '#/components/schemas/schemaTreeDir'
     schemaTreeItem:
       type: object
+      required:
+        - name
+        - id
       properties:
         name:
           type: string
@@ -386,6 +389,9 @@ components:
           $ref: '#/components/schemas/schemaId'
     schemaTreeDir:
       type: object
+      required:
+        - children
+        - name
       properties:
         children:
           $ref: '#/components/schemas/schemaTree'

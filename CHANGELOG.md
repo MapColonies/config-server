@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.4.0](https://github.com/MapColonies/config-server/compare/v1.3.1...v1.4.0) (2025-04-15)
+
+
+### Features
+
+* extend validator keywords to include 'x-env-format' ([#85](https://github.com/MapColonies/config-server/issues/85)) ([c719fa4](https://github.com/MapColonies/config-server/commit/c719fa416b7b31e7422810d496e0e0423ec0f4cc))
+
+
+### Dependency Updates
+
+* bump @map-colonies/schemas to version 1.6.0 ([#97](https://github.com/MapColonies/config-server/issues/97)) ([6b9b86b](https://github.com/MapColonies/config-server/commit/6b9b86b94e1479a557d381d172e59962d4da4d80))
+
 ## [1.3.1](https://github.com/MapColonies/config-server/compare/v1.3.0...v1.3.1) (2025-03-30)
 
 

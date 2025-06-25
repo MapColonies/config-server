@@ -4,6 +4,7 @@
 {{- $cloudProviderDockerRegistryUrl := include "config-server.cloudProviderDockerRegistryUrl" . -}}
 {{- $cloudProviderImagePullSecretName := include "config-server.cloudProviderImagePullSecretName" . -}}
 {{- $imageTag := include "config-server.tag" . -}}
+{{ $postgresSecretName := ternary .Values.dbConfig.secretName (printf "%s%s" .Release.Name "-postgres-secret") .Values.dbConfig.useExternalSecret }}
 {{- if .Values.enabled -}}
 apiVersion: apps/v1
 kind: Deployment
@@ -32,6 +33,7 @@ spec:
         run: {{ $releaseName }}-{{ $chartName }}
         {{- include "config-server.selectorLabels" . | nindent 8 }}
       annotations:
+        {{ include "mc-labels-and-annotations.annotations" . | nindent 8 }}
       {{- if .Values.resetOnConfigChange }}
         checksum/configmap: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
       {{- end }}
@@ -63,10 +65,10 @@ spec:
               mountPath: /tmp/certs
               readOnly: true
             {{- end }}
-            {{- if .Values.caSecretName }}
-            - mountPath: {{ printf "%s/%s" .Values.caPath .Values.caKey | quote }}
+            {{- if .Values.ca.enabled }}
+            - mountPath: {{ printf "%s/%s" .Values.ca.path .Values.ca.key | quote }}
               name: root-ca
-              subPath: {{ quote .Values.caKey }}
+              subPath: {{ quote .Values.ca.key }}
             {{- end }}
             {{- if .Values.extraVolumeMounts -}}
               {{ toYaml .Values.extraVolumeMounts | nindent 12 }}
@@ -74,11 +76,11 @@ spec:
           env:
             - name: SERVER_PORT
               value: {{ .Values.env.targetPort | quote }}
-            {{- if .Values.caSecretName }}
+            {{- if .Values.ca.enabled }}
             - name: REQUESTS_CA_BUNDLE
-              value: {{ printf "%s/%s" .Values.caPath .Values.caKey | quote }}
+              value: {{ printf "%s/%s" .Values.ca.path .Values.ca.key | quote }}
             - name: NODE_EXTRA_CA_CERTS
-              value: {{ printf "[%s/%s]" .Values.caPath .Values.caKey | quote }}
+              value: {{ printf "[%s/%s]" .Values.ca.path .Values.ca.key | quote }}
             {{- end }}
             {{- if .Values.extraEnvVars }}
             {{- toYaml .Values.extraEnvVars | nindent 12 }}
@@ -124,12 +126,12 @@ spec:
       {{- if .Values.dbConfig.sslAuth.enabled }}
         - name: cert-conf
           secret:
-            secretName: {{ .Values.dbConfig.sslAuth.secretName }}
+            secretName: {{ .Values.dbConfig.secretName }}
       {{- end }}
-        {{- if .Values.caSecretName }}
+        {{- if .Values.ca.enabled }}
         - name: root-ca
           secret:
-            secretName: {{ .Values.caSecretName }}
+            secretName: {{ .Values.ca.secretName }}
         {{- end }}
         {{- if .Values.extraVolumes -}}
           {{ tpl (toYaml .Values.extraVolumes) . | nindent 8 }}

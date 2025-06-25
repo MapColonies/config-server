@@ -2,10 +2,15 @@ global:
   cloudProvider: {}
   tracing: {}
   metrics: {}
-  environment: ''
+  mcLabelsAndAnnotations:
+    environment: development
+  
+mcLabelsAndAnnotations:
+  component: backend
+  partOf: authentication
+  owner: infra
 
 enabled: true
-environment: development
 replicaCount: 1
 revisionHistoryLimit: 5 # Amount of revisions we keep
 nodePort: 30030 # For minikube deployment only
@@ -48,9 +53,11 @@ cloudProvider:
   imagePullSecretName: ''
   flavor: openshift
 
-caSecretName: ''
-caPath: '/usr/local/share/ca-certificates'
-caKey: 'ca.crt'
+ca:
+  enabled: false
+  secretName: ''
+  path: '/usr/local/share/ca-certificates'
+  key: 'ca.crt'
 
 image:
   repository: config-server
@@ -78,11 +85,10 @@ dbConfig:
   password: postgres
   database: config-server
   # port: 5432
-  externalSecretName: ''
   useExternalSecret: false
+  secretName: secret-name
   sslAuth:
     enabled: false
-    secretName: secret-name
     certFileName: certFile
     keyFileName: keyFile
     caFileName: caFile

@@ -1,7 +1,7 @@
 {{- $releaseName := .Release.Name -}}
 {{- $chartName := include "config-server.name" . -}}
 {{- $cloudProviderFlavor := include "config-server.cloudProviderFlavor" . -}}
-{{- if and (and (.Values.enabled) (eq $cloudProviderFlavor "openshift")) (.Values.route.enabled) -}}
+{{- if and (eq $cloudProviderFlavor "openshift") .Values.route.enabled -}}
 apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
@@ -11,7 +11,7 @@ metadata:
     haproxy.router.openshift.io/rewrite-target: {{ .Values.route.rewriteTarget }}
     {{- end }}
     {{- if .Values.route.timeout.enabled }}
-    haproxy.router.openshift.io/timeout: {{ .Values.route.timeout.durationSeconds }}
+    haproxy.router.openshift.io/timeout: {{ .Values.route.timeout.duration }}
     {{- end }}
 spec:
   {{- if .Values.route.host }}

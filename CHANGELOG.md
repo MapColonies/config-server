@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.4.1](https://github.com/MapColonies/config-server/compare/v1.4.0...v1.4.1) (2025-06-26)
+
+
+### Helm Changes
+
+* use mc-labels-and-annotations ([#108](https://github.com/MapColonies/config-server/issues/108)) ([96b8c39](https://github.com/MapColonies/config-server/commit/96b8c39cf22305000234fe9bd63de75f2e2c3da1))
+
+
+### Dependency Updates
+
+* update schema version ([#110](https://github.com/MapColonies/config-server/issues/110)) ([33533af](https://github.com/MapColonies/config-server/commit/33533afc31c81fdf4b087d345c57677c256da49e))
+
 ## [1.4.0](https://github.com/MapColonies/config-server/compare/v1.3.1...v1.4.0) (2025-04-15)
 
 

@@ -50,7 +50,7 @@
     "config": "^3.3.12",
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",
-    "drizzle-orm": "^0.40.1",
+    "drizzle-orm": "^0.41.0",
     "express": "^4.21.2",
     "express-openapi-validator": "^5.4.6",
     "http-status-codes": "^2.3.0",

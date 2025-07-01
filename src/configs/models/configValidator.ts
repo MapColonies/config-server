@@ -28,6 +28,7 @@ export class Validator {
           return this.schemaManager.getSchema(uri);
         },
         keywords: ['x-env-value', 'x-env-format'],
+        discriminator: true,
         useDefaults: true,
       })
     );

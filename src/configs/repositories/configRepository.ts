@@ -1,4 +1,4 @@
-import { SQL, SQLWrapper, and, asc, desc, eq, gt, isNull, lt, or, sql } from 'drizzle-orm';
+import { SQLWrapper, and, asc, desc, eq, gt, isNull, lt, or, sql } from 'drizzle-orm';
 import { inject, scoped, Lifecycle } from 'tsyringe';
 import { toDate } from 'date-fns-tz';
 import { type Logger } from '@map-colonies/js-logger';
@@ -12,7 +12,8 @@ import { ConfigNotFoundError } from '../models/errors';
 const DEFAULT_LIMIT = 10;
 const DEFAULT_OFFSET = 0;
 
-function recursiveQueryBuilder(drizzle: Drizzle, baseQuery: SQLWrapper, recursiveSelectParameters: Parameters<typeof drizzle.select>[0]): SQL {
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+function recursiveQueryBuilder(drizzle: Drizzle, baseQuery: SQLWrapper, recursiveSelectParameters: Parameters<typeof drizzle.select>[0]) {
   return callWithSpan(() => {
     const recursiveQuery = drizzle
       .select(recursiveSelectParameters)
@@ -105,6 +106,7 @@ export class ConfigRepository {
         inputSchemaId: sql`input."schemaId" AS "inputSchemaId"`,
         name: sql`${configs.configName} AS "configName"`,
         version: configs.version,
+        schemaId: sql`${configs.schemaId} AS "schemaId"`,
         config: configs.config,
         isLatest: sql`
           CASE
@@ -264,7 +266,7 @@ export class ConfigRepository {
       configName: configs.configName,
       version: configs.version,
       config: configs.config,
-      schemaId: sql`NULL`,
+      schemaId: configs.schemaId,
       createdAt: sql`NULL`,
       createdBy: sql`NULL`,
       isLatest: sql`

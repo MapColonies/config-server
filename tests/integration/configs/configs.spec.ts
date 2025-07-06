@@ -702,8 +702,6 @@ describe('config', function () {
           },
         });
 
-        console.log(response.body);
-
         expect(response.status).toBe(httpStatusCodes.CREATED);
         expect(response).toSatisfyApiSpec();
       });

@@ -538,7 +538,6 @@ describe('config', function () {
           schemaId: 'https://mapcolonies.com/schemaWithRef/v1',
         });
 
-        console.log(response.body);
         expect(response.status).toBe(httpStatusCodes.OK);
         expect(response).toSatisfyApiSpec();
         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access

@@ -10,7 +10,7 @@ import type { Prettify } from '@common/interfaces';
 import { SERVICES } from '@common/constants';
 import { enrichLogContext } from '@common/logger';
 import { setSpanAttributes, withSpan } from '@common/tracing';
-import { filesTreeGenerator } from '@common/utils';
+import { filesTreeGenerator, removeSchemaVersion } from '@common/utils';
 import { ConfigRepository, ConfigSearchParams, SqlPaginationParams } from '../repositories/configRepository';
 import { schemasBasePath } from '../../schemas/models/schemaManager';
 import { Config, SortOption } from './config';
@@ -34,10 +34,10 @@ export class ConfigManager {
   ) {}
 
   @withSpan()
-  public async getConfig(name: string, version?: number, shouldDereferenceConfig?: boolean): Promise<Config> {
+  public async getConfig(name: string, schemaId: string, version?: number, shouldDereferenceConfig?: boolean): Promise<Config> {
     if (shouldDereferenceConfig !== true) {
       this.logger.debug('Retrieving config from the database with unresolved refs');
-      const config = await this.configRepository.getConfig(name, version);
+      const config = await this.configRepository.getConfig(name, schemaId, version);
 
       if (!config) {
         throw new ConfigNotFoundError('Config not found');
@@ -49,7 +49,7 @@ export class ConfigManager {
 
     this.logger.debug('Retrieving config from the database with resolved refs');
 
-    const res = await this.configRepository.getConfigRecursive(name, version);
+    const res = await this.configRepository.getConfigRecursive(name, schemaId, version);
     if (!res) {
       throw new ConfigNotFoundError('Config not found');
     }
@@ -103,21 +103,9 @@ export class ConfigManager {
     this.logger.debug('Creating a new config');
 
     this.logger.debug('fetching latest config with same name for validations');
-    const latestConfig = await this.configRepository.getConfig(config.configName);
+    const latestConfig = await this.configRepository.getConfig(config.configName, config.schemaId);
 
-    if (!latestConfig && config.version !== 1) {
-      throw new ConfigVersionMismatchError('A new version of a config was submitted, when the config does not exist');
-    }
-
-    if (latestConfig) {
-      if (config.version !== latestConfig.version) {
-        throw new ConfigVersionMismatchError('The version of the config is not the next one in line');
-      }
-
-      if (config.schemaId !== latestConfig.schemaId) {
-        throw new ConfigSchemaMismatchError('The schema id of the config is not the same as the rest of the configs with the same name');
-      }
-    }
+    await this.createConfigValidations(latestConfig, config);
 
     // Resolve all the references in the config
     const refs = this.listConfigRefs(config);
@@ -140,6 +128,35 @@ export class ConfigManager {
 
     await this.configRepository.createConfig({ ...config, createdBy: 'TBD', refs });
     enrichLogContext({ createdVersion: config.version }, true);
+  }
+
+  @withSpan()
+  private async createConfigValidations(
+    latestConfig: Config | undefined,
+    newConfig: Omit<components['schemas']['config'], 'createdAt' | 'createdBy' | 'isLatest'>
+  ): Promise<void> {
+    if (!latestConfig) {
+      if (newConfig.version !== 1) {
+        throw new ConfigVersionMismatchError('A new version of a config was submitted, when the config does not exist');
+      }
+
+      const versionLessSchemaId = removeSchemaVersion(newConfig.schemaId);
+      const configsWithSameName = await this.configRepository.getConfigs({ configName: newConfig.configName });
+
+      if (configsWithSameName.configs.some((config) => removeSchemaVersion(config.schemaId) !== versionLessSchemaId)) {
+        throw new ConfigSchemaMismatchError('The schema of the config is not the same as the rest of the configs with the same name');
+      }
+    }
+
+    if (latestConfig) {
+      if (newConfig.version !== latestConfig.version) {
+        throw new ConfigVersionMismatchError('The version of the config is not the next one in line');
+      }
+
+      if (newConfig.schemaId !== latestConfig.schemaId) {
+        throw new ConfigSchemaMismatchError('The schema id of the config is not the same as the rest of the configs with the same name');
+      }
+    }
   }
 
   /**
@@ -203,7 +220,9 @@ export class ConfigManager {
 
     for (const [path, ref] of paths) {
       this.logger.debug('Replacing the reference in the object', { refPath: path, referenceObject: ref });
-      const config = refs.find((r) => r.configName === ref.configName && (ref.version === 'latest' || r.version === ref.version));
+      const config = refs.find(
+        (r) => r.configName === ref.configName && (ref.version === 'latest' || r.version === ref.version) && r.schemaId === ref.schemaId
+      );
       if (!config) {
         throw new Error(`could not find ref in db: ${JSON.stringify(ref)}`);
       }
@@ -254,6 +273,127 @@ export class ConfigManager {
     }
   }
 
+  public async updateOldConfigs(): Promise<void> {
+    this.logger.info('Updating old configs to the new schema version');
+
+    const BATCH_SIZE = 1000;
+    const NO_CONFIGS_TO_UPDATE = 0;
+    let totalProcessed = 0;
+
+    // Process configs in batches until no more exist
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    while (true) {
+      const configsToUpdate = await this.configRepository.getConfigs({ configSchemaVersion: 'v1' }, { offset: 0, limit: BATCH_SIZE });
+
+      // Exit if no configs to update
+      if (configsToUpdate.totalCount === NO_CONFIGS_TO_UPDATE) {
+        if (totalProcessed === NO_CONFIGS_TO_UPDATE) {
+          this.logger.info('No old configs found, nothing to update');
+        }
+        break;
+      }
+
+      this.logger.info(`Found ${configsToUpdate.totalCount} old configs remaining to update`);
+
+      // Process each config in the current batch
+      for (const config of configsToUpdate.configs) {
+        try {
+          this.logger.debug(`Updating config: ${config.configName} (${config.schemaId}) version ${config.version}`);
+
+          const updatedConfig = await this.updateRefsToV2Schema(config.config);
+          await this.configRepository.updateConfigToNewSchemaVersion({
+            configName: config.configName,
+            schemaId: config.schemaId,
+            version: config.version,
+            newSchemaVersion: 'v2',
+            config: updatedConfig,
+          });
+
+          totalProcessed++;
+          this.logger.info(`Updated config ${config.configName} to the new schema version (${totalProcessed} processed)`);
+        } catch (error) {
+          this.logger.error(`Failed to update config ${config.configName}:`, error);
+          // Continue processing other configs even if one fails
+        }
+      }
+    }
+
+    this.logger.info(`Config update completed. Total processed: ${totalProcessed}`);
+  }
+
+  /**
+   * Updates config references from v1 schema format to v2 schema format.
+   * In v1, refs only contained configName and version.
+   * In v2, refs also need to contain schemaId.
+   * @param config - The config object to update
+   * @returns The updated config object with v2 schema refs
+   */
+  private async updateRefsToV2Schema(config: Record<string, unknown>): Promise<Record<string, unknown>> {
+    const updatedConfig = Clone(config);
+
+    // Collect all refs that need to be updated
+    const refsToUpdate: { refPath: string; oldRef: { configName: string; version: number | 'latest' } }[] = [];
+
+    // Find all $ref objects in the config
+    pointer.walk(updatedConfig, (val, key) => {
+      if (key.endsWith('$ref/configName')) {
+        const refPath = key.slice(0, key.lastIndexOf('/'));
+        const refObject = pointer.get(updatedConfig, refPath) as unknown;
+
+        // Check if this is an old format ref (has configName and version but no schemaId)
+        if (
+          refObject !== null &&
+          typeof refObject === 'object' &&
+          'configName' in refObject &&
+          'version' in refObject &&
+          !('schemaId' in refObject)
+        ) {
+          const oldRef = refObject as { configName: string; version: number | 'latest' };
+          refsToUpdate.push({ refPath, oldRef });
+        }
+      }
+    });
+
+    // Update each ref by fetching the schemaId from the database
+    for (const { refPath, oldRef } of refsToUpdate) {
+      try {
+        // Fetch the referenced config from database to get its schemaId
+        const configsWithSameName = await this.configRepository.getConfigs({
+          configName: oldRef.configName,
+          version: oldRef.version === 'latest' ? undefined : oldRef.version,
+        });
+
+        if (configsWithSameName.configs.length === 0) {
+          this.logger.warn(`Could not find config for ref update: ${oldRef.configName} version ${oldRef.version}`);
+          continue;
+        }
+
+        // Get the first matching config to extract schemaId
+        const referencedConfig = configsWithSameName.configs[0];
+
+        if (!referencedConfig) {
+          this.logger.warn(`No config found for ref update: ${oldRef.configName} version ${oldRef.version}`);
+          continue;
+        }
+
+        // Update the ref object to include schemaId
+        const updatedRef = {
+          configName: oldRef.configName,
+          version: oldRef.version,
+          schemaId: referencedConfig.schemaId,
+        };
+
+        pointer.set(updatedConfig, refPath, updatedRef);
+
+        this.logger.debug(`Updated ref ${oldRef.configName} to include schemaId: ${referencedConfig.schemaId}`);
+      } catch (error) {
+        this.logger.error(`Failed to update ref ${oldRef.configName}:`, error);
+      }
+    }
+
+    return updatedConfig;
+  }
+
   private async insertDefaultConfig(name: string, configs: Map<string, DefaultConfigToInsert>): Promise<void> {
     const config = configs.get(name);
 
@@ -267,7 +407,7 @@ export class ConfigManager {
 
     config.visited = true;
 
-    const existingConfig = await this.configRepository.getConfig(config.configName);
+    const existingConfig = await this.configRepository.getConfig(config.configName, config.schemaId);
     if (existingConfig) {
       return;
     }

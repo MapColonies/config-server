@@ -21,8 +21,8 @@
     "start:dev": "npm run build && cd dist && node --enable-source-maps --require ./common/tracing.js  ./index.js",
     "assets:copy": "copyfiles -f ./config/* ./dist/config && copyfiles -f ./openapi3.yaml ./dist/ && copyfiles ./package.json dist && copyfiles -u 1 ./src/db/migrations/* ./dist/ && copyfiles -u 1 ./src/db/migrations/meta/* ./dist/",
     "clean": "rimraf dist",
-    "generate:types": "node scripts/generateTypes.mjs",
-    "migration:create": "drizzle-kit generate:pg",
+    "generate:openapi-types": "openapi-helpers ./openapi3.yaml ./src/openapiTypes.d.ts --format --add-typed-request-handler",
+    "migration:create": "drizzle-kit generate",
     "migration:run": "ts-node ./src/db/runMigrations.ts",
     "prepare": "node .husky/install.mjs"
   },
@@ -65,6 +65,7 @@
     "@faker-js/faker": "^9.6.0",
     "@map-colonies/eslint-config": "^6.0.0",
     "@map-colonies/prettier-config": "0.0.1",
+    "@map-colonies/openapi-helpers": "^1.0.0",
     "@map-colonies/tsconfig": "^1.0.1",
     "@map-colonies/commitlint-config": "^1.1.1",
     "@map-colonies/infra-copilot-instructions": "^1.0.0",

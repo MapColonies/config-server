@@ -1,10 +1,8 @@
 {
-  "id": "803e5a56-4d36-4b1b-ad64-4a0ceca0a77d",
-  "prevId": "bc0c8f91-085a-489c-a7c2-1566fa6159d3",
-  "version": "5",
-  "dialect": "pg",
+  "version": "7",
+  "dialect": "postgresql",
   "tables": {
-    "config": {
+    "config_server.config": {
       "name": "config",
       "schema": "config_server",
       "columns": {
@@ -60,9 +58,12 @@
           "columns": ["name", "version"]
         }
       },
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
-    "config_refs": {
+    "config_server.config_refs": {
       "name": "config_refs",
       "schema": "config_server",
       "columns": {
@@ -93,35 +94,54 @@
       },
       "indexes": {
         "idx_config_name_version": {
+          "columns": [
+            {
+              "expression": "name",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "version",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "with": {},
           "name": "idx_config_name_version",
-          "columns": ["name", "version"],
-          "isUnique": false
+          "isUnique": false,
+          "method": "btree",
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "config_refs_original_config_fk": {
           "name": "config_refs_original_config_fk",
           "tableFrom": "config_refs",
+          "columnsFrom": ["name", "version"],
           "tableTo": "config",
           "schemaTo": "config_server",
-          "columnsFrom": ["name", "version"],
           "columnsTo": ["name", "version"],
-          "onDelete": "no action",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "no action"
         },
         "config_refs_child_config_fk": {
           "name": "config_refs_child_config_fk",
           "tableFrom": "config_refs",
+          "columnsFrom": ["ref_name", "ref_version"],
           "tableTo": "config",
           "schemaTo": "config_server",
-          "columnsFrom": ["ref_name", "ref_version"],
           "columnsTo": ["name", "version"],
-          "onDelete": "no action",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "no action"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     }
   },
   "enums": {},
@@ -129,8 +149,14 @@
     "config_server": "config_server"
   },
   "_meta": {
-    "columns": {},
     "schemas": {},
-    "tables": {}
-  }
+    "tables": {},
+    "columns": {}
+  },
+  "id": "803e5a56-4d36-4b1b-ad64-4a0ceca0a77d",
+  "prevId": "bc0c8f91-085a-489c-a7c2-1566fa6159d3",
+  "sequences": {},
+  "policies": {},
+  "views": {},
+  "roles": {}
 }

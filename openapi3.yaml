@@ -71,37 +71,9 @@ paths:
           $ref: '#/components/responses/409Conflict'
         '500':
           $ref: '#/components/responses/500InternalServerError'
-  /config/{name}:
-    get:
-      parameters:
-        - in: path
-          name: name
-          required: true
-          schema:
-            $ref: '#/components/schemas/configName'
-        - $ref: '#/components/parameters/ShouldDereferenceConfigQuery'
-      operationId: getConfigsByName
-      summary: get a specific client connection for specific environment
-      responses:
-        '200':
-          description: Array containing all the configs with the specific name
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/config'
-        '400':
-          $ref: '#/components/responses/400BadRequest'
-        '404':
-          $ref: '#/components/responses/404NotFound'
-        '500':
-          $ref: '#/components/responses/500InternalServerError'
   /config/{name}/{version}:
     parameters:
-      - in: path
-        name: name
-        required: true
-        schema:
-          $ref: '#/components/schemas/configName'
+      - $ref: '#/components/parameters/ConfigNamePath'
       - in: path
         name: version
         required: true
@@ -112,6 +84,12 @@ paths:
                 - latest
             - $ref: '#/components/schemas/version'
       - $ref: '#/components/parameters/ShouldDereferenceConfigQuery'
+      - in: query
+        name: schemaId
+        description: The id of the requested schema
+        required: true
+        schema:
+          $ref: '#/components/schemas/schemaId'
     get:
       operationId: getVersionedConfig
       summary: get a specific version of a config
@@ -223,6 +201,13 @@ components:
           schema:
             $ref: '#/components/schemas/error'
   parameters:
+    ConfigNamePath:
+      name: name
+      in: path
+      description: The name of the config
+      required: true
+      schema:
+        $ref: '#/components/schemas/configName'
     ConfigNameQuery:
       name: config_name
       in: query

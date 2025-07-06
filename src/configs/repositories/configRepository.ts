@@ -17,11 +17,19 @@ function recursiveQueryBuilder(drizzle: Drizzle, baseQuery: SQLWrapper, recursiv
     const recursiveQuery = drizzle
       .select(recursiveSelectParameters)
       .from(sql`rec`)
-      .innerJoin(configsRefs, and(eq(configsRefs.configName, sql`rec."configName"`), eq(configsRefs.version, sql`rec."version"`)))
+      .innerJoin(
+        configsRefs,
+        and(
+          eq(configsRefs.configName, sql`rec."configName"`),
+          eq(configsRefs.version, sql`rec."version"`),
+          eq(configsRefs.schemaId, sql`rec."schemaId"`)
+        )
+      )
       .innerJoin(
         configs,
         and(
           eq(configsRefs.refConfigName, configs.configName),
+          eq(configsRefs.refSchemaId, configs.schemaId),
           or(eq(configs.version, configsRefs.refVersion), and(isNull(configsRefs.refVersion), eq(configs.isLatest, true)))
         )
       );
@@ -54,6 +62,7 @@ export interface ConfigSearchParams {
   createdAtLt?: Date;
   createdBy?: string;
   configName?: string;
+  configSchemaVersion?: string;
 }
 
 export interface SqlPaginationParams {
@@ -61,7 +70,7 @@ export interface SqlPaginationParams {
   offset?: number;
 }
 
-export type ConfigRefResponse = Pick<Config, 'config' | 'configName' | 'version'> & {
+export type ConfigRefResponse = Pick<Config, 'config' | 'configName' | 'version' | 'schemaId'> & {
   isLatest: boolean;
 };
 
@@ -75,13 +84,17 @@ export class ConfigRepository {
   @withSpan()
   public async getAllConfigRefs(refs: ConfigReference[]): Promise<ConfigRefResponse[]> {
     this.logger.debug('Retrieving all config references', { refCount: refs.length });
-    const refsForSql = refs.map((ref) => ({ configName: ref.configName, version: ref.version === 'latest' ? null : ref.version }));
+    const refsForSql = refs.map((ref) => ({
+      configName: ref.configName,
+      version: ref.version === 'latest' ? null : ref.version,
+      schemaId: ref.schemaId,
+    }));
     // query to transform the input into a postgresql recordset so it can be joined with the data
     const inputCTE = sql`
       SELECT
         *
       FROM
-        jsonb_to_recordset(${JSON.stringify(refsForSql)}) AS x ("configName" text, "version" int)
+        jsonb_to_recordset(${JSON.stringify(refsForSql)}) AS x ("configName" text, "version" int, "schemaId" text)
     `;
 
     // this query selects all the references requested by the input
@@ -89,6 +102,7 @@ export class ConfigRepository {
       .select({
         inputName: sql`input."configName" AS "inputConfigName"`,
         inputVersion: sql`input."version" AS "inputVersion"`,
+        inputSchemaId: sql`input."schemaId" AS "inputSchemaId"`,
         name: sql`${configs.configName} AS "configName"`,
         version: configs.version,
         config: configs.config,
@@ -104,6 +118,7 @@ export class ConfigRepository {
         configs,
         and(
           eq(configs.configName, sql`input."configName"`),
+          eq(configs.schemaId, sql`input."schemaId"`),
           or(eq(configs.version, sql`input."version"`), and(isNull(sql`input."version"`), eq(configs.isLatest, true)))
         )
       );
@@ -112,8 +127,10 @@ export class ConfigRepository {
     const recursiveQuery = recursiveQueryBuilder(this.drizzle, baseQuery, {
       inputName: sql`NULL`,
       inputVersion: sql`NULL`,
+      inputSchemaId: sql`NULL`,
       name: configs.configName,
       version: configs.version,
+      schemaId: configs.schemaId,
       config: configs.config,
       isLatest: sql`
         CASE
@@ -124,9 +141,9 @@ export class ConfigRepository {
     });
 
     const res = await this.drizzle.execute<
-      { inputConfigName: string | null; inputVersion: number | null; configName: string | null; isLatest: boolean } & Pick<
+      { inputConfigName: string | null; inputVersion: number | null; configName: string | null; isLatest: boolean; schemaId: string | null } & Pick<
         Config,
-        'config' | 'version'
+        'config' | 'version' | 'schemaId'
       >
     >(recursiveQuery);
     const returnValue: Awaited<ReturnType<typeof this.getAllConfigRefs>> = [];
@@ -134,10 +151,10 @@ export class ConfigRepository {
     for (const row of res.rows) {
       if (row.configName === null) {
         throw new ConfigNotFoundError(
-          `no matching config was found for the following reference: ${row.inputConfigName ?? ''} ${row.inputVersion ?? 'latest'}`
+          `no matching config was found for the following reference: ${row.inputConfigName ?? ''} ${row.inputVersion ?? 'latest'} ${row.schemaId}`
         );
       }
-      returnValue.push({ config: row.config, configName: row.configName, version: row.version, isLatest: row.isLatest });
+      returnValue.push({ config: row.config, configName: row.configName, version: row.version, isLatest: row.isLatest, schemaId: row.schemaId });
     }
 
     return returnValue;
@@ -154,8 +171,10 @@ export class ConfigRepository {
     const dbRefs = config.refs.map<NewConfigRef>((ref) => ({
       configName: config.configName,
       version: config.version,
+      schemaId: config.schemaId,
       refConfigName: ref.configName,
       refVersion: ref.version === 'latest' ? null : ref.version,
+      refSchemaId: ref.schemaId,
     }));
 
     await this.drizzle.transaction(async (tx) => {
@@ -176,7 +195,7 @@ export class ConfigRepository {
         await tx
           .update(configs)
           .set({ isLatest: false })
-          .where(and(eq(configs.configName, config.configName), eq(configs.version, config.version - 1)))
+          .where(and(eq(configs.configName, config.configName), eq(configs.version, config.version - 1), eq(configs.schemaId, config.schemaId)))
           .execute();
       }
     });
@@ -190,9 +209,9 @@ export class ConfigRepository {
    * @returns A Promise that resolves to the retrieved configuration, or undefined if not found.
    */
   @withSpan()
-  public async getConfig(name: string, version?: number): Promise<Config | undefined> {
+  public async getConfig(name: string, schemaId: string, version?: number): Promise<Config | undefined> {
     this.logger.debug('Retrieving the config from the database without resolving references');
-    const comparators = [eq(configs.configName, name)];
+    const comparators = [eq(configs.configName, name), eq(configs.schemaId, schemaId)];
 
     if (version !== undefined) {
       comparators.push(eq(configs.version, version));
@@ -219,7 +238,7 @@ export class ConfigRepository {
    * @returns A promise that resolves to an array containing the configuration and its references, or undefined if not found.
    */
   @withSpan()
-  public async getConfigRecursive(name: string, version?: number): Promise<[Config, ConfigRefResponse[]] | undefined> {
+  public async getConfigRecursive(name: string, schemaId: string, version?: number): Promise<[Config, ConfigRefResponse[]] | undefined> {
     this.logger.debug('Retrieving config and its references from the database');
     // const maxVersion = maxVersionQueryBuilder(this.drizzle, name);
 
@@ -235,9 +254,10 @@ export class ConfigRepository {
         createdAt: sql`${configs.createdAt} AS "createdAt"`,
         createdBy: sql`${configs.createdBy} AS "createdBy"`,
         isLatest: sql`${configs.isLatest} AS "isLatest"`,
+        configSchemaVersion: sql`${configs.configSchemaVersion} AS "configSchemaVersion"`,
       })
       .from(configs)
-      .where(and(eq(configs.configName, name), versionOperator));
+      .where(and(eq(configs.configName, name), versionOperator, eq(configs.schemaId, schemaId)));
 
     // this query is the recursive query that will fetch the references of the config
     const recursiveQuery = recursiveQueryBuilder(this.drizzle, baseQuery, {
@@ -253,6 +273,7 @@ export class ConfigRepository {
           ELSE FALSE
         END AS "isLatest"
       `,
+      configSchemaVersion: configs.configSchemaVersion,
     });
 
     const res = await this.drizzle.execute<Omit<Config, 'createdAt'> & { createdAt: string }>(recursiveQuery);
@@ -271,8 +292,15 @@ export class ConfigRepository {
       createdAt: toDate(configResult.createdAt, { timeZone: 'UTC' }),
       createdBy: configResult.createdBy,
       isLatest: configResult.isLatest,
+      configSchemaVersion: configResult.configSchemaVersion,
     };
-    const refs = res.rows.map((row) => ({ config: row.config, configName: row.configName, version: row.version, isLatest: row.isLatest }));
+    const refs = res.rows.map((row) => ({
+      config: row.config,
+      configName: row.configName,
+      version: row.version,
+      schemaId: row.schemaId,
+      isLatest: row.isLatest,
+    }));
 
     return [config, refs];
   }
@@ -303,6 +331,7 @@ export class ConfigRepository {
         createdAt: configs.createdAt,
         createdBy: configs.createdBy,
         isLatest: configs.isLatest,
+        configSchemaVersion: configs.configSchemaVersion,
         totalCount: sql<string>`count(*) OVER ()`,
       })
       .from(configs)
@@ -328,10 +357,12 @@ export class ConfigRepository {
       createdAt: config.createdAt,
       createdBy: config.createdBy,
       isLatest: config.isLatest,
+      configSchemaVersion: config.configSchemaVersion,
     }));
 
     return { configs: mappedConfig, totalCount };
   }
+
   @withSpan()
   private getFilterParams(searchParams: ConfigSearchParams): SQLWrapper[] {
     this.logger.debug('Building SQL filter params for the config search');
@@ -370,6 +401,26 @@ export class ConfigRepository {
       filterParams.push(eq(configs.isLatest, true));
     }
 
+    if (searchParams.configSchemaVersion !== undefined) {
+      filterParams.push(eq(configs.configSchemaVersion, searchParams.configSchemaVersion));
+    }
+
     return filterParams;
+  }
+
+  public async updateConfigToNewSchemaVersion(input: {
+    configName: string;
+    schemaId: string;
+    version: number;
+    newSchemaVersion: string;
+    config: Record<string, unknown>;
+  }): Promise<void> {
+    const { configName, schemaId, version, newSchemaVersion } = input;
+    this.logger.debug('Updating config to a new version', { configName, schemaId, version, newSchemaVersion });
+    await this.drizzle
+      .update(configs)
+      .set({ config: input.config, configSchemaVersion: newSchemaVersion })
+      .where(and(eq(configs.configName, configName), eq(configs.schemaId, schemaId), eq(configs.version, version)))
+      .execute();
   }
 }

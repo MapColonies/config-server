@@ -1,10 +1,8 @@
 {
-  "id": "cd9fa987-a4ff-4770-9994-6de9679de7ed",
-  "prevId": "00000000-0000-0000-0000-000000000000",
-  "version": "5",
-  "dialect": "pg",
+  "version": "7",
+  "dialect": "postgresql",
   "tables": {
-    "config": {
+    "config_server.config": {
       "name": "config",
       "schema": "config_server",
       "columns": {
@@ -54,7 +52,10 @@
           "columns": ["name", "version"]
         }
       },
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     }
   },
   "enums": {},
@@ -62,8 +63,14 @@
     "config_server": "config_server"
   },
   "_meta": {
-    "columns": {},
     "schemas": {},
-    "tables": {}
-  }
+    "tables": {},
+    "columns": {}
+  },
+  "id": "cd9fa987-a4ff-4770-9994-6de9679de7ed",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "sequences": {},
+  "policies": {},
+  "views": {},
+  "roles": {}
 }

@@ -363,11 +363,6 @@ export class ConfigManager {
           version: oldRef.version === 'latest' ? undefined : oldRef.version,
         });
 
-        if (configsWithSameName.configs.length === 0) {
-          this.logger.warn(`Could not find config for ref update: ${oldRef.configName} version ${oldRef.version}`);
-          continue;
-        }
-
         // Get the first matching config to extract schemaId
         const referencedConfig = configsWithSameName.configs[0];
 

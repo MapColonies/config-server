@@ -15,6 +15,25 @@ export const simpleSchema: JSONSchema = {
   },
 };
 
+export const simpleSchemaV2: JSONSchema = {
+  type: 'object',
+  $id: 'https://mapcolonies.com/simpleSchema/v2',
+  additionalProperties: false,
+  properties: {
+    name: {
+      type: 'string',
+    },
+    age: {
+      type: 'number',
+    },
+    role: {
+      type: 'string',
+      default: 'unknown',
+    },
+  },
+  required: ['name', 'age'],
+};
+
 export const schemaWithRef: JSONSchema = {
   type: 'object',
   $id: 'https://mapcolonies.com/schemaWithRef/v1',
@@ -160,7 +179,7 @@ export const configsMockData: NewConfig[] = [
     version: 1,
     config: {
       manager: {
-        $ref: { configName: 'config3', version: 1 },
+        $ref: { configName: 'config3', version: 1, schemaId: 'https://mapcolonies.com/simpleSchema/v1' },
       },
     },
     isLatest: true,
@@ -172,7 +191,7 @@ export const configsMockData: NewConfig[] = [
     version: 1,
     config: {
       manager: {
-        $ref: { configName: 'config3', version: 'latest' },
+        $ref: { configName: 'config3', version: 'latest', schemaId: 'https://mapcolonies.com/simpleSchema/v1' },
       },
     },
     isLatest: true,
@@ -191,13 +210,17 @@ export const refs: ConfigRef[] = [
   {
     configName: 'config-ref-2',
     version: 1,
+    schemaId: 'https://mapcolonies.com/schemaWithRef/v1',
     refConfigName: 'config3',
     refVersion: 1,
+    refSchemaId: 'https://mapcolonies.com/simpleSchema/v1',
   },
   {
     configName: 'config-ref-3',
     version: 1,
+    schemaId: 'https://mapcolonies.com/schemaWithRef/v1',
     refConfigName: 'config3',
     refVersion: null,
+    refSchemaId: 'https://mapcolonies.com/simpleSchema/v1',
   },
 ];

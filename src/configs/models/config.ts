@@ -12,33 +12,34 @@ export const configs = pgDbSchema.table(
     createdAt: timestamp('created_at').notNull().defaultNow(),
     createdBy: text('created_by').notNull(),
     isLatest: boolean('is_latest').notNull(),
+    configSchemaVersion: text('config_schema_version').notNull().default('v2'),
   },
-  (table) => ({
-    pk: primaryKey({ columns: [table.configName, table.version] }),
-  })
+  (table) => [primaryKey({ columns: [table.configName, table.schemaId, table.version] })]
 );
 
 export const configsRefs = pgDbSchema.table(
   'config_refs',
   {
     configName: text('name').notNull(),
+    schemaId: text('schema_id').notNull(),
     version: integer('version').notNull(),
     refConfigName: text('ref_name').notNull(),
+    refSchemaId: text('ref_schema_id').notNull(),
     refVersion: integer('ref_version'),
   },
-  (table) => ({
-    originalConfigRef: foreignKey({
-      columns: [table.configName, table.version],
-      foreignColumns: [configs.configName, configs.version],
+  (table) => [
+    foreignKey({
+      columns: [table.configName, table.schemaId, table.version],
+      foreignColumns: [configs.configName, configs.schemaId, configs.version],
       name: 'config_refs_original_config_fk',
     }),
-    childConfigRef: foreignKey({
-      columns: [table.refConfigName, table.refVersion],
-      foreignColumns: [configs.configName, configs.version],
+    foreignKey({
+      columns: [table.refConfigName, table.refSchemaId, table.refVersion],
+      foreignColumns: [configs.configName, configs.schemaId, configs.version],
       name: 'config_refs_child_config_fk',
     }),
-    index: index('idx_config_name_version').on(table.configName, table.version),
-  })
+    index('idx_config_name_version').on(table.configName, table.version),
+  ]
 );
 
 export type Config = typeof configs.$inferSelect;

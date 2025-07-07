@@ -12,14 +12,10 @@ export class ConfigRequestSender {
       .set('Content-Type', 'application/json');
   }
 
-  public async getConfigByName(name: string, params: paths['/config/{name}']['get']['parameters']['query'] = {}): Promise<Test> {
-    return agent(this.app).get(`/config/${name}`).query(params).set('Content-Type', 'application/json');
-  }
-
   public async getConfigByVersion(
     name: string,
     version: number | 'latest',
-    params: paths['/config/{name}/{version}']['get']['parameters']['query'] = {}
+    params: paths['/config/{name}/{version}']['get']['parameters']['query']
   ): Promise<Test> {
     return agent(this.app).get(`/config/${name}/${version}`).query(params).set('Content-Type', 'application/json');
   }

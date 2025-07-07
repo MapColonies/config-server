@@ -10,6 +10,13 @@ async function getApp(registerOptions?: RegisterOptions): Promise<[Express, Depe
   const container = await registerExternalValues(registerOptions);
   const configManager = container.resolve(ConfigManager);
   const logger = container.resolve<Logger>(SERVICES.LOGGER);
+
+  try {
+    await configManager.updateOldConfigs();
+  } catch (error) {
+    logger.warn({ msg: 'Failed to update configs to V2 schema', error });
+  }
+
   try {
     await configManager.insertDefaultConfigs();
   } catch (err) {

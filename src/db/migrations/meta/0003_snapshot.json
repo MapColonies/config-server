@@ -1,4 +1,6 @@
 {
+  "id": "18c166e5-975b-4f15-b6d6-ca93e3b431f8",
+  "prevId": "803e5a56-4d36-4b1b-ad64-4a0ceca0a77d",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -42,20 +44,33 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "is_latest": {
+          "name": "is_latest",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "config_schema_version": {
+          "name": "config_schema_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'v2'"
         }
       },
       "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {
-        "config_name_version_pk": {
-          "name": "config_name_version_pk",
-          "columns": ["name", "version"]
+        "config_name_schema_id_version_pk": {
+          "name": "config_name_schema_id_version_pk",
+          "columns": ["name", "schema_id", "version"]
         }
       },
       "uniqueConstraints": {},
       "policies": {},
-      "isRLSEnabled": false,
-      "checkConstraints": {}
+      "checkConstraints": {},
+      "isRLSEnabled": false
     },
     "config_server.config_refs": {
       "name": "config_refs",
@@ -63,6 +78,12 @@
       "columns": {
         "name": {
           "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "schema_id": {
+          "name": "schema_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true
@@ -79,6 +100,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "ref_schema_id": {
+          "name": "ref_schema_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
         "ref_version": {
           "name": "ref_version",
           "type": "integer",
@@ -88,6 +115,7 @@
       },
       "indexes": {
         "idx_config_name_version": {
+          "name": "idx_config_name_version",
           "columns": [
             {
               "expression": "name",
@@ -102,55 +130,52 @@
               "nulls": "last"
             }
           ],
-          "with": {},
-          "name": "idx_config_name_version",
           "isUnique": false,
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {
         "config_refs_original_config_fk": {
           "name": "config_refs_original_config_fk",
           "tableFrom": "config_refs",
-          "columnsFrom": ["name", "version"],
           "tableTo": "config",
           "schemaTo": "config_server",
-          "columnsTo": ["name", "version"],
-          "onUpdate": "no action",
-          "onDelete": "no action"
+          "columnsFrom": ["name", "schema_id", "version"],
+          "columnsTo": ["name", "schema_id", "version"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
         },
         "config_refs_child_config_fk": {
           "name": "config_refs_child_config_fk",
           "tableFrom": "config_refs",
-          "columnsFrom": ["ref_name", "ref_version"],
           "tableTo": "config",
           "schemaTo": "config_server",
-          "columnsTo": ["name", "version"],
-          "onUpdate": "no action",
-          "onDelete": "no action"
+          "columnsFrom": ["ref_name", "ref_schema_id", "ref_version"],
+          "columnsTo": ["name", "schema_id", "version"],
+          "onDelete": "no action",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "isRLSEnabled": false,
-      "checkConstraints": {}
+      "checkConstraints": {},
+      "isRLSEnabled": false
     }
   },
   "enums": {},
   "schemas": {
     "config_server": "config_server"
   },
-  "_meta": {
-    "schemas": {},
-    "tables": {},
-    "columns": {}
-  },
-  "id": "bc0c8f91-085a-489c-a7c2-1566fa6159d3",
-  "prevId": "cd9fa987-a4ff-4770-9994-6de9679de7ed",
   "sequences": {},
+  "roles": {},
   "policies": {},
   "views": {},
-  "roles": {}
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
 }

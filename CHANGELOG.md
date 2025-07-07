@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [2.0.0](https://github.com/MapColonies/config-server/compare/v1.4.1...v2.0.0) (2025-07-07)
+
+
+### ⚠ BREAKING CHANGES
+
+* added schemaId to ref ([#114](https://github.com/MapColonies/config-server/issues/114))
+
+### Features
+
+* added schemaId to ref ([#114](https://github.com/MapColonies/config-server/issues/114)) ([a4d942a](https://github.com/MapColonies/config-server/commit/a4d942af1bc5ce2790103f73a0840b484d222e98))
+* enable discriminator in AJV schema validation ([#112](https://github.com/MapColonies/config-server/issues/112)) ([c5c15e7](https://github.com/MapColonies/config-server/commit/c5c15e74ef138db63ca4a893deb3fb858ad70614))
+
 ## [1.4.1](https://github.com/MapColonies/config-server/compare/v1.4.0...v1.4.1) (2025-06-26)
 
 

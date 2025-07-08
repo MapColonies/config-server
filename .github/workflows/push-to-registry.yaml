@@ -1,0 +1,84 @@
+name: Push artifacts to Azure Registry
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  push-docker-image:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Login to Registry
+        uses: MapColonies/shared-workflows/actions/artifactory-login@artifactory-login-v1
+        with:
+          registry: ${{ secrets.ACR_URL }}
+          username: ${{ secrets.ACR_PUSH_USER }}
+          password: ${{ secrets.ACR_PUSH_TOKEN }}
+
+      - name: Build Docker Image
+        id: build_docker_image
+        uses: MapColonies/shared-workflows/actions/build-docker@build-docker-v1
+        with:
+          context: .
+          domain: infra
+          registry: ${{ secrets.ACR_URL }}
+
+      - name: Push Docker Image
+        uses: MapColonies/shared-workflows/actions/push-docker@push-docker-v1
+        with:
+          image_name: ${{ steps.build_docker_image.outputs.docker_image_name }}
+          image_tag: ${{ steps.build_docker_image.outputs.docker_image_tag }}
+
+      - name: Update Docker Image in artifacts.json
+        uses: MapColonies/shared-workflows/actions/update-artifacts-file@update-artifacts-file-v1
+        with:
+          domain: infra
+          type: docker
+          artifact_name: ${{ steps.build_docker_image.outputs.docker_image_name }}
+          artifact_tag: ${{ steps.build_docker_image.outputs.docker_image_tag }}
+          registry: ${{ secrets.ACR_URL }}
+          github_token: ${{ secrets.GH_PAT }}
+
+  update-artifacts-json-docker:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+  push-helm-package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Artifactory Login
+        uses: MapColonies/shared-workflows/actions/artifactory-login@artifactory-login-v1
+        with:
+          registry: ${{ secrets.ACR_URL }}
+          username: ${{ secrets.ACR_PUSH_USER }}
+          password: ${{ secrets.ACR_PUSH_TOKEN }}
+
+      - name: Build and Push Helm Chart
+        id: build_helm_chart
+        uses: MapColonies/shared-workflows/actions/build-and-push-helm@build-and-push-helm-v1
+        with:
+          domain: infra
+          registry: ${{ secrets.ACR_URL }}
+
+      - name: Update Helm Package in artifacts.json
+        uses: MapColonies/shared-workflows/actions/update-artifacts-file@update-artifacts-file-v1
+        with:
+          domain: infra
+          type: helm
+          artifact_name: ${{ steps.build_helm_chart.outputs.chart }}
+          artifact_tag: ${{ steps.build_helm_chart.outputs.ver }}
+          registry: ${{ secrets.ACR_URL }}
+          github_token: ${{ secrets.GH_PAT }}

@@ -30,6 +30,10 @@ jobs:
     name: Run OpenAPI lint Check
     runs-on: ubuntu-latest
 
+    strategy:
+      matrix:
+        node: [22.13.1]
+
     steps:
       - name: Check out TS Project Git repository
         uses: actions/checkout@v4

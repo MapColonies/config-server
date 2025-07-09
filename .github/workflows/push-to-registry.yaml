@@ -27,7 +27,6 @@ jobs:
         id: build_docker_image
         uses: MapColonies/shared-workflows/actions/build-docker@build-docker-v1
         with:
-          context: .
           domain: infra
           registry: ${{ secrets.ACR_URL }}
 
@@ -46,12 +45,6 @@ jobs:
           artifact_tag: ${{ steps.build_docker_image.outputs.docker_image_tag }}
           registry: ${{ secrets.ACR_URL }}
           github_token: ${{ secrets.GH_PAT }}
-
-  update-artifacts-json-docker:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
 
   push-helm-package:
     runs-on: ubuntu-latest

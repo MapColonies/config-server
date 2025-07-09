@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [2.0.2](https://github.com/MapColonies/config-server/compare/v2.0.1...v2.0.2) (2025-07-09)
+
+
+### Bug Fixes
+
+* add limit to the latest migration ([#119](https://github.com/MapColonies/config-server/issues/119)) ([99708b3](https://github.com/MapColonies/config-server/commit/99708b3992d4c376e0770de2b60e4c55890dd187))
+
+
+### Helm Changes
+
+* remove environment ([#121](https://github.com/MapColonies/config-server/issues/121)) ([7e20d02](https://github.com/MapColonies/config-server/commit/7e20d02b545fde9e1ac9566f1d003e99fc67be2d))
+
 ## [2.0.1](https://github.com/MapColonies/config-server/compare/v2.0.0...v2.0.1) (2025-07-09)
 
 

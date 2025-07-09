@@ -9,7 +9,6 @@ metadata:
   labels:
     app: {{ $chartName }}
     component: {{ $chartName }}
-    environment: {{ include "config-server.environment" . }}
     release: {{ $releaseName }}
     {{- include "config-server.labels" . | nindent 4 }}
 spec:

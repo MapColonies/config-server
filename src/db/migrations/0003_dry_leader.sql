@@ -27,6 +27,8 @@ SET
       "config_server"."config" c
     WHERE
       c."name" = "config_refs"."name"
+    LIMIT
+      1
   );
 
 --> statement-breakpoint
@@ -39,6 +41,8 @@ SET
       "config_server"."config" c
     WHERE
       c."name" = "config_refs"."ref_name"
+    LIMIT
+      1
   );
 
 --> statement-breakpoint

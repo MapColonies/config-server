@@ -33,7 +33,7 @@ jobs:
       - name: Push Docker Image
         uses: MapColonies/shared-workflows/actions/push-docker@push-docker-v1
         with:
-          image_name: ${{ steps.build_docker_image.outputs.docker_image_name }}
+          image_name: ${{ steps.build_docker_image.outputs.docker_image_full_name }}
           image_tag: ${{ steps.build_docker_image.outputs.docker_image_tag }}
 
       - name: Update Docker Image in artifacts.json

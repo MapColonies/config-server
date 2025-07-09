@@ -41,7 +41,7 @@ jobs:
         with:
           domain: infra
           type: docker
-          artifact_name: ${{ steps.build_docker_image.outputs.docker_image_name }}
+          artifact_name: ${{ github.repository }}
           artifact_tag: ${{ steps.build_docker_image.outputs.docker_image_tag }}
           registry: ${{ secrets.ACR_URL }}
           github_token: ${{ secrets.GH_PAT }}

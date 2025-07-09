@@ -18,8 +18,8 @@ jobs:
       - name: Check out TS Project Git repository
         uses: actions/checkout@v4
 
-      - name: Init nodejs
-        uses: ./.github/actions/init-npm
+      - name: Initialize NPM Project
+        uses: MapColonies/shared-workflows/actions/init-npm@init-npm-v1
         with:
           node-version: ${{ matrix.node }}
 
@@ -30,12 +30,18 @@ jobs:
     name: Run OpenAPI lint Check
     runs-on: ubuntu-latest
 
+    strategy:
+      matrix:
+        node: [22.13.1]
+
     steps:
       - name: Check out TS Project Git repository
         uses: actions/checkout@v4
 
-      - name: Init nodejs
-        uses: ./.github/actions/init-npm
+      - name: Initialize NPM Project
+        uses: MapColonies/shared-workflows/actions/init-npm@init-npm-v1
+        with:
+          node-version: ${{ matrix.node }}
 
       - name: OpenAPI Lint Checks
         run: npx @redocly/cli lint --format=github-actions openapi3.yaml
@@ -72,8 +78,10 @@ jobs:
       - name: Check out TS Project Git repository
         uses: actions/checkout@v4
         
-      - name: Init nodejs
-        uses: ./.github/actions/init-npm
+      - name: Initialize NPM Project
+        uses: MapColonies/shared-workflows/actions/init-npm@init-npm-v1
+        with:
+          node-version: ${{ matrix.node }}
 
       - name: Run tests
         run: npm run test

@@ -31,7 +31,7 @@ spec:
         app: {{ $chartName }}
         release: {{ $releaseName }}
         run: {{ $releaseName }}-{{ $chartName }}
-        {{- include "config-server.selectorLabels" . | nindent 8 }}
+        {{- include "config-server.labels" . | nindent 8 }}
       annotations:
         {{ include "mc-labels-and-annotations.annotations" . | nindent 8 }}
       {{- if .Values.resetOnConfigChange }}

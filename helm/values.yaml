@@ -7,8 +7,10 @@ global:
   
 mcLabelsAndAnnotations:
   component: backend
-  partOf: authentication
+  partOf: config-management
   owner: infra
+  prometheus:
+    enabled: true
 
 enabled: true
 replicaCount: 1

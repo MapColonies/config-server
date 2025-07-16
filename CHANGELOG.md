@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [2.0.3](https://github.com/MapColonies/config-server/compare/v2.0.2...v2.0.3) (2025-07-16)
+
+
+### Dependency Updates
+
+* upgraded schemas to 1.12.1 ([#123](https://github.com/MapColonies/config-server/issues/123)) ([76124cd](https://github.com/MapColonies/config-server/commit/76124cd34bad808c0909ba71f1bd93d6ff1839f0))
+
 ## [2.0.2](https://github.com/MapColonies/config-server/compare/v2.0.1...v2.0.2) (2025-07-09)
 
 

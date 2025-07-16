@@ -39,7 +39,7 @@
     "@map-colonies/js-logger": "^2.0.0",
     "@map-colonies/openapi-express-viewer": "^4.0.0",
     "@map-colonies/read-pkg": "^1.0.0",
-    "@map-colonies/schemas": "^1.9.0",
+    "@map-colonies/schemas": "^1.12.1",
     "@map-colonies/telemetry": "^10.0.0",
     "@opentelemetry/api": "^1.9.0",
     "@sidvind/better-ajv-errors": "^4.0.0",

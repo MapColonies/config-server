@@ -40,7 +40,7 @@ helm.sh/chart: {{ include "config-server.chart" . }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
-{{ include "mc-labels-and-annotations.labels" . }}
+{{ include "mclabels.labels" . }}
 {{- end }}
 
 {{/*
@@ -56,7 +56,7 @@ Selector labels
 {{- define "config-server.selectorLabels" -}}
 app.kubernetes.io/name: {{ include "config-server.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
-{{ include "mc-labels-and-annotations.selectorLabels" . }}
+{{ include "mclabels.selectorLabels" . }}
 {{- end }}
 
 {{/*

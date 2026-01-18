@@ -2,8 +2,8 @@ apiVersion: v2
 name: config-server
 description: A Helm chart for config-server service
 type: application
-version: 2.0.5
-appVersion: 2.0.5
+version: 2.0.6
+appVersion: 2.0.6
 dependencies:
   - name: mclabels
     version: 1.0.1

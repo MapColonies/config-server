@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [2.0.6](https://github.com/MapColonies/config-server/compare/v2.0.5...v2.0.6) (2026-01-18)
+
+
+### Helm Changes
+
+* upgrade mclabels ([#133](https://github.com/MapColonies/config-server/issues/133)) ([bf4ede9](https://github.com/MapColonies/config-server/commit/bf4ede923817c5973f5a9893410a9669549bdfbe))
+
+
+### Dependency Updates
+
+* bump drizzle-orm from 0.40.1 to 0.41.0 ([#90](https://github.com/MapColonies/config-server/issues/90)) ([25cbc60](https://github.com/MapColonies/config-server/commit/25cbc608d55b7ff2f3b605841484ea45e4e18b2f))
+
 ## [2.0.5](https://github.com/MapColonies/config-server/compare/v2.0.4...v2.0.5) (2025-09-14)
 
 

@@ -1,4 +1,5 @@
 import 'jest-openapi';
+import { describe, beforeEach, it, expect } from 'vitest';
 import { CapabilitiesManager } from '@src/capabilities/models/capabilitiesManager';
 
 describe('CapabilitiesManager', () => {

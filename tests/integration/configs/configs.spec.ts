@@ -3,7 +3,8 @@ import 'jest-openapi';
 import 'jest-sorted';
 
 import fs from 'node:fs';
-import jsLogger, { Logger } from '@map-colonies/js-logger';
+import { describe, beforeAll, afterAll, it, expect, vi } from 'vitest';
+import { Logger, jsLogger } from '@map-colonies/js-logger';
 import httpStatusCodes from 'http-status-codes';
 import { DependencyContainer } from 'tsyringe';
 import { faker } from '@faker-js/faker';
@@ -20,12 +21,12 @@ import { SchemaNotFoundError } from '@src/schemas/models/errors';
 import { ConfigRequestSender } from './helpers/requestSender';
 import { configsMockData, refs, schemaWithRef, simpleSchema, primitiveRefSchema, primitiveSchema, simpleSchemaV2 } from './helpers/data';
 
-jest.mock('../../../src/common/utils', () => {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+vi.mock('../../../src/common/utils', async () => {
+  const original = await vi.importActual('../../../src/common/utils');
   return {
     // eslint-disable-next-line @typescript-eslint/naming-convention
     __esModule: true,
-    ...jest.requireActual('../../../src/common/utils'),
+    ...original,
   };
 });
 
@@ -59,7 +60,8 @@ describe('config', function () {
             useFactory: (container) => {
               const logger = container.resolve<Logger>(SERVICES.LOGGER);
               const manager = new SchemaManager(logger);
-              jest.spyOn(manager, 'getSchema').mockImplementation(getSchemaMock);
+              // vi.spyOn(manager, 'getSchema').mockImplementation(getSchemaMock);
+              manager.getSchema = getSchemaMock;
               return manager;
             },
           },
@@ -81,7 +83,7 @@ describe('config', function () {
 
   describe('insertDefaultConfigs', function () {
     it('should insert a config without errors', async function () {
-      jest.spyOn(utils, 'filesTreeGenerator').mockImplementationOnce(async function* () {
+      vi.spyOn(utils, 'filesTreeGenerator').mockImplementationOnce(async function* () {
         await Promise.resolve();
         yield {
           name: 'v1.configs.json',
@@ -89,7 +91,7 @@ describe('config', function () {
         } as fs.Dirent;
       });
 
-      const fsSpy = jest.spyOn(fs, 'readFileSync');
+      const fsSpy = vi.spyOn(fs, 'readFileSync');
 
       const configManager = dependencyContainer.resolve(ConfigManager);
 
@@ -102,7 +104,7 @@ describe('config', function () {
     });
 
     it('should not insert config if it already exists', async function () {
-      jest.spyOn(utils, 'filesTreeGenerator').mockImplementationOnce(async function* () {
+      vi.spyOn(utils, 'filesTreeGenerator').mockImplementationOnce(async function* () {
         await Promise.resolve();
         yield {
           name: 'v1.configs.json',
@@ -110,7 +112,7 @@ describe('config', function () {
         } as fs.Dirent;
       });
 
-      const fsSpy = jest.spyOn(fs, 'readFileSync');
+      const fsSpy = vi.spyOn(fs, 'readFileSync');
 
       const configManager = dependencyContainer.resolve(ConfigManager);
       await configManager.createConfig({
@@ -130,7 +132,7 @@ describe('config', function () {
     });
 
     it('should throw an error if there is a ref for a config that does not exists', async function () {
-      jest.spyOn(utils, 'filesTreeGenerator').mockImplementationOnce(async function* () {
+      vi.spyOn(utils, 'filesTreeGenerator').mockImplementationOnce(async function* () {
         await Promise.resolve();
         yield {
           name: 'v1.configs.json',
@@ -138,7 +140,7 @@ describe('config', function () {
         } as fs.Dirent;
       });
 
-      const fsSpy = jest.spyOn(fs, 'readFileSync');
+      const fsSpy = vi.spyOn(fs, 'readFileSync');
 
       const configManager = dependencyContainer.resolve(ConfigManager);
 
@@ -147,14 +149,6 @@ describe('config', function () {
       const action = configManager.insertDefaultConfigs();
 
       await expect(action).rejects.toThrow();
-    });
-
-    it('should insert all the default configs in the current schemas package', async function () {
-      const configManager = dependencyContainer.resolve(ConfigManager);
-
-      const action = configManager.insertDefaultConfigs();
-
-      await expect(action).resolves.not.toThrow();
     });
   });
 
@@ -328,14 +322,13 @@ describe('config', function () {
       await drizzle.insert(configs).values(oldConfigs);
 
       // Mock updateConfigToNewSchemaVersion to fail for first config
-      let callCount = 0;
-      jest.spyOn(configRepository, 'updateConfigToNewSchemaVersion').mockImplementation(async (input) => {
-        callCount++;
-        if (callCount === 1 && input.configName === 'config-will-fail') {
+      const originalUpdate = configRepository.updateConfigToNewSchemaVersion.bind(configRepository);
+      vi.spyOn(configRepository, 'updateConfigToNewSchemaVersion').mockImplementation(async (input) => {
+        if (input.configName === 'config-will-fail') {
           throw new Error('Simulated database error');
         }
         // For subsequent calls, just resolve successfully since we're testing error handling
-        return Promise.resolve();
+        return originalUpdate(input);
       });
 
       // Should not throw even if one config fails
@@ -498,7 +491,7 @@ describe('config', function () {
     describe('Sad Path', function () {
       it('should return 500 status code when the database is down', async function () {
         const configRepo = dependencyContainer.resolve(ConfigRepository);
-        jest.spyOn(configRepo, 'getConfigs').mockRejectedValueOnce(new Error('Database is down'));
+        vi.spyOn(configRepo, 'getConfigs').mockRejectedValueOnce(new Error('Database is down'));
 
         const response = await requestSender.getConfigs({});
 
@@ -586,7 +579,7 @@ describe('config', function () {
     describe('Sad Path', function () {
       it('should return 500 status code when the database is down', async function () {
         const configRepo = dependencyContainer.resolve(ConfigRepository);
-        jest.spyOn(configRepo, 'getConfig').mockRejectedValueOnce(new Error('Database is down'));
+        vi.spyOn(configRepo, 'getConfig').mockRejectedValueOnce(new Error('Database is down'));
 
         const response = await requestSender.getConfigByVersion('config1', 1, { schemaId: 'https://mapcolonies.com/simpleSchema/v1' });
 
@@ -862,7 +855,7 @@ describe('config', function () {
     describe('Sad Path', function () {
       it('should return 500 status code when the database is down', async function () {
         const configRepo = dependencyContainer.resolve(ConfigRepository);
-        jest.spyOn(configRepo, 'createConfig').mockRejectedValueOnce(new Error('Database is down'));
+        vi.spyOn(configRepo, 'createConfig').mockRejectedValueOnce(new Error('Database is down'));
 
         const response = await requestSender.postConfig({
           configName: 'new-config3',

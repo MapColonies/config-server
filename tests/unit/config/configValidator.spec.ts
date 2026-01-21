@@ -1,9 +1,11 @@
+import { describe, beforeEach, it, expect, vi, Mock } from 'vitest';
+
 import betterAjvErrors from '@sidvind/better-ajv-errors';
-import jsLogger from '@map-colonies/js-logger';
+import { jsLogger } from '@map-colonies/js-logger';
 import { Validator } from '@src/configs/models/configValidator';
 import { SchemaManager } from '@src/schemas/models/schemaManager';
 
-jest.mock('@sidvind/better-ajv-errors');
+vi.mock('@sidvind/better-ajv-errors');
 
 describe('Validator', () => {
   let validator: Validator;
@@ -23,9 +25,9 @@ describe('Validator', () => {
       const schema = {
         /* mock schema object */
       };
-      const validateMock = jest.fn().mockReturnValue(true);
-      const getSchemaMock = jest.fn().mockResolvedValue(schema);
-      const compileAsyncMock = jest.fn().mockResolvedValue(validateMock);
+      const validateMock = vi.fn().mockReturnValue(true);
+      const getSchemaMock = vi.fn().mockResolvedValue(schema);
+      const compileAsyncMock = vi.fn().mockResolvedValue(validateMock);
 
       schemaManager.getSchema = getSchemaMock;
       validator['ajv'].compileAsync = compileAsyncMock;
@@ -43,12 +45,11 @@ describe('Validator', () => {
       const schema = {
         /* mock schema object */
       };
-      const validateMock = jest.fn().mockReturnValue(false);
-      const getSchemaMock = jest.fn().mockResolvedValue(schema);
-      const compileAsyncMock = jest.fn().mockResolvedValue(validateMock);
-      const getSchemaSchemaMock = jest.fn().mockReturnValue(schema);
-      (betterAjvErrors as jest.Mock).mockReturnValue([{ message: 'Validation error' }]);
-
+      const validateMock = vi.fn().mockReturnValue(false);
+      const getSchemaMock = vi.fn().mockResolvedValue(schema);
+      const compileAsyncMock = vi.fn().mockResolvedValue(validateMock);
+      const getSchemaSchemaMock = vi.fn().mockReturnValue(schema);
+      (betterAjvErrors as Mock).mockReturnValue([{ message: 'Validation error' }]);
       schemaManager.getSchema = getSchemaMock;
       validator['ajv'].compileAsync = compileAsyncMock;
       validator['ajv'].getSchema = getSchemaSchemaMock;

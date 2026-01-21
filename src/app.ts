@@ -14,7 +14,7 @@ async function getApp(registerOptions?: RegisterOptions): Promise<[Express, Depe
   try {
     await configManager.updateOldConfigs();
   } catch (error) {
-    logger.warn({ msg: 'Failed to update configs to V2 schema', error });
+    logger.warn({ msg: 'Failed to update configs to V2 schema', err: error });
   }
 
   try {

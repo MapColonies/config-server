@@ -1,3 +1,4 @@
+import 'reflect-metadata';
 /* eslint-disable */
 import path from 'node:path';
 import { expect } from 'vitest';
@@ -5,9 +6,10 @@ import jestOpenApi from 'jest-openapi';
 import * as matchers from 'jest-extended';
 
 expect.extend(matchers);
+
 //@ts-ignore
 globalThis.expect = expect;
-import 'jest-sorted';
+require('jest-sorted');
 
 jestOpenApi(path.join(process.cwd(), 'openapi3.yaml'));
 

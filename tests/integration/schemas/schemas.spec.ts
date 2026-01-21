@@ -1,4 +1,5 @@
-import jsLogger from '@map-colonies/js-logger';
+import { describe, beforeEach, afterEach, it, expect } from 'vitest';
+import { jsLogger } from '@map-colonies/js-logger';
 import httpStatusCodes from 'http-status-codes';
 import { DependencyContainer } from 'tsyringe';
 import { getApp } from '@src/app';

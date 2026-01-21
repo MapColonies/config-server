@@ -12,7 +12,7 @@ jobs:
 
     strategy:
       matrix:
-        node: [22.13.1]
+        node: [24]
 
     steps:
       - name: Check out TS Project Git repository
@@ -32,7 +32,7 @@ jobs:
 
     strategy:
       matrix:
-        node: [22.13.1]
+        node: [24]
 
     steps:
       - name: Check out TS Project Git repository
@@ -46,20 +46,19 @@ jobs:
       - name: OpenAPI Lint Checks
         run: npx @redocly/cli lint --format=github-actions openapi3.yaml
 
-
   tests:
     name: Run Tests
     runs-on: ubuntu-latest
 
     strategy:
       matrix:
-        node: [22.13.1]
+        node: [24]
 
     services:
       # Label used to access the service container
       postgres:
         # Docker Hub image
-        image: postgres:14
+        image: postgres:15
         # Provide the password for postgres
         env:
           POSTGRES_PASSWORD: "postgres"
@@ -77,7 +76,7 @@ jobs:
     steps:
       - name: Check out TS Project Git repository
         uses: actions/checkout@v5
-        
+
       - name: Initialize NPM Project
         uses: MapColonies/shared-workflows/actions/init-npm@init-npm-v1
         with:

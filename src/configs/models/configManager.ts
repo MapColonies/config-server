@@ -59,7 +59,7 @@ export class ConfigManager {
     const [config, refs] = res;
 
     if (refs.length > 0) {
-      this.logger.debug('Resolving refs for config', { refCount: refs.length });
+      this.logger.debug({ refCount: refs.length, msg: 'Resolving refs for config' });
       setSpanAttributes({ refCount: refs.length });
       this.replaceRefs(config.config, refs);
     }
@@ -210,7 +210,7 @@ export class ConfigManager {
         const refPath = key.slice(0, key.lastIndexOf('/'));
         const ref = pointer.get(obj, refPath) as unknown;
         if (!this.configValidator.validateRef(ref)) {
-          this.logger.debug('The reference in the following path is not valid', { refPath });
+          this.logger.debug({ refPath, msg: 'The reference in the following path is not valid' });
           throw new ConfigValidationError(`The reference in the following path ${refPath} is not valid`);
         }
 
@@ -219,7 +219,7 @@ export class ConfigManager {
     });
 
     for (const [path, ref] of paths) {
-      this.logger.debug('Replacing the reference in the object', { refPath: path, referenceObject: ref });
+      this.logger.debug({ refPath: path, referenceObject: ref, msg: 'Replacing the reference in the object' });
       const config = refs.find(
         (r) => r.configName === ref.configName && (ref.version === 'latest' || r.version === ref.version) && r.schemaId === ref.schemaId
       );
@@ -276,9 +276,10 @@ export class ConfigManager {
   public async updateOldConfigs(): Promise<void> {
     this.logger.info('Updating old configs to the new schema version');
 
-    const BATCH_SIZE = 1000;
+    const BATCH_SIZE = 100;
     const NO_CONFIGS_TO_UPDATE = 0;
     let totalProcessed = 0;
+    const failedConfigKeys = new Set<string>();
 
     // Process configs in batches until no more exist
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
@@ -286,7 +287,7 @@ export class ConfigManager {
       const configsToUpdate = await this.configRepository.getConfigs({ configSchemaVersion: 'v1' }, { offset: 0, limit: BATCH_SIZE });
 
       // Exit if no configs to update
-      if (configsToUpdate.totalCount === NO_CONFIGS_TO_UPDATE) {
+      if (configsToUpdate.totalCount - failedConfigKeys.size === NO_CONFIGS_TO_UPDATE) {
         if (totalProcessed === NO_CONFIGS_TO_UPDATE) {
           this.logger.info('No old configs found, nothing to update');
         }
@@ -297,6 +298,11 @@ export class ConfigManager {
 
       // Process each config in the current batch
       for (const config of configsToUpdate.configs) {
+        if (failedConfigKeys.has(`${config.configName}::${config.schemaId}::${config.version}`)) {
+          this.logger.info(`Skipping previously failed config: ${config.configName} (${config.schemaId}) version ${config.version}`);
+          continue;
+        }
+
         try {
           this.logger.debug(`Updating config: ${config.configName} (${config.schemaId}) version ${config.version}`);
 
@@ -312,7 +318,8 @@ export class ConfigManager {
           totalProcessed++;
           this.logger.info(`Updated config ${config.configName} to the new schema version (${totalProcessed} processed)`);
         } catch (error) {
-          this.logger.error(`Failed to update config ${config.configName}:`, error);
+          this.logger.error({ msg: `Failed to update config ${config.configName}:`, err: error });
+          failedConfigKeys.add(`${config.configName}::${config.schemaId}::${config.version}`);
           // Continue processing other configs even if one fails
         }
       }
@@ -382,7 +389,7 @@ export class ConfigManager {
 
         this.logger.debug(`Updated ref ${oldRef.configName} to include schemaId: ${referencedConfig.schemaId}`);
       } catch (error) {
-        this.logger.error(`Failed to update ref ${oldRef.configName}:`, error);
+        this.logger.error({ msg: `Failed to update ref ${oldRef.configName}`, err: error });
       }
     }
 

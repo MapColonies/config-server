@@ -2,19 +2,20 @@ import { describe, beforeEach, afterEach, it, expect } from 'vitest';
 import { jsLogger } from '@map-colonies/js-logger';
 import httpStatusCodes from 'http-status-codes';
 import { DependencyContainer } from 'tsyringe';
+import { createRequestSender, RequestSender, expectResponseStatusFactory, ExpectResponseStatus } from '@map-colonies/openapi-helpers/requestSender';
 import { getApp } from '@src/app';
 import { SERVICES } from '@common/constants';
-import { SchemaRequestSender } from './helpers/requestSender';
+import { paths, operations } from '@openapi';
 
 describe('capabilities', function () {
-  let requestSender: SchemaRequestSender;
+  let requestSender: RequestSender<paths, operations>;
   let dependencyContainer: DependencyContainer;
   beforeEach(async function () {
     const [app, container] = await getApp({
       override: [{ token: SERVICES.LOGGER, provider: { useValue: jsLogger({ enabled: false }) } }],
       useChild: true,
     });
-    requestSender = new SchemaRequestSender(app);
+    requestSender = await createRequestSender<paths, operations>('openapi3.yaml', app);
     dependencyContainer = container;
   });
 

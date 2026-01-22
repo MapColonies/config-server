@@ -349,9 +349,7 @@ describe('config', function () {
         const response = await requestSender.getConfigs({});
 
         expectResponseStatus(response, 200);
-        // expect(response.status).toBe(httpStatusCodes.OK);
         expect(response).toSatisfyApiSpec();
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         expect(response.body.configs).not.toHaveLength(0);
       });
 
@@ -360,7 +358,6 @@ describe('config', function () {
 
         expectResponseStatus(response, 200);
         expect(response).toSatisfyApiSpec();
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         expect(response.body.configs).toHaveLength(1);
         expect(response.body).toHaveProperty('total');
       });
@@ -381,7 +378,6 @@ describe('config', function () {
 
         expectResponseStatus(response, 200);
         expect(response).toSatisfyApiSpec();
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         expect(response.body.configs).toHaveLength(1);
       });
 
@@ -390,7 +386,6 @@ describe('config', function () {
 
         expectResponseStatus(response, 200);
         expect(response).toSatisfyApiSpec();
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         expect(response.body.configs).toHaveLength(1);
       });
 
@@ -400,10 +395,8 @@ describe('config', function () {
 
         expectResponseStatus(response, 200);
         expect(response).toSatisfyApiSpec();
-        /* eslint-disable @typescript-eslint/no-unsafe-member-access */
         expect(response.body.configs).not.toHaveLength(0);
         expect(response.body.configs?.[0]).toHaveProperty('version', 2);
-        /* eslint-enable @typescript-eslint/no-unsafe-member-access */
       });
 
       it('should return 200 status code and empty array if no results have returned', async function () {
@@ -412,7 +405,6 @@ describe('config', function () {
 
         expectResponseStatus(response, 200);
         expect(response).toSatisfyApiSpec();
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         expect(response.body.configs).toHaveLength(0);
         expect(response.body).toHaveProperty('total', 0);
       });
@@ -422,7 +414,6 @@ describe('config', function () {
 
         expectResponseStatus(response, 200);
         expect(response).toSatisfyApiSpec();
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         expect(response.body.configs).not.toHaveLength(0);
         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         expect(response.body.configs).toSatisfyAll((config) => config.version === 1);
@@ -433,7 +424,6 @@ describe('config', function () {
 
         expectResponseStatus(response, 200);
         expect(response).toSatisfyApiSpec();
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         expect(response.body.configs).toBeSortedBy('configName', { descending: false });
       });
 
@@ -442,7 +432,6 @@ describe('config', function () {
 
         expectResponseStatus(response, 200);
         expect(response).toSatisfyApiSpec();
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         expect(response.body.configs).toBeSorted({
           descending: false,
           compare: (a: Config, b: Config) => {
@@ -517,7 +506,6 @@ describe('config', function () {
 
         expectResponseStatus(response, 200);
         expect(response).toSatisfyApiSpec();
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         expect(response.body.version).toBe(1);
       });
 
@@ -529,7 +517,6 @@ describe('config', function () {
 
         expectResponseStatus(response, 200);
         expect(response).toSatisfyApiSpec();
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         expect(response.body.version).toBe(2);
       });
 
@@ -544,7 +531,6 @@ describe('config', function () {
 
         expectResponseStatus(response, 200);
         expect(response).toSatisfyApiSpec();
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         expect(response.body.config).toStrictEqual({
           manager: {
             name: 'name4',
@@ -564,7 +550,6 @@ describe('config', function () {
 
         expectResponseStatus(response, 200);
         expect(response).toSatisfyApiSpec();
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         expect(JSON.stringify(response.body.config)).not.toContain('$ref');
       });
     });

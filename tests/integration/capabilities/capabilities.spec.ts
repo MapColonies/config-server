@@ -2,10 +2,10 @@ import { describe, beforeEach, afterEach, it, expect } from 'vitest';
 import { jsLogger } from '@map-colonies/js-logger';
 import httpStatusCodes from 'http-status-codes';
 import { DependencyContainer } from 'tsyringe';
-import { createRequestSender, RequestSender, expectResponseStatusFactory, ExpectResponseStatus } from '@map-colonies/openapi-helpers/requestSender';
+import { createRequestSender, RequestSender } from '@map-colonies/openapi-helpers/requestSender';
+import { paths, operations } from '@openapi';
 import { getApp } from '@src/app';
 import { SERVICES } from '@common/constants';
-import { paths, operations } from '@openapi';
 
 describe('capabilities', function () {
   let requestSender: RequestSender<paths, operations>;

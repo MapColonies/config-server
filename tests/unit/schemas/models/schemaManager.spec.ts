@@ -1,5 +1,6 @@
+import { describe, beforeEach, it, expect, test } from 'vitest';
 import 'jest-openapi';
-import jsLogger from '@map-colonies/js-logger';
+import { jsLogger } from '@map-colonies/js-logger';
 import { SchemaManager } from '@src/schemas/models/schemaManager';
 import { SchemaNotFoundError, SchemaPathIsInvalidError } from '@src/schemas/models/errors';
 

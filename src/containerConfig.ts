@@ -3,7 +3,6 @@ import { metrics as OtelMetrics } from '@opentelemetry/api';
 import { DependencyContainer } from 'tsyringe/dist/typings/types';
 import { instancePerContainerCachingFactory } from 'tsyringe';
 import type { Pool } from 'pg';
-import { Metrics } from '@map-colonies/telemetry';
 import { initConnection, createDrizzle, createConnectionOptions, DbConfig } from '@db';
 import { InjectionObject, registerDependencies } from '@common/dependencyRegistration';
 import { SERVICES, SERVICE_NAME } from '@common/constants';
@@ -19,9 +18,6 @@ export interface RegisterOptions {
 }
 
 export async function registerExternalValues(options?: RegisterOptions): Promise<DependencyContainer> {
-  const metrics = new Metrics();
-  metrics.start();
-
   let pool: Pool;
   try {
     pool = await initConnection(createConnectionOptions(config.get<DbConfig>('db')));
@@ -49,7 +45,7 @@ export async function registerExternalValues(options?: RegisterOptions): Promise
       token: 'onSignal',
       provider: {
         useValue: async (): Promise<void> => {
-          await Promise.all([tracing.stop(), metrics.stop(), pool.end()]);
+          await Promise.all([tracing.stop(), pool.end()]);
         },
       },
     },

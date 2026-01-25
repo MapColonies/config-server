@@ -1,4 +1,4 @@
-import { Tracing } from '@map-colonies/telemetry';
+import { Tracing } from '@map-colonies/tracing';
 import config from 'config';
 import { get } from 'lodash';
 import { type Attributes, type Span, type SpanOptions, SpanStatusCode, trace } from '@opentelemetry/api';

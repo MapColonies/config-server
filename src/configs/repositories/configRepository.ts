@@ -84,7 +84,7 @@ export class ConfigRepository {
 
   @withSpan()
   public async getAllConfigRefs(refs: ConfigReference[]): Promise<ConfigRefResponse[]> {
-    this.logger.debug('Retrieving all config references', { refCount: refs.length });
+    this.logger.debug({ refCount: refs.length, msg: 'Retrieving all config references' });
     const refsForSql = refs.map((ref) => ({
       configName: ref.configName,
       version: ref.version === 'latest' ? null : ref.version,
@@ -418,7 +418,7 @@ export class ConfigRepository {
     config: Record<string, unknown>;
   }): Promise<void> {
     const { configName, schemaId, version, newSchemaVersion } = input;
-    this.logger.debug('Updating config to a new version', { configName, schemaId, version, newSchemaVersion });
+    this.logger.debug({ msg: 'Updating config to a new version', configName, schemaId, version, newSchemaVersion });
     await this.drizzle
       .update(configs)
       .set({ config: input.config, configSchemaVersion: newSchemaVersion })

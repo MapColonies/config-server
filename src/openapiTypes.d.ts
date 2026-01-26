@@ -30,7 +30,10 @@ export type paths = {
         /** @description The id of the requested schema */
         schemaId: components['schemas']['schemaId'];
       };
-      header?: never;
+      header?: {
+        /** @description ETag value from a previous request to enable conditional GET requests */
+        'If-None-Match'?: components['parameters']['IfNoneMatchHeader'];
+      };
       path: {
         /** @description The name of the config */
         name: components['parameters']['ConfigNamePath'];
@@ -169,6 +172,8 @@ export type components = {
       readonly createdAt: components['schemas']['createdAt'];
       readonly createdBy: components['schemas']['createdBy'];
       readonly isLatest?: boolean;
+      /** @description Merkle-tree hash of config body and dependencies for caching */
+      readonly hash?: string;
     };
     capabilities: {
       /** @description The version of the server */
@@ -261,6 +266,8 @@ export type components = {
     SortQuery: string[];
     /** @description should the server bundle all refs into one config */
     ShouldDereferenceConfigQuery: boolean;
+    /** @description ETag value from a previous request to enable conditional GET requests */
+    IfNoneMatchHeader: string;
   };
   requestBodies: never;
   headers: never;
@@ -359,7 +366,10 @@ export interface operations {
         /** @description The id of the requested schema */
         schemaId: components['schemas']['schemaId'];
       };
-      header?: never;
+      header?: {
+        /** @description ETag value from a previous request to enable conditional GET requests */
+        'If-None-Match'?: components['parameters']['IfNoneMatchHeader'];
+      };
       path: {
         /** @description The name of the config */
         name: components['parameters']['ConfigNamePath'];
@@ -372,11 +382,20 @@ export interface operations {
       /** @description Object containing the config with the specific name and version or the latest version */
       200: {
         headers: {
+          /** @description Entity tag for caching and conditional requests */
+          ETag?: string;
           [name: string]: unknown;
         };
         content: {
           'application/json': components['schemas']['config'];
         };
+      };
+      /** @description Not Modified - Config has not changed since the ETag provided in If-None-Match header */
+      304: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
       };
       400: components['responses']['400BadRequest'];
       404: components['responses']['404NotFound'];

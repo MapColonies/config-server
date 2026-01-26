@@ -11,12 +11,13 @@ import { SERVICES } from '@common/constants';
 import { enrichLogContext } from '@common/logger';
 import { setSpanAttributes, withSpan } from '@common/tracing';
 import { filesTreeGenerator, removeSchemaVersion } from '@common/utils';
-import { ConfigRepository, ConfigSearchParams, SqlPaginationParams } from '../repositories/configRepository';
+import { ConfigRepository, ConfigRefResponse, ConfigSearchParams, SqlPaginationParams } from '../repositories/configRepository';
 import { schemasBasePath } from '../../schemas/models/schemaManager';
 import { Config, SortOption } from './config';
 import { Validator } from './configValidator';
 import { ConfigNotFoundError, ConfigSchemaMismatchError, ConfigValidationError, ConfigVersionMismatchError } from './errors';
 import { ConfigReference } from './configReference';
+import { getConfigCacheKey, HashPropagationHelper } from './hashPropagationHelpers';
 
 type GetConfigOptions = Prettify<Omit<NonNullable<paths['/config']['get']['parameters']['query']>, 'sort'> & { sort?: SortOption[] }>;
 
@@ -30,7 +31,8 @@ export class ConfigManager {
   public constructor(
     @inject(SERVICES.LOGGER) private readonly logger: Logger,
     @inject(ConfigRepository) private readonly configRepository: ConfigRepository,
-    @inject(Validator) private readonly configValidator: Validator
+    @inject(Validator) private readonly configValidator: Validator,
+    @inject(HashPropagationHelper) private readonly hashPropagationHelper: HashPropagationHelper
   ) {}
 
   @withSpan()
@@ -126,8 +128,14 @@ export class ConfigManager {
       config.version++;
     }
 
-    await this.configRepository.createConfig({ ...config, createdBy: 'TBD', refs });
+    // Calculate Merkle hash: Hash = SHA256(Body + SortedListOf(DirectDependencyHashes))
+    const hash = this.hashPropagationHelper.calculateConfigHash(config.config, refs, resolvedRefs);
+
+    await this.configRepository.createConfig({ ...config, createdBy: 'TBD', refs, hash });
     enrichLogContext({ createdVersion: config.version }, true);
+
+    // Propagate hash changes to all parent configs
+    await this.propagateHashToParents(config.configName, config.schemaId, config.version);
   }
 
   @withSpan()
@@ -249,6 +257,62 @@ export class ConfigManager {
     }
   }
 
+  /**
+   * Calculates a Merkle-tree hash for a config based on its body and dependency hashes.
+   * Hash = SHA256(StableJSON(Body) + SortedListOf(DependencyHashes))
+   * @param configBody - The configuration body to hash
+   * @param refs - The list of config references
+   * @param resolvedRefs - The resolved config references with their hashes
+   * @returns The calculated hash as a hex string
+   */
+  @withSpan()
+  /**
+   * Propagates hash changes to all parent configurations that depend on the updated config.
+   * Updates parent hashes in-place without creating new versions.
+   * Uses a recursive CTE to fetch entire parent tree, then processes level-by-level.
+   * @param childConfigName - The name of the config that was updated
+   * @param childSchemaId - The schema ID of the config that was updated
+   * @param childVersion - The version of the config that was updated
+   */
+  @withSpan()
+  private async propagateHashToParents(childConfigName: string, childSchemaId: string, childVersion: number): Promise<void> {
+    this.logger.debug({ childConfigName, childSchemaId, childVersion, msg: 'Propagating hash changes to parent configs' });
+
+    // Use recursive CTE to fetch ALL parents in the entire tree with depth levels
+    const allParents = await this.configRepository.getAllParentConfigsRecursive(childConfigName, childSchemaId, childVersion);
+
+    if (allParents.length === 0) {
+      this.logger.debug('No parent configs found, skipping propagation');
+      return;
+    }
+
+    const maxDepth = allParents.reduce((max, p) => Math.max(max, p.depth), 0);
+    this.logger.info({
+      totalParents: allParents.length,
+      maxDepth,
+      msg: 'Found all parent configs in dependency tree',
+    });
+    setSpanAttributes({ totalParentCount: allParents.length, maxDepth });
+
+    // Build cache that will be updated as we process each level
+    const resolvedRefsCache = new Map<string, ConfigRefResponse>();
+
+    // Process parents level by level (depth 1, then depth 2, etc.)
+    for (let currentDepth = 1; currentDepth <= maxDepth; currentDepth++) {
+      const parentsAtLevel = allParents.filter((p) => p.depth === currentDepth);
+
+      this.logger.debug({
+        depth: currentDepth,
+        parentCount: parentsAtLevel.length,
+        msg: 'Processing parents at depth level',
+      });
+
+      await this.processParentsAtDepthLevel(currentDepth, parentsAtLevel, resolvedRefsCache);
+    }
+
+    this.logger.info({ maxDepth, msg: 'Hash propagation completed for all levels' });
+  }
+
   public async insertDefaultConfigs(): Promise<void> {
     this.logger.info('Inserting default configs');
 
@@ -298,7 +362,7 @@ export class ConfigManager {
 
       // Process each config in the current batch
       for (const config of configsToUpdate.configs) {
-        if (failedConfigKeys.has(`${config.configName}::${config.schemaId}::${config.version}`)) {
+        if (failedConfigKeys.has(getConfigCacheKey(config))) {
           this.logger.info(`Skipping previously failed config: ${config.configName} (${config.schemaId}) version ${config.version}`);
           continue;
         }
@@ -319,13 +383,47 @@ export class ConfigManager {
           this.logger.info(`Updated config ${config.configName} to the new schema version (${totalProcessed} processed)`);
         } catch (error) {
           this.logger.error({ msg: `Failed to update config ${config.configName}:`, err: error });
-          failedConfigKeys.add(`${config.configName}::${config.schemaId}::${config.version}`);
+          failedConfigKeys.add(getConfigCacheKey(config));
           // Continue processing other configs even if one fails
         }
       }
     }
 
     this.logger.info(`Config update completed. Total processed: ${totalProcessed}`);
+  }
+
+  /**
+   * Processes all parent configs at a specific depth level during hash propagation.
+   * Fetches missing refs, calculates new hashes, updates cache, and persists to DB.
+   */
+  private async processParentsAtDepthLevel(
+    currentDepth: number,
+    parentsAtLevel: Config[],
+    resolvedRefsCache: Map<string, ConfigRefResponse>
+  ): Promise<void> {
+    // Step 1: Collect all refs needed for this level and fetch missing ones
+    const parentRefMap = await this.hashPropagationHelper.fetchAndCacheRefsForParents(currentDepth, parentsAtLevel, resolvedRefsCache, (config) =>
+      this.listConfigRefs(config)
+    );
+
+    // Step 2: Calculate new hashes for all parents at this level
+    const hashUpdates = this.hashPropagationHelper.calculateHashUpdatesForParents(
+      currentDepth,
+      parentsAtLevel,
+      parentRefMap,
+      resolvedRefsCache,
+      (config, refs, resolvedRefs) => this.hashPropagationHelper.calculateConfigHash(config, refs, resolvedRefs)
+    );
+
+    // Step 3: Batch update all changed hashes to database
+    if (hashUpdates.length > 0) {
+      this.logger.info({
+        depth: currentDepth,
+        updateCount: hashUpdates.length,
+        msg: 'Updating parent config hashes in batch',
+      });
+      await this.configRepository.updateConfigHashes(hashUpdates);
+    }
   }
 
   /**

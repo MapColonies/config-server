@@ -78,6 +78,19 @@ export class ConfigController {
 
     try {
       const config = await this.manager.getConfig(req.params.name, req.query.schemaId, version, req.query.shouldDereference);
+
+      // ETag support: Use the config's hash as the ETag
+      const etag = config.hash;
+
+      // Check If-None-Match header for conditional GET
+      const ifNoneMatch = req.headers['if-none-match'];
+      if (ifNoneMatch !== undefined && ifNoneMatch !== '' && ifNoneMatch === etag) {
+        // Config hasn't changed, return 304 Not Modified
+        return res.status(httpStatus.NOT_MODIFIED).end();
+      }
+
+      // Set ETag header and return the config
+      res.setHeader('ETag', etag);
       return res.status(httpStatus.OK).json(configMapper(config));
     } catch (error) {
       if (error instanceof ConfigNotFoundError) {

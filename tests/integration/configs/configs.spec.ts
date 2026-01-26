@@ -20,7 +20,16 @@ import { SERVICES } from '@common/constants';
 import { Config, configs, configsRefs } from '@src/configs/models/config';
 import * as utils from '@common/utils';
 import { SchemaNotFoundError } from '@src/schemas/models/errors';
-import { configsMockData, refs, schemaWithRef, simpleSchema, primitiveRefSchema, primitiveSchema, simpleSchemaV2 } from './helpers/data';
+import {
+  configsMockData,
+  refs,
+  schemaWithRef,
+  schemaWithNestedRef,
+  simpleSchema,
+  primitiveRefSchema,
+  primitiveSchema,
+  simpleSchemaV2,
+} from './helpers/data';
 
 const expectResponseStatus: ExpectResponseStatus = expectResponseStatusFactory(expect);
 
@@ -37,6 +46,8 @@ async function getSchemaMock(id: string): Promise<JSONSchema> {
   switch (id) {
     case schemaWithRef.$id:
       return Promise.resolve(schemaWithRef);
+    case schemaWithNestedRef.$id:
+      return Promise.resolve(schemaWithNestedRef);
     case simpleSchema.$id:
       return Promise.resolve(simpleSchema);
     case simpleSchemaV2.$id:
@@ -177,6 +188,7 @@ describe('config', function () {
         createdBy: 'system',
         isLatest: true,
         configSchemaVersion: 'v1',
+        hash: 'temp-hash-old-v1',
       };
 
       await drizzle.insert(configs).values(oldConfigWithV1Schema);
@@ -202,6 +214,7 @@ describe('config', function () {
         createdBy: 'system',
         isLatest: true,
         configSchemaVersion: 'v1',
+        hash: 'temp-hash-ref',
       };
 
       await drizzle.insert(configs).values(referencedConfig);
@@ -224,6 +237,7 @@ describe('config', function () {
         createdBy: 'system',
         isLatest: true,
         configSchemaVersion: 'v1',
+        hash: 'temp-hash-withref',
       };
 
       await drizzle.insert(configs).values(configWithV1Ref);
@@ -255,6 +269,7 @@ describe('config', function () {
         createdBy: 'system',
         isLatest: true,
         configSchemaVersion: 'v1',
+        hash: 'temp-hash-latest-target',
       };
 
       await drizzle.insert(configs).values(referencedConfig);
@@ -277,6 +292,7 @@ describe('config', function () {
         createdBy: 'system',
         isLatest: true,
         configSchemaVersion: 'v1',
+        hash: 'temp-hash-latest-ref',
       };
 
       await drizzle.insert(configs).values(configWithLatestRef);
@@ -310,6 +326,7 @@ describe('config', function () {
           createdBy: 'system',
           isLatest: true,
           configSchemaVersion: 'v1',
+          hash: 'temp-hash-fail',
         },
         {
           configName: 'config-will-succeed',
@@ -319,6 +336,7 @@ describe('config', function () {
           createdBy: 'system',
           isLatest: true,
           configSchemaVersion: 'v1',
+          hash: 'temp-hash-succeed',
         },
       ];
 
@@ -600,6 +618,75 @@ describe('config', function () {
 
         expectResponseStatus(response, 500);
         expect(response).toSatisfyApiSpec();
+      });
+    });
+
+    describe('ETag and Caching', function () {
+      it('should return ETag header in response', async function () {
+        const response = await requestSender.getVersionedConfig({
+          pathParams: { name: 'config1', version: 1 },
+          queryParams: { schemaId: 'https://mapcolonies.com/simpleSchema/v1' },
+        });
+
+        expectResponseStatus(response, 200);
+        expect(response).toSatisfyApiSpec();
+        expect(response.headers).toHaveProperty('etag');
+        expect(response.headers.etag).toBe('hash-config1-v1');
+      });
+
+      it('should return 304 Not Modified when If-None-Match matches ETag', async function () {
+        // First request to get the ETag
+        const firstResponse = await requestSender.getVersionedConfig({
+          pathParams: { name: 'config1', version: 1 },
+          queryParams: { schemaId: 'https://mapcolonies.com/simpleSchema/v1' },
+        });
+
+        expectResponseStatus(firstResponse, 200);
+        const etag = firstResponse.headers.etag;
+        expect(etag).toBeDefined();
+        expect(etag).toBeTypeOf('string');
+
+        // Second request with If-None-Match header
+        const secondResponse = await requestSender.getVersionedConfig({
+          pathParams: { name: 'config1', version: 1 },
+          queryParams: { schemaId: 'https://mapcolonies.com/simpleSchema/v1' },
+          headers: { 'If-None-Match': etag! },
+        });
+
+        expectResponseStatus(secondResponse, 304);
+        // 304 responses should have no body content (empty object from HTTP client)
+        expect(Object.keys(secondResponse.body).length).toBe(0);
+      });
+
+      it('should return 200 and full response when If-None-Match does not match', async function () {
+        const response = await requestSender.getVersionedConfig({
+          pathParams: { name: 'config1', version: 1 },
+          queryParams: { schemaId: 'https://mapcolonies.com/simpleSchema/v1' },
+          headers: { 'If-None-Match': 'different-hash' },
+        });
+
+        expectResponseStatus(response, 200);
+        expect(response).toSatisfyApiSpec();
+        expect(response.body).toBeDefined();
+        expect(response.body.version).toBe(1);
+      });
+
+      it('should return different ETags for different config versions', async function () {
+        const v1Response = await requestSender.getVersionedConfig({
+          pathParams: { name: 'config1', version: 1 },
+          queryParams: { schemaId: 'https://mapcolonies.com/simpleSchema/v1' },
+        });
+
+        const v2Response = await requestSender.getVersionedConfig({
+          pathParams: { name: 'config1', version: 2 },
+          queryParams: { schemaId: 'https://mapcolonies.com/simpleSchema/v1' },
+        });
+
+        expectResponseStatus(v1Response, 200);
+        expectResponseStatus(v2Response, 200);
+        expect(v1Response.headers.etag).toBe('hash-config1-v1');
+        expect(v2Response.headers.etag).toBe('hash-config1-v2');
+        expect(v1Response.headers.etag).not.toBe(v2Response.headers.etag);
       });
     });
   });
@@ -919,6 +1006,215 @@ describe('config', function () {
         expectResponseStatus(response, 500);
         expect(response).toSatisfyApiSpec();
       });
+    });
+  });
+
+  describe('Hash Propagation', function () {
+    it('should propagate hash changes to parent configs in-place when child is updated', async function () {
+      // Create a child config first
+      const childResponse = await requestSender.upsertConfig({
+        requestBody: {
+          configName: 'child-config-test',
+          schemaId: 'https://mapcolonies.com/simpleSchema/v1',
+          version: 1,
+          config: {
+            name: 'child-v1',
+            age: 10,
+          },
+        },
+      });
+
+      expectResponseStatus(childResponse, 201);
+
+      // Create a parent config that references the child with 'latest'
+      const parentResponse = await requestSender.upsertConfig({
+        requestBody: {
+          configName: 'parent-config-test',
+          schemaId: 'https://mapcolonies.com/schemaWithRef/v1',
+          version: 1,
+          config: {
+            manager: {
+              $ref: {
+                configName: 'child-config-test',
+                version: 'latest',
+                schemaId: 'https://mapcolonies.com/simpleSchema/v1',
+              },
+            },
+          },
+        },
+      });
+
+      expectResponseStatus(parentResponse, 201);
+
+      // Fetch parent v1 and save its ETag/hash
+      const parentV1Before = await requestSender.getVersionedConfig({
+        pathParams: { name: 'parent-config-test', version: 1 },
+        queryParams: { schemaId: 'https://mapcolonies.com/schemaWithRef/v1' },
+      });
+
+      expectResponseStatus(parentV1Before, 200);
+      const parentV1HashBefore = parentV1Before.headers.etag;
+      expect(parentV1HashBefore).toBeDefined();
+
+      // Update child to v2
+      const childV2Response = await requestSender.upsertConfig({
+        requestBody: {
+          configName: 'child-config-test',
+          schemaId: 'https://mapcolonies.com/simpleSchema/v1',
+          version: 1, // ConfigManager will increment this
+          config: {
+            name: 'child-v2-updated',
+            age: 20,
+          },
+        },
+      });
+
+      expectResponseStatus(childV2Response, 201);
+
+      // Verify that parent v1's hash was updated IN-PLACE (no new version created)
+      const parentV1After = await requestSender.getVersionedConfig({
+        pathParams: { name: 'parent-config-test', version: 1 },
+        queryParams: { schemaId: 'https://mapcolonies.com/schemaWithRef/v1' },
+      });
+
+      expectResponseStatus(parentV1After, 200);
+      expect(parentV1After.body.version).toBe(1); // Still version 1, no new version created
+      const parentV1HashAfter = parentV1After.headers.etag;
+      expect(parentV1HashAfter).toBeDefined();
+      expect(parentV1HashAfter).not.toBe(parentV1HashBefore); // Hash has changed in-place
+
+      // Verify the parent config content is unchanged (only hash changed)
+      expect(parentV1After.body.config).toStrictEqual(parentV1Before.body.config);
+
+      // Verify that 'latest' still points to v1 (no new version was created)
+      const parentLatest = await requestSender.getVersionedConfig({
+        pathParams: { name: 'parent-config-test', version: 'latest' },
+        queryParams: { schemaId: 'https://mapcolonies.com/schemaWithRef/v1' },
+      });
+
+      expectResponseStatus(parentLatest, 200);
+      expect(parentLatest.body.version).toBe(1); // Latest is still v1
+      expect(parentLatest.headers.etag).toBe(parentV1HashAfter); // Same hash as v1
+    });
+
+    it('should propagate hash changes through multiple levels (grandparent -> parent -> child)', async function () {
+      // Create a child config
+      const childResponse = await requestSender.upsertConfig({
+        requestBody: {
+          configName: 'multi-level-child',
+          schemaId: 'https://mapcolonies.com/simpleSchema/v1',
+          version: 1,
+          config: {
+            name: 'child-v1',
+            age: 10,
+          },
+        },
+      });
+
+      expectResponseStatus(childResponse, 201);
+
+      // Create a parent config that references the child
+      const parentResponse = await requestSender.upsertConfig({
+        requestBody: {
+          configName: 'multi-level-parent',
+          schemaId: 'https://mapcolonies.com/schemaWithRef/v1',
+          version: 1,
+          config: {
+            manager: {
+              $ref: {
+                configName: 'multi-level-child',
+                version: 'latest',
+                schemaId: 'https://mapcolonies.com/simpleSchema/v1',
+              },
+            },
+          },
+        },
+      });
+
+      expectResponseStatus(parentResponse, 201);
+
+      // Create a grandparent config that references the parent
+      const grandparentResponse = await requestSender.upsertConfig({
+        requestBody: {
+          configName: 'multi-level-grandparent',
+          schemaId: 'https://mapcolonies.com/schemaWithNestedRef/v1',
+          version: 1,
+          config: {
+            manager: {
+              $ref: {
+                configName: 'multi-level-parent',
+                version: 'latest',
+                schemaId: 'https://mapcolonies.com/schemaWithRef/v1',
+              },
+            },
+          },
+        },
+      });
+
+      expectResponseStatus(grandparentResponse, 201);
+
+      // Fetch initial hashes for all configs
+      const parentV1Before = await requestSender.getVersionedConfig({
+        pathParams: { name: 'multi-level-parent', version: 1 },
+        queryParams: { schemaId: 'https://mapcolonies.com/schemaWithRef/v1' },
+      });
+      expectResponseStatus(parentV1Before, 200);
+      const parentHashBefore = parentV1Before.headers.etag;
+
+      const grandparentV1Before = await requestSender.getVersionedConfig({
+        pathParams: { name: 'multi-level-grandparent', version: 1 },
+        queryParams: { schemaId: 'https://mapcolonies.com/schemaWithNestedRef/v1' },
+      });
+      expectResponseStatus(grandparentV1Before, 200);
+      const grandparentHashBefore = grandparentV1Before.headers.etag;
+
+      // Update the child config to v2
+      const childV2Response = await requestSender.upsertConfig({
+        requestBody: {
+          configName: 'multi-level-child',
+          schemaId: 'https://mapcolonies.com/simpleSchema/v1',
+          version: 1, // Will be incremented to v2
+          config: {
+            name: 'child-v2-updated',
+            age: 20,
+          },
+        },
+      });
+
+      expectResponseStatus(childV2Response, 201);
+
+      // Verify parent hash updated in-place (version still 1, hash changed)
+      const parentV1After = await requestSender.getVersionedConfig({
+        pathParams: { name: 'multi-level-parent', version: 1 },
+        queryParams: { schemaId: 'https://mapcolonies.com/schemaWithRef/v1' },
+      });
+
+      expectResponseStatus(parentV1After, 200);
+      expect(parentV1After.body.version).toBe(1); // Version unchanged
+      const parentHashAfter = parentV1After.headers.etag;
+      expect(parentHashAfter).toBeDefined();
+      expect(parentHashAfter).not.toBe(parentHashBefore); // Hash changed
+
+      // Verify grandparent hash also updated in-place (version still 1, hash changed)
+      const grandparentV1After = await requestSender.getVersionedConfig({
+        pathParams: { name: 'multi-level-grandparent', version: 1 },
+        queryParams: { schemaId: 'https://mapcolonies.com/schemaWithNestedRef/v1' },
+      });
+
+      expectResponseStatus(grandparentV1After, 200);
+      expect(grandparentV1After.body.version).toBe(1); // Version unchanged
+      const grandparentHashAfter = grandparentV1After.headers.etag;
+      expect(grandparentHashAfter).toBeDefined();
+      expect(grandparentHashAfter).not.toBe(grandparentHashBefore); // Hash changed
+
+      // Verify config content unchanged (only hashes changed)
+      expect(parentV1After.body.config).toStrictEqual(parentV1Before.body.config);
+      expect(grandparentV1After.body.config).toStrictEqual(grandparentV1Before.body.config);
+
+      // CRITICAL: Verify grandparent hash is different from parent hash
+      // This ensures the recursive CTE processed configs in correct topological order
+      // If grandparent used stale parent hash, the hashes would be wrong
+      expect(grandparentHashAfter).not.toBe(parentHashAfter);
     });
   });
 });

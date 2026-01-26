@@ -5,6 +5,7 @@ export const schemasPackageVersion = readPackageJsonSync(schemasPackagePath + 'p
 
 export const SERVICE_NAME = readPackageJsonSync().name ?? 'unknown_service';
 export const DEFAULT_SERVER_PORT = 80;
+export const DB_CONNECTION_TIMEOUT = 5000;
 
 export const MILLISECONDS_IN_SECOND = 1000;
 
@@ -18,5 +19,6 @@ export const SERVICES = {
   METER: Symbol('Meter'),
   PG_POOL: Symbol('PgPool'),
   DRIZZLE: Symbol('Drizzle'),
+  HEALTHCHECK: Symbol('Healthcheck'),
 } satisfies Record<string, symbol>;
 /* eslint-enable @typescript-eslint/naming-convention */

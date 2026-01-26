@@ -1,16 +1,19 @@
 import config from 'config';
 import { metrics as OtelMetrics } from '@opentelemetry/api';
 import { DependencyContainer } from 'tsyringe/dist/typings/types';
-import { instancePerContainerCachingFactory } from 'tsyringe';
+import { instanceCachingFactory, instancePerContainerCachingFactory } from 'tsyringe';
 import type { Pool } from 'pg';
-import { initConnection, createDrizzle, createConnectionOptions, DbConfig } from '@db';
+import { sql } from 'drizzle-orm';
+import { HealthCheck } from '@godaddy/terminus';
+import { initConnection, createDrizzle, createConnectionOptions, DbConfig, Drizzle } from '@db';
 import { InjectionObject, registerDependencies } from '@common/dependencyRegistration';
-import { SERVICES, SERVICE_NAME } from '@common/constants';
+import { DB_CONNECTION_TIMEOUT, SERVICES, SERVICE_NAME } from '@common/constants';
 import { tracing } from '@common/tracing';
 import { SCHEMA_ROUTER_SYMBOL, schemaRouterFactory } from './schemas/routes/schemaRouter';
 import { CAPABILITIES_ROUTER_SYMBOL, capabilitiesRouterFactory } from './capabilities/routes/capabilitiesRouter';
 import { CONFIG_ROUTER_SYMBOL, configRouterFactory } from './configs/routes/configRouter';
 import { loggerFactory } from './common/logger';
+import { promiseTimeout } from './common/utils/promiseTimeout';
 
 export interface RegisterOptions {
   override?: InjectionObject<unknown>[];
@@ -25,6 +28,15 @@ export async function registerExternalValues(options?: RegisterOptions): Promise
     throw new Error(`Failed to connect to the database`, { cause: error });
   }
 
+  const healthCheck = (drizzle: Drizzle): HealthCheck => {
+    return async (): Promise<void> => {
+      const check = drizzle.execute(sql`select 1`).then(() => {
+        return;
+      });
+      return promiseTimeout<void>(DB_CONNECTION_TIMEOUT, check);
+    };
+  };
+
   const dependencies: InjectionObject<unknown>[] = [
     { token: SERVICES.CONFIG, provider: { useValue: config } },
     { token: SERVICES.LOGGER, provider: { useFactory: instancePerContainerCachingFactory(loggerFactory) } },
@@ -33,11 +45,22 @@ export async function registerExternalValues(options?: RegisterOptions): Promise
     { token: CAPABILITIES_ROUTER_SYMBOL, provider: { useFactory: capabilitiesRouterFactory } },
     { token: CONFIG_ROUTER_SYMBOL, provider: { useFactory: configRouterFactory } },
     { token: SERVICES.PG_POOL, provider: { useValue: pool } },
+
     {
       token: SERVICES.DRIZZLE,
       provider: {
         useFactory: instancePerContainerCachingFactory((container) => {
           return createDrizzle(container.resolve(SERVICES.PG_POOL));
+        }),
+      },
+    },
+    {
+      token: SERVICES.HEALTHCHECK,
+      provider: {
+        /* v8 ignore next 4 -- @preserve */
+        useFactory: instanceCachingFactory((container) => {
+          const drizzle = container.resolve<Drizzle>(SERVICES.DRIZZLE);
+          return healthCheck(drizzle);
         }),
       },
     },

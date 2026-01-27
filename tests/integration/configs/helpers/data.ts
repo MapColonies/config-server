@@ -49,6 +49,21 @@ export const schemaWithRef: JSONSchema = {
   },
 };
 
+export const schemaWithNestedRef: JSONSchema = {
+  type: 'object',
+  $id: 'https://mapcolonies.com/schemaWithNestedRef/v1',
+  additionalProperties: false,
+  properties: {
+    manager: {
+      $ref: 'https://mapcolonies.com/schemaWithRef/v1',
+    },
+    department: {
+      type: 'string',
+      default: 'engineering',
+    },
+  },
+};
+
 export const primitiveSchema: JSONSchema = {
   type: 'string',
   $id: 'https://mapcolonies.com/primitiveSchema/v1',
@@ -75,6 +90,7 @@ export const configsMockData: NewConfig[] = [
     },
     createdBy: 'user1',
     isLatest: false,
+    hash: 'hash-config1-v1',
   },
   {
     configName: 'config1',
@@ -86,6 +102,7 @@ export const configsMockData: NewConfig[] = [
     },
     createdBy: 'user2',
     isLatest: true,
+    hash: 'hash-config1-v2',
   },
   {
     configName: 'config2',
@@ -98,6 +115,7 @@ export const configsMockData: NewConfig[] = [
     createdAt: new Date('2001-01-01'),
     createdBy: 'user3',
     isLatest: true,
+    hash: 'hash-config2-v1',
   },
   {
     configName: 'config3',
@@ -110,6 +128,7 @@ export const configsMockData: NewConfig[] = [
     createdAt: new Date('2001-01-01'),
     createdBy: 'user3',
     isLatest: false,
+    hash: 'hash-config3-v1',
   },
   {
     configName: 'config3',
@@ -122,6 +141,7 @@ export const configsMockData: NewConfig[] = [
     createdAt: new Date('2001-01-01'),
     createdBy: 'user3',
     isLatest: true,
+    hash: 'hash-config3-v2',
   },
   {
     configName: 'config4',
@@ -134,6 +154,7 @@ export const configsMockData: NewConfig[] = [
     createdAt: new Date('2001-01-01'),
     createdBy: 'user3',
     isLatest: false,
+    hash: 'hash-config4-v1',
   },
   {
     configName: 'config4',
@@ -146,6 +167,7 @@ export const configsMockData: NewConfig[] = [
     createdAt: new Date('2001-01-01'),
     createdBy: 'user3',
     isLatest: false,
+    hash: 'hash-config4-v2',
   },
   {
     configName: 'config4',
@@ -158,6 +180,7 @@ export const configsMockData: NewConfig[] = [
     createdAt: new Date('2001-01-01'),
     createdBy: 'user3',
     isLatest: true,
+    hash: 'hash-config4-v3',
   },
   {
     configName: 'config-ref-1',
@@ -171,6 +194,7 @@ export const configsMockData: NewConfig[] = [
       },
     },
     isLatest: true,
+    hash: 'hash-config-ref-1-v1',
   },
   {
     configName: 'config-ref-2',
@@ -183,6 +207,7 @@ export const configsMockData: NewConfig[] = [
       },
     },
     isLatest: true,
+    hash: 'hash-config-ref-2-v1',
   },
   {
     configName: 'config-ref-3',
@@ -195,6 +220,7 @@ export const configsMockData: NewConfig[] = [
       },
     },
     isLatest: true,
+    hash: 'hash-config-ref-3-v1',
   },
   {
     configName: 'primitive-config',
@@ -203,6 +229,7 @@ export const configsMockData: NewConfig[] = [
     version: 1,
     config: 'primitive' as unknown as Record<string, unknown>,
     isLatest: true,
+    hash: 'hash-primitive-config-v1',
   },
 ];
 

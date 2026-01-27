@@ -13,6 +13,7 @@ export const configs = pgDbSchema.table(
     createdBy: text('created_by').notNull(),
     isLatest: boolean('is_latest').notNull(),
     configSchemaVersion: text('config_schema_version').notNull().default('v2'),
+    hash: text('hash').notNull(),
   },
   (table) => [primaryKey({ columns: [table.configName, table.schemaId, table.version] })]
 );

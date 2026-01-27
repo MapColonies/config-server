@@ -7,6 +7,7 @@ import { Validator } from '@src/configs/models/configValidator';
 import { ConfigNotFoundError, ConfigVersionMismatchError, ConfigValidationError, ConfigSchemaMismatchError } from '@src/configs/models/errors';
 import * as utils from '@src/common/utils';
 import { ConfigReference } from '@src/configs/models/configReference';
+import { HashPropagationHelper } from '@src/configs/models/hashPropagationHelpers';
 
 vi.mock('../../../src/common/utils', async () => {
   return {
@@ -20,13 +21,16 @@ describe('ConfigManager', () => {
   let configManager: ConfigManager;
   let configRepository: ConfigRepository;
   let configValidator: Validator;
+  let hashPropagationHelper: HashPropagationHelper;
   let logger: Logger;
 
   beforeEach(() => {
     logger = jsLogger({ enabled: false });
     configRepository = {} as ConfigRepository;
     configValidator = {} as Validator;
-    configManager = new ConfigManager(logger, configRepository, configValidator);
+    hashPropagationHelper = {} as HashPropagationHelper;
+    hashPropagationHelper.calculateConfigHash = vi.fn().mockReturnValue('mock-hash');
+    configManager = new ConfigManager(logger, configRepository, configValidator, hashPropagationHelper);
   });
 
   afterEach(() => {
@@ -52,7 +56,14 @@ describe('ConfigManager', () => {
         config: { avi: { $ref: { configName: 'refName', version: 1, schemaId: 'https://mapcolonies.com/test/v1' } } },
       };
       const refs: ConfigRefResponse[] = [
-        { config: { test: 'test' }, configName: 'refName', version: 1, isLatest: false, schemaId: 'https://mapcolonies.com/test/v1' },
+        {
+          config: { test: 'test' },
+          configName: 'refName',
+          version: 1,
+          isLatest: false,
+          schemaId: 'https://mapcolonies.com/test/v1',
+          hash: 'test-hash',
+        },
       ];
       configRepository.getConfigRecursive = vi.fn().mockResolvedValue([config, refs]);
 
@@ -68,7 +79,14 @@ describe('ConfigManager', () => {
         config: { $ref: { configName: 'refName', version: 1, schemaId: 'https://mapcolonies.com/test/v1' } },
       };
       const refs: ConfigRefResponse[] = [
-        { config: { test: 'test' }, configName: 'refName', version: 1, isLatest: false, schemaId: 'https://mapcolonies.com/test/v1' },
+        {
+          config: { test: 'test' },
+          configName: 'refName',
+          version: 1,
+          isLatest: false,
+          schemaId: 'https://mapcolonies.com/test/v1',
+          hash: 'test-hash',
+        },
       ];
       configRepository.getConfigRecursive = vi.fn().mockResolvedValue([config, refs]);
 
@@ -87,7 +105,14 @@ describe('ConfigManager', () => {
         },
       };
       const refs: ConfigRefResponse[] = [
-        { config: { test: 'test' }, configName: 'refName', version: 1, isLatest: false, schemaId: 'https://mapcolonies.com/test/v1' },
+        {
+          config: { test: 'test' },
+          configName: 'refName',
+          version: 1,
+          isLatest: false,
+          schemaId: 'https://mapcolonies.com/test/v1',
+          hash: 'test-hash',
+        },
       ];
       configRepository.getConfigRecursive = vi.fn().mockResolvedValue([config, refs]);
 
@@ -115,7 +140,14 @@ describe('ConfigManager', () => {
         config: { avi: { $ref: { configName: 'refName', version: 1 } } },
       };
       const refs: ConfigRefResponse[] = [
-        { config: { test: 'test' }, configName: 'refName', version: 1, isLatest: false, schemaId: 'https://mapcolonies.com/test/v1' },
+        {
+          config: { test: 'test' },
+          configName: 'refName',
+          version: 1,
+          isLatest: false,
+          schemaId: 'https://mapcolonies.com/test/v1',
+          hash: 'test-hash',
+        },
       ];
       configRepository.getConfigRecursive = vi.fn().mockResolvedValue([config, refs]);
 
@@ -131,7 +163,14 @@ describe('ConfigManager', () => {
         config: { avi: { $ref: { configName: 'refName', version: 1, schemaId: 'https://mapcolonies.com/test/v2' } } },
       };
       const refs: ConfigRefResponse[] = [
-        { config: { test: 'test' }, configName: 'refName', version: 1, isLatest: false, schemaId: 'https://mapcolonies.com/test/v1' },
+        {
+          config: { test: 'test' },
+          configName: 'refName',
+          version: 1,
+          isLatest: false,
+          schemaId: 'https://mapcolonies.com/test/v1',
+          hash: 'test-hash',
+        },
       ];
       configRepository.getConfigRecursive = vi.fn().mockResolvedValue([config, refs]);
 
@@ -176,11 +215,19 @@ describe('ConfigManager', () => {
       configValidator.isValid = vi.fn().mockResolvedValue([true, null]);
       configRepository.createConfig = vi.fn();
       configRepository.getConfigs = vi.fn().mockResolvedValue({ totalCount: 0, configs: [] });
+      configRepository.getAllParentConfigsRecursive = vi.fn().mockResolvedValue([]);
 
       await configManager.createConfig({ ...config });
 
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(configRepository.createConfig).toHaveBeenCalledWith({ ...config, createdBy: 'TBD', refs: [] });
+      expect(configRepository.createConfig).toHaveBeenCalledWith(expect.objectContaining({ ...config, createdBy: 'TBD', refs: [] }));
+      // Also verify hash was calculated
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+      const callArgs = (configRepository.createConfig as any).mock.calls[0][0];
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      expect(callArgs.hash).toBeDefined();
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      expect(typeof callArgs.hash).toBe('string');
     });
 
     it('should create a new config with the same name but different schema version', async () => {
@@ -193,11 +240,17 @@ describe('ConfigManager', () => {
         .mockResolvedValue({ totalCount: 1, configs: [{ version: 1, schemaId: 'https://mapcolonies.com/test/v2' }] });
       configValidator.isValid = vi.fn().mockResolvedValue([true, null]);
       configRepository.createConfig = vi.fn();
+      configRepository.getAllParentConfigsRecursive = vi.fn().mockResolvedValue([]);
 
       await configManager.createConfig({ ...config });
 
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(configRepository.createConfig).toHaveBeenCalledWith({ ...config, createdBy: 'TBD', refs: [] });
+      expect(configRepository.createConfig).toHaveBeenCalledWith(expect.objectContaining({ ...config, createdBy: 'TBD', refs: [] }));
+      // Also verify hash was calculated
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+      const callArgs = (configRepository.createConfig as any).mock.calls[0][0];
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      expect(callArgs.hash).toBeDefined();
     });
 
     it('should increment the version when a new version is created', async () => {
@@ -206,11 +259,19 @@ describe('ConfigManager', () => {
       configValidator.isValid = vi.fn().mockResolvedValue([true, null]);
       configRepository.getAllConfigRefs = vi.fn().mockResolvedValue([]);
       configRepository.createConfig = vi.fn();
+      configRepository.getAllParentConfigsRecursive = vi.fn().mockResolvedValue([]);
 
       await configManager.createConfig({ ...config });
 
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(configRepository.createConfig).toHaveBeenCalledWith({ ...config, version: 2, createdBy: 'TBD', refs: [] });
+      expect(configRepository.createConfig).toHaveBeenCalledWith(expect.objectContaining({ ...config, version: 2, createdBy: 'TBD', refs: [] }));
+      // Also verify hash was calculated
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+      const callArgs = (configRepository.createConfig as any).mock.calls[0][0];
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      expect(callArgs.hash).toBeDefined();
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      expect(typeof callArgs.hash).toBe('string');
     });
 
     it('should create a new config with refs', async () => {
@@ -221,7 +282,14 @@ describe('ConfigManager', () => {
         version: 1,
       };
       const refs: ConfigRefResponse[] = [
-        { configName: 'refName', version: 1, isLatest: true, config: { test: 'test' }, schemaId: 'https://mapcolonies.com/test/v1' },
+        {
+          configName: 'refName',
+          version: 1,
+          isLatest: true,
+          config: { test: 'test' },
+          schemaId: 'https://mapcolonies.com/test/v1',
+          hash: 'test-hash',
+        },
       ];
       configRepository.getConfig = vi.fn().mockResolvedValue(undefined);
       configValidator.isValid = vi.fn().mockResolvedValue([true, null]);
@@ -230,15 +298,25 @@ describe('ConfigManager', () => {
       // @ts-expect-error ts wants this to be a predicate
       configValidator.validateRef = vi.fn().mockReturnValue(true);
       configRepository.getConfigs = vi.fn().mockResolvedValue({ totalCount: 0, configs: [] });
+      configRepository.getAllParentConfigsRecursive = vi.fn().mockResolvedValue([]);
 
       await configManager.createConfig({ ...config });
 
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(configRepository.createConfig).toHaveBeenCalledWith({
-        ...config,
-        createdBy: 'TBD',
-        refs: [{ configName: 'refName', version: 'latest', schemaId: 'https://mapcolonies.com/test/v1' }],
-      });
+      expect(configRepository.createConfig).toHaveBeenCalledWith(
+        expect.objectContaining({
+          ...config,
+          createdBy: 'TBD',
+          refs: [{ configName: 'refName', version: 'latest', schemaId: 'https://mapcolonies.com/test/v1' }],
+        })
+      );
+      // Also verify hash was calculated
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+      const callArgs = (configRepository.createConfig as any).mock.calls[0][0];
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      expect(callArgs.hash).toBeDefined();
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      expect(typeof callArgs.hash).toBe('string');
     });
 
     it('should throw ConfigVersionMismatchError when the version is not the next one in line', async () => {

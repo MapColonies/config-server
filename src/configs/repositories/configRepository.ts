@@ -71,8 +71,14 @@ export interface SqlPaginationParams {
   offset?: number;
 }
 
-export type ConfigRefResponse = Pick<Config, 'config' | 'configName' | 'version' | 'schemaId'> & {
+export type ConfigRefResponse = Pick<Config, 'config' | 'configName' | 'version' | 'schemaId' | 'hash'> & {
   isLatest: boolean;
+};
+
+export type ConfigHashUpdate = Pick<Config, 'configName' | 'schemaId' | 'version' | 'hash'>;
+
+export type ConfigWithDepth = Config & {
+  depth: number;
 };
 
 @scoped(Lifecycle.ContainerScoped)
@@ -108,6 +114,7 @@ export class ConfigRepository {
         version: configs.version,
         schemaId: sql`${configs.schemaId} AS "schemaId"`,
         config: configs.config,
+        hash: configs.hash,
         isLatest: sql`
           CASE
             WHEN input."version" IS NULL THEN TRUE
@@ -134,6 +141,7 @@ export class ConfigRepository {
       version: configs.version,
       schemaId: configs.schemaId,
       config: configs.config,
+      hash: configs.hash,
       isLatest: sql`
         CASE
           WHEN ${configsRefs.refVersion} IS NULL THEN TRUE
@@ -143,10 +151,14 @@ export class ConfigRepository {
     });
 
     const res = await this.drizzle.execute<
-      { inputConfigName: string | null; inputVersion: number | null; configName: string | null; isLatest: boolean; schemaId: string | null } & Pick<
-        Config,
-        'config' | 'version' | 'schemaId'
-      >
+      {
+        inputConfigName: string | null;
+        inputVersion: number | null;
+        configName: string | null;
+        isLatest: boolean;
+        schemaId: string | null;
+        hash: string | null;
+      } & Pick<Config, 'config' | 'version' | 'schemaId'>
     >(recursiveQuery);
     const returnValue: Awaited<ReturnType<typeof this.getAllConfigRefs>> = [];
 
@@ -156,10 +168,91 @@ export class ConfigRepository {
           `no matching config was found for the following reference: ${row.inputConfigName ?? ''} ${row.inputVersion ?? 'latest'} ${row.schemaId}`
         );
       }
-      returnValue.push({ config: row.config, configName: row.configName, version: row.version, isLatest: row.isLatest, schemaId: row.schemaId });
+      returnValue.push({
+        config: row.config,
+        configName: row.configName,
+        version: row.version,
+        isLatest: row.isLatest,
+        schemaId: row.schemaId,
+        hash: row.hash ?? '',
+      });
     }
 
     return returnValue;
+  }
+
+  /**
+   * Retrieves config references without recursion (only one level deep).
+   * More efficient than getAllConfigRefs when you don't need nested references.
+   * @param refs - The config references to retrieve
+   * @returns A Promise that resolves to an array of config references (non-recursive)
+   */
+  @withSpan()
+  public async getConfigRefs(refs: ConfigReference[]): Promise<ConfigRefResponse[]> {
+    this.logger.debug({ refCount: refs.length, msg: 'Retrieving config references (non-recursive)' });
+    const refsForSql = refs.map((ref) => ({
+      configName: ref.configName,
+      version: ref.version === 'latest' ? null : ref.version,
+      schemaId: ref.schemaId,
+    }));
+
+    const inputCTE = sql`
+      SELECT *
+      FROM jsonb_to_recordset(${JSON.stringify(refsForSql)}) AS x ("configName" text, "version" int, "schemaId" text)
+    `;
+
+    const query = this.drizzle
+      .select({
+        configName: configs.configName,
+        version: configs.version,
+        schemaId: configs.schemaId,
+        config: configs.config,
+        hash: configs.hash,
+        isLatest: sql<boolean>`
+          CASE
+            WHEN input."version" IS NULL THEN TRUE
+            ELSE FALSE
+          END
+        `,
+      })
+      .from(sql`(${inputCTE}) AS input`)
+      .innerJoin(
+        configs,
+        and(
+          eq(configs.configName, sql`input."configName"`),
+          eq(configs.schemaId, sql`input."schemaId"`),
+          or(eq(configs.version, sql`input."version"`), and(isNull(sql`input."version"`), eq(configs.isLatest, true)))
+        )
+      );
+
+    const res = await query.execute();
+
+    if (res.length !== refs.length) {
+      // Some configs were not found - need to identify which ones
+      const foundKeys = new Set(res.map((r) => `${r.configName}:${r.schemaId}:${r.version}`));
+      const missingRef = refs.find((ref) => {
+        const version = ref.version === 'latest' ? 'latest' : ref.version;
+        return (
+          !foundKeys.has(`${ref.configName}:${ref.schemaId}:${version}`) &&
+          !res.some((r) => r.configName === ref.configName && r.schemaId === ref.schemaId && r.isLatest && ref.version === 'latest')
+        );
+      });
+
+      if (missingRef) {
+        throw new ConfigNotFoundError(
+          `no matching config was found for the following reference: ${missingRef.configName} ${missingRef.version} ${missingRef.schemaId}`
+        );
+      }
+    }
+
+    return res.map((row) => ({
+      config: row.config,
+      configName: row.configName,
+      version: row.version,
+      isLatest: row.isLatest,
+      schemaId: row.schemaId,
+      hash: row.hash,
+    }));
   }
 
   /**
@@ -257,6 +350,7 @@ export class ConfigRepository {
         createdBy: sql`${configs.createdBy} AS "createdBy"`,
         isLatest: sql`${configs.isLatest} AS "isLatest"`,
         configSchemaVersion: sql`${configs.configSchemaVersion} AS "configSchemaVersion"`,
+        hash: sql`${configs.hash} AS "hash"`,
       })
       .from(configs)
       .where(and(eq(configs.configName, name), versionOperator, eq(configs.schemaId, schemaId)));
@@ -276,6 +370,7 @@ export class ConfigRepository {
         END AS "isLatest"
       `,
       configSchemaVersion: configs.configSchemaVersion,
+      hash: configs.hash,
     });
 
     const res = await this.drizzle.execute<Omit<Config, 'createdAt'> & { createdAt: string }>(recursiveQuery);
@@ -295,6 +390,7 @@ export class ConfigRepository {
       createdBy: configResult.createdBy,
       isLatest: configResult.isLatest,
       configSchemaVersion: configResult.configSchemaVersion,
+      hash: configResult.hash,
     };
     const refs = res.rows.map((row) => ({
       config: row.config,
@@ -302,6 +398,7 @@ export class ConfigRepository {
       version: row.version,
       schemaId: row.schemaId,
       isLatest: row.isLatest,
+      hash: row.hash,
     }));
 
     return [config, refs];
@@ -334,6 +431,7 @@ export class ConfigRepository {
         createdBy: configs.createdBy,
         isLatest: configs.isLatest,
         configSchemaVersion: configs.configSchemaVersion,
+        hash: configs.hash,
         totalCount: sql<string>`count(*) OVER ()`,
       })
       .from(configs)
@@ -360,12 +458,231 @@ export class ConfigRepository {
       createdBy: config.createdBy,
       isLatest: config.isLatest,
       configSchemaVersion: config.configSchemaVersion,
+      hash: config.hash,
     }));
 
     return { configs: mappedConfig, totalCount };
   }
 
+  /**
+   * Retrieves all parent configurations that reference the specified child config.
+   * This is used for hash propagation - when a config changes, we need to update all parents.
+   * Returns ALL versions of parent configs that might be affected, not just the latest.
+   * @param childConfigName - The name of the child config
+   * @param childSchemaId - The schema ID of the child config
+   * @param childVersion - The version of the child config (optional, if not provided, finds parents referencing 'latest')
+   * @returns A Promise that resolves to an array of parent configs (all versions)
+   */
   @withSpan()
+  public async getParentConfigs(childConfigName: string, childSchemaId: string, childVersion?: number): Promise<Config[]> {
+    this.logger.debug({ childConfigName, childSchemaId, childVersion, msg: 'Finding parent configs that reference this child' });
+
+    // Find all config_refs that point to this child config
+    const parentRefs = await this.drizzle
+      .select({
+        configName: configsRefs.configName,
+        schemaId: configsRefs.schemaId,
+        version: configsRefs.version,
+      })
+      .from(configsRefs)
+      .where(
+        and(
+          eq(configsRefs.refConfigName, childConfigName),
+          eq(configsRefs.refSchemaId, childSchemaId),
+          // Match either specific version or null (which means 'latest')
+          childVersion !== undefined ? or(eq(configsRefs.refVersion, childVersion), isNull(configsRefs.refVersion)) : isNull(configsRefs.refVersion)
+        )
+      )
+      .execute();
+
+    if (parentRefs.length === 0) {
+      return [];
+    }
+
+    // Fetch ALL parent config versions (not just latest)
+    // Each row in parentRefs represents a specific version that references the child
+    const parentConfigs: Config[] = [];
+    for (const parentRef of parentRefs) {
+      const parentConfig = await this.getConfig(parentRef.configName, parentRef.schemaId, parentRef.version);
+      if (parentConfig) {
+        parentConfigs.push(parentConfig);
+      }
+    }
+
+    this.logger.debug({ parentCount: parentConfigs.length, msg: 'Found parent config versions' });
+    return parentConfigs;
+  }
+
+  /**
+   * Retrieves ALL parent configs in the entire dependency tree using a recursive CTE.
+   * Returns parents with their depth level (distance from the child config).
+   * This enables processing parents in correct topological order for hash propagation.
+   *
+   * @param childConfigName - The name of the child config
+   * @param childSchemaId - The schema ID of the child config
+   * @param childVersion - The version of the child config (optional)
+   * @returns A Promise that resolves to an array of parent configs with depth information, ordered by depth
+   */
+  @withSpan()
+  public async getAllParentConfigsRecursive(childConfigName: string, childSchemaId: string, childVersion?: number): Promise<ConfigWithDepth[]> {
+    this.logger.debug({ childConfigName, childSchemaId, childVersion, msg: 'Finding all parent configs recursively with depth' });
+
+    // Build recursive CTE to find all parents in the dependency tree
+    // Level 1: Direct parents of the child
+    // Level 2: Parents of level 1 (grandparents)
+    // Level N: Continue until no more parents found
+    const recursiveCTE = sql`
+      WITH RECURSIVE parent_tree AS (
+        -- Base case: Find direct parents of the child config
+        SELECT DISTINCT
+          c.name AS "configName",
+          c.schema_id AS "schemaId",
+          c.version,
+          c.config,
+          c.created_at AS "createdAt",
+          c.created_by AS "createdBy",
+          c.is_latest AS "isLatest",
+          c.config_schema_version AS "configSchemaVersion",
+          c.hash,
+          1 AS depth
+        FROM config_server.config_refs cr
+        INNER JOIN config_server.config c
+          ON cr.name = c.name 
+          AND cr.schema_id = c.schema_id 
+          AND cr.version = c.version
+        WHERE cr.ref_name = ${childConfigName}
+          AND cr.ref_schema_id = ${childSchemaId}
+          AND (
+            ${childVersion !== undefined ? sql`cr.ref_version = ${childVersion} OR cr.ref_version IS NULL` : sql`cr.ref_version IS NULL`}
+          )
+        
+        UNION
+        
+        -- Recursive case: Find parents of parents
+        SELECT DISTINCT
+          c.name AS "configName",
+          c.schema_id AS "schemaId",
+          c.version,
+          c.config,
+          c.created_at AS "createdAt",
+          c.created_by AS "createdBy",
+          c.is_latest AS "isLatest",
+          c.config_schema_version AS "configSchemaVersion",
+          c.hash,
+          pt.depth + 1
+        FROM parent_tree pt
+        INNER JOIN config_server.config_refs cr
+          ON cr.ref_name = pt."configName"
+          AND cr.ref_schema_id = pt."schemaId"
+          AND (cr.ref_version = pt.version OR cr.ref_version IS NULL)
+        INNER JOIN config_server.config c
+          ON cr.name = c.name
+          AND cr.schema_id = c.schema_id
+          AND cr.version = c.version
+      )
+      SELECT * FROM parent_tree
+      ORDER BY depth ASC, "configName" ASC, "schemaId" ASC, version ASC
+    `;
+
+    const result = await this.drizzle.execute<Omit<Config, 'createdAt'> & { createdAt: string; depth: number }>(recursiveCTE);
+
+    const parentConfigs: ConfigWithDepth[] = result.rows.map((row) => ({
+      configName: row.configName,
+      schemaId: row.schemaId,
+      version: row.version,
+      config: row.config,
+      createdAt: toDate(row.createdAt, { timeZone: 'UTC' }),
+      createdBy: row.createdBy,
+      isLatest: row.isLatest,
+      configSchemaVersion: row.configSchemaVersion,
+      hash: row.hash,
+      depth: row.depth,
+    }));
+
+    this.logger.debug({
+      parentCount: parentConfigs.length,
+      maxDepth: parentConfigs.length > 0 ? Math.max(...parentConfigs.map((p) => p.depth)) : 0,
+      msg: 'Found all parent configs recursively',
+    });
+
+    return parentConfigs;
+  }
+
+  /**
+   * Updates the hash of a specific config version in-place.
+   * Used for hash propagation when dependencies change.
+   * @param configName - The name of the config
+   * @param schemaId - The schema ID of the config
+   * @param version - The version of the config
+   * @param hash - The new hash value
+   */
+  @withSpan()
+  public async updateConfigHash(configName: string, schemaId: string, version: number, hash: string): Promise<void> {
+    this.logger.debug({ msg: 'Updating config hash in-place', configName, schemaId, version, hash });
+    await this.drizzle
+      .update(configs)
+      .set({ hash })
+      .where(and(eq(configs.configName, configName), eq(configs.schemaId, schemaId), eq(configs.version, version)))
+      .execute();
+  }
+
+  /**
+   * Batch updates hashes for multiple config versions in a single SQL statement.
+   * Much more efficient than updating configs one by one.
+   * @param updates - Array of config identifiers and their new hash values
+   */
+  @withSpan()
+  public async updateConfigHashes(updates: ConfigHashUpdate[]): Promise<void> {
+    if (updates.length === 0) {
+      return;
+    }
+
+    this.logger.debug({ updateCount: updates.length, msg: 'Batch updating config hashes' });
+
+    // Build a SQL statement using CASE to update all hashes in one query
+    // UPDATE configs SET hash = CASE
+    //   WHEN (configName = 'x' AND schemaId = 'y' AND version = 1) THEN 'hash1'
+    //   WHEN (configName = 'x' AND schemaId = 'y' AND version = 2) THEN 'hash2'
+    //   ELSE hash
+    // END
+    // WHERE (configName, schemaId, version) IN (('x', 'y', 1), ('x', 'y', 2), ...)
+
+    const caseConditions = updates.map(
+      (u) =>
+        sql`WHEN (${configs.configName} = ${u.configName} AND ${configs.schemaId} = ${u.schemaId} AND ${configs.version} = ${u.version}) THEN ${u.hash}`
+    );
+
+    const whereConditions = updates.map(
+      (u) => sql`(${configs.configName}, ${configs.schemaId}, ${configs.version}) = (${u.configName}, ${u.schemaId}, ${u.version})`
+    );
+
+    await this.drizzle
+      .update(configs)
+      .set({
+        hash: sql`CASE ${sql.join(caseConditions, sql.raw(' '))} ELSE ${configs.hash} END`,
+      })
+      .where(or(...whereConditions))
+      .execute();
+
+    this.logger.debug({ updateCount: updates.length, msg: 'Batch hash update completed' });
+  }
+
+  public async updateConfigToNewSchemaVersion(input: {
+    configName: string;
+    schemaId: string;
+    version: number;
+    newSchemaVersion: string;
+    config: Record<string, unknown>;
+  }): Promise<void> {
+    const { configName, schemaId, version, newSchemaVersion } = input;
+    this.logger.debug({ msg: 'Updating config to a new version', configName, schemaId, version, newSchemaVersion });
+    await this.drizzle
+      .update(configs)
+      .set({ config: input.config, configSchemaVersion: newSchemaVersion })
+      .where(and(eq(configs.configName, configName), eq(configs.schemaId, schemaId), eq(configs.version, version)))
+      .execute();
+  }
+
   private getFilterParams(searchParams: ConfigSearchParams): SQLWrapper[] {
     this.logger.debug('Building SQL filter params for the config search');
     const filterParams: SQLWrapper[] = [];
@@ -408,21 +725,5 @@ export class ConfigRepository {
     }
 
     return filterParams;
-  }
-
-  public async updateConfigToNewSchemaVersion(input: {
-    configName: string;
-    schemaId: string;
-    version: number;
-    newSchemaVersion: string;
-    config: Record<string, unknown>;
-  }): Promise<void> {
-    const { configName, schemaId, version, newSchemaVersion } = input;
-    this.logger.debug({ msg: 'Updating config to a new version', configName, schemaId, version, newSchemaVersion });
-    await this.drizzle
-      .update(configs)
-      .set({ config: input.config, configSchemaVersion: newSchemaVersion })
-      .where(and(eq(configs.configName, configName), eq(configs.schemaId, schemaId), eq(configs.version, version)))
-      .execute();
   }
 }

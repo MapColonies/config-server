@@ -90,6 +90,7 @@ paths:
         required: true
         schema:
           $ref: '#/components/schemas/schemaId'
+      - $ref: '#/components/parameters/IfNoneMatchHeader'
     get:
       operationId: getVersionedConfig
       summary: get a specific version of a config
@@ -98,10 +99,17 @@ paths:
           description: >-
             Object containing the config with the specific name and version or
             the latest version
+          headers:
+            ETag:
+              description: Entity tag for caching and conditional requests
+              schema:
+                type: string
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/config'
+        '304':
+          description: Not Modified - Config has not changed since the ETag provided in If-None-Match header
         '400':
           $ref: '#/components/responses/400BadRequest'
         '404':
@@ -316,6 +324,13 @@ components:
       description: should the server bundle all refs into one config
       schema:
         type: boolean
+    IfNoneMatchHeader:
+      name: If-None-Match
+      in: header
+      description: ETag value from a previous request to enable conditional GET requests
+      required: false
+      schema:
+        type: string
   schemas:
     error:
       type: object
@@ -415,6 +430,10 @@ components:
         isLatest:
           type: boolean
           readOnly: true
+        hash:
+          type: string
+          readOnly: true
+          description: Merkle-tree hash of config body and dependencies for caching
     capabilities:
       type: object
       required:

@@ -84,7 +84,7 @@ export class ConfigController {
 
       // Check If-None-Match header for conditional GET
       const ifNoneMatch = req.headers['if-none-match'];
-      if (ifNoneMatch !== undefined && ifNoneMatch === etag) {
+      if (ifNoneMatch === etag) {
         // Config hasn't changed, return 304 Not Modified
         return res.status(httpStatus.NOT_MODIFIED).end();
       }

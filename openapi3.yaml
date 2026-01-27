@@ -7,7 +7,7 @@ info:
   description: >-
     This is a config server that provides the means to manage all the
     configurations
-  version: 2.0.7
+  version: 2.1.0
   license:
     name: MIT
     url: https://opensource.org/licenses/MIT
@@ -109,7 +109,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/config'
         '304':
-          description: Not Modified - Config has not changed since the ETag provided in If-None-Match header
+          description: >-
+            Not Modified - Config has not changed since the ETag provided in
+            If-None-Match header
         '400':
           $ref: '#/components/responses/400BadRequest'
         '404':

@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [2.1.0](https://github.com/MapColonies/config-server/compare/v2.0.7...v2.1.0) (2026-01-27)
+
+
+### Features
+
+* add support for hashing and not modified requests MAPCO-9471 ([#142](https://github.com/MapColonies/config-server/issues/142)) ([553efe3](https://github.com/MapColonies/config-server/commit/553efe39563b2cd7348a8473557e96d4450e0c53))
+* updated with the newest version of map-colonies packages ([#140](https://github.com/MapColonies/config-server/issues/140)) ([158a010](https://github.com/MapColonies/config-server/commit/158a01069f5e8f36d8f1ab3fe118494c3442269f))
+
 ## [2.0.7](https://github.com/MapColonies/config-server/compare/v2.0.6...v2.0.7) (2026-01-19)
 
 

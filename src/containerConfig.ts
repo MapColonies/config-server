@@ -3,17 +3,15 @@ import { metrics as OtelMetrics } from '@opentelemetry/api';
 import { DependencyContainer } from 'tsyringe/dist/typings/types';
 import { instanceCachingFactory, instancePerContainerCachingFactory } from 'tsyringe';
 import type { Pool } from 'pg';
-import { sql } from 'drizzle-orm';
-import { HealthCheck } from '@godaddy/terminus';
 import { initConnection, createDrizzle, createConnectionOptions, DbConfig, Drizzle } from '@db';
 import { InjectionObject, registerDependencies } from '@common/dependencyRegistration';
-import { DB_CONNECTION_TIMEOUT, SERVICES, SERVICE_NAME } from '@common/constants';
+import { SERVICES, SERVICE_NAME } from '@common/constants';
 import { tracing } from '@common/tracing';
 import { SCHEMA_ROUTER_SYMBOL, schemaRouterFactory } from './schemas/routes/schemaRouter';
 import { CAPABILITIES_ROUTER_SYMBOL, capabilitiesRouterFactory } from './capabilities/routes/capabilitiesRouter';
 import { CONFIG_ROUTER_SYMBOL, configRouterFactory } from './configs/routes/configRouter';
 import { loggerFactory } from './common/logger';
-import { promiseTimeout } from './common/utils/promiseTimeout';
+import { healthCheck } from './db/utils';
 
 export interface RegisterOptions {
   override?: InjectionObject<unknown>[];
@@ -27,15 +25,6 @@ export async function registerExternalValues(options?: RegisterOptions): Promise
   } catch (error) {
     throw new Error(`Failed to connect to the database`, { cause: error });
   }
-
-  const healthCheck = (drizzle: Drizzle): HealthCheck => {
-    return async (): Promise<void> => {
-      const check = drizzle.execute(sql`select 1`).then(() => {
-        return;
-      });
-      return promiseTimeout<void>(DB_CONNECTION_TIMEOUT, check);
-    };
-  };
 
   const dependencies: InjectionObject<unknown>[] = [
     { token: SERVICES.CONFIG, provider: { useValue: config } },

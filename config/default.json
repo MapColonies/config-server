@@ -43,6 +43,6 @@
       "cert": ""
     },
     "database": "config-server",
-    "connectionTimeout": "5000"
+    "connectionTimeout": "5000MS"
   }
 }

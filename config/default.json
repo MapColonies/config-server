@@ -42,6 +42,7 @@
       "key": "",
       "cert": ""
     },
-    "database": "config-server"
+    "database": "config-server",
+    "connectionTimeout": "5000"
   }
 }

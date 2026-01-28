@@ -1,6 +1,5 @@
-import { integer, jsonb, pgSchema, text, timestamp, primaryKey, foreignKey, index, boolean } from 'drizzle-orm/pg-core';
-
-export const pgDbSchema = pgSchema('config_server');
+import { integer, jsonb, text, timestamp, primaryKey, foreignKey, index, boolean } from 'drizzle-orm/pg-core';
+import { pgDbSchema } from '../../db/schema';
 
 export const configs = pgDbSchema.table(
   'config',

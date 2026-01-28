@@ -102,6 +102,40 @@ export type paths = {
     patch?: never;
     trace?: never;
   };
+  '/locks': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Acquire a lock slot for a specific key */
+    post: operations['acquireLock'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/locks/{key}/{callerId}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Release a lock for a specific key and caller */
+    delete: operations['releaseLock'];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 };
 export type webhooks = Record<string, never>;
 export type components = {
@@ -469,6 +503,75 @@ export interface operations {
         content: {
           'application/json': components['schemas']['capabilities'];
         };
+      };
+      400: components['responses']['400BadRequest'];
+      500: components['responses']['500InternalServerError'];
+    };
+  };
+  acquireLock: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': {
+          /** @description An opaque identifier for the resource/group */
+          key: string;
+          /** @description The unique ID of the instance holding the lock */
+          callerId: string;
+          /** @description Time to live in seconds */
+          ttl: number;
+          /** @description Maximum number of concurrent locks for this key */
+          limit: number;
+        };
+      };
+    };
+    responses: {
+      /** @description Lock acquired or renewed successfully */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      400: components['responses']['400BadRequest'];
+      /** @description Locked - Concurrency limit reached */
+      423: {
+        headers: {
+          /** @description Number of seconds to wait before retrying */
+          'Retry-After'?: number;
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['error'];
+        };
+      };
+      500: components['responses']['500InternalServerError'];
+    };
+  };
+  releaseLock: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description The lock key */
+        key: string;
+        /** @description The caller ID */
+        callerId: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Lock released successfully */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
       };
       400: components['responses']['400BadRequest'];
       500: components['responses']['500InternalServerError'];

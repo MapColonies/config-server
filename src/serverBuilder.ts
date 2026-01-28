@@ -14,6 +14,7 @@ import { addOperationIdToLog, logContextInjectionMiddleware } from '@common/logg
 import { SCHEMA_ROUTER_SYMBOL } from './schemas/routes/schemaRouter';
 import { CAPABILITIES_ROUTER_SYMBOL } from './capabilities/routes/capabilitiesRouter';
 import { CONFIG_ROUTER_SYMBOL } from './configs/routes/configRouter';
+import { LOCK_ROUTER_SYMBOL } from './locks/routes/lockRouter';
 
 @injectable()
 export class ServerBuilder {
@@ -26,7 +27,8 @@ export class ServerBuilder {
     @inject(SERVICES.LOGGER) private readonly logger: Logger,
     @inject(SCHEMA_ROUTER_SYMBOL) private readonly schemaRouter: Router,
     @inject(CAPABILITIES_ROUTER_SYMBOL) private readonly capabilitiesRouter: Router,
-    @inject(CONFIG_ROUTER_SYMBOL) private readonly configRouter: Router
+    @inject(CONFIG_ROUTER_SYMBOL) private readonly configRouter: Router,
+    @inject(LOCK_ROUTER_SYMBOL) private readonly lockRouter: Router
   ) {
     this.serverInstance = express();
     this.openapiFilePath = this.config.get<string>('openapiConfig.filePath');
@@ -57,6 +59,7 @@ export class ServerBuilder {
     router.use('/schema', this.schemaRouter);
     router.use('/capabilities', this.capabilitiesRouter);
     router.use('/config', this.configRouter);
+    router.use('/locks', this.lockRouter);
     this.serverInstance.use(this.apiPrefix, router);
   }
 

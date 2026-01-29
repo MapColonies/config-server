@@ -235,7 +235,18 @@ export class SchemaManager {
       const dtsPath = path.join(schemasBasePath, schemaPath + '.schema.d.ts');
 
       if (fs.existsSync(dtsPath)) {
-        return await fsPromise.readFile(dtsPath, { encoding: 'utf-8' });
+        const fullContent = await fsPromise.readFile(dtsPath, { encoding: 'utf-8' });
+
+        // Extract only the typeSymbol content
+        const typeSymbolMatch = fullContent.match(/readonly \[typeSymbol\]: ([\s\S]*?);\s*readonly \$id:/);
+
+        if (typeSymbolMatch?.[1] !== undefined && typeSymbolMatch[1] !== '') {
+          return typeSymbolMatch[1].trim();
+        }
+
+        // Fallback: return full content if pattern not found
+        this.logger.debug({ msg: 'Could not extract typeSymbol, returning full content', path: dtsPath });
+        return fullContent;
       }
 
       this.logger.debug({ msg: 'TypeScript definition file not found', path: dtsPath });

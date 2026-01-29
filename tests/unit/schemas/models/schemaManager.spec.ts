@@ -86,5 +86,28 @@ describe('SchemaManager', () => {
       expect(metadata.dependencies).toHaveProperty('internal');
       expect(metadata.dependencies).toHaveProperty('external');
     });
+
+    it('should extract only typeSymbol content from TypeScript definitions', async () => {
+      // Arrange
+      const id = 'https://mapcolonies.com/common/redis/v1';
+
+      // Act
+      const metadata = await schemaManager.getFullSchemaMetadata(id);
+
+      // Assert
+      expect(metadata.typeContent).not.toBeNull();
+      if (metadata.typeContent !== null && metadata.typeContent !== '') {
+        // Should not contain import statements
+        expect(metadata.typeContent).not.toContain('import {');
+        expect(metadata.typeContent).not.toContain('declare const');
+        expect(metadata.typeContent).not.toContain('export type');
+
+        // Should contain the actual type definition structure
+        expect(metadata.typeContent).toContain('{');
+
+        // Should not start with 'import' or 'declare'
+        expect(metadata.typeContent.trimStart()).not.toMatch(/^(import|declare|export)/);
+      }
+    });
   });
 });

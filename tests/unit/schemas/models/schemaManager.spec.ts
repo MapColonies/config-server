@@ -89,7 +89,7 @@ describe('SchemaManager', () => {
 
     it('should extract only typeSymbol content from TypeScript definitions', async () => {
       // Arrange
-      const id = 'https://mapcolonies.com/common/redis/v1';
+      const id = 'https://mapcolonies.com/common/boilerplate/v1';
 
       // Act
       const metadata = await schemaManager.getFullSchemaMetadata(id);
@@ -102,11 +102,16 @@ describe('SchemaManager', () => {
         expect(metadata.typeContent).not.toContain('declare const');
         expect(metadata.typeContent).not.toContain('export type');
 
+        // Should not contain readonly fields that come after typeSymbol
+        expect(metadata.typeContent).not.toContain('readonly description:');
+        expect(metadata.typeContent).not.toContain('readonly $id:');
+        expect(metadata.typeContent).not.toContain('readonly type:');
+
         // Should contain the actual type definition structure
         expect(metadata.typeContent).toContain('{');
 
         // Should not start with 'import' or 'declare'
-        expect(metadata.typeContent.trimStart()).not.toMatch(/^(import|declare|export)/);
+        expect(metadata.typeContent.trimStart()).not.toMatch(/^(import|declare|export|readonly)/);
       }
     });
   });

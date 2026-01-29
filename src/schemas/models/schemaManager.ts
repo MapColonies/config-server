@@ -23,6 +23,7 @@ const SCHEMA_DOMAIN = 'https://mapcolonies.com/';
 const SCHEMA_TRACING_CACHE_KEY = 'schema.cache';
 const LAST_ARRAY_ELEMENT = -1;
 const INTERNAL_REF_PREFIX_LENGTH = 2; // Length of '#/' prefix in internal references
+const NOT_FOUND = -1; // Return value from indexOf when string is not found
 
 export { schemasBasePath };
 @injectable()
@@ -237,11 +238,30 @@ export class SchemaManager {
       if (fs.existsSync(dtsPath)) {
         const fullContent = await fsPromise.readFile(dtsPath, { encoding: 'utf-8' });
 
-        // Extract only the typeSymbol content
-        const typeSymbolMatch = fullContent.match(/readonly \[typeSymbol\]: ([\s\S]*?);\s*readonly \$id:/);
+        // Extract only the typeSymbol content by matching balanced braces
+        const typeSymbolStart = fullContent.indexOf('readonly [typeSymbol]: {');
+        if (typeSymbolStart !== NOT_FOUND) {
+          // Start after the opening brace
+          let braceCount = 1;
+          let pos = fullContent.indexOf('{', typeSymbolStart + 'readonly [typeSymbol]: '.length);
+          pos++; // Move past the opening brace
 
-        if (typeSymbolMatch?.[1] !== undefined && typeSymbolMatch[1] !== '') {
-          return typeSymbolMatch[1].trim();
+          // Find the matching closing brace
+          while (pos < fullContent.length && braceCount > 0) {
+            if (fullContent[pos] === '{') {
+              braceCount++;
+            } else if (fullContent[pos] === '}') {
+              braceCount--;
+            }
+            pos++;
+          }
+
+          if (braceCount === 0) {
+            // Extract content between the braces (excluding the braces themselves)
+            const startPos = fullContent.indexOf('{', typeSymbolStart + 'readonly [typeSymbol]: '.length) + 1;
+            const endPos = pos - 1; // pos is now after the closing brace
+            return fullContent.substring(startPos, endPos).trim();
+          }
         }
 
         // Fallback: return full content if pattern not found

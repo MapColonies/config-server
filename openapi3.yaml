@@ -164,6 +164,7 @@ paths:
     get:
       operationId: getSchemasIndex
       summary: Get searchable index of all schemas
+      description: Returns metadata for all schemas. Frontend can build client-side search index from this data.
       responses:
         '200':
           description: OK
@@ -173,7 +174,6 @@ paths:
                 type: object
                 required:
                   - schemas
-                  - searchIndex
                 properties:
                   schemas:
                     type: array
@@ -201,9 +201,6 @@ paths:
                           type: string
                         title:
                           type: string
-                  searchIndex:
-                    type: string
-                    description: Serialized FlexSearch index
         '500':
           $ref: '#/components/responses/500InternalServerError'
   /schema/full:

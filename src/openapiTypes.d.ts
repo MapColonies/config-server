@@ -92,7 +92,10 @@ export type paths = {
       path?: never;
       cookie?: never;
     };
-    /** Get searchable index of all schemas */
+    /**
+     * Get searchable index of all schemas
+     * @description Returns metadata for all schemas. Frontend can build client-side search index from this data.
+     */
     get: operations['getSchemasIndex'];
     put?: never;
     post?: never;
@@ -512,8 +515,6 @@ export interface operations {
               category: string;
               title?: string;
             }[];
-            /** @description Serialized FlexSearch index */
-            searchIndex: string;
           };
         };
       };

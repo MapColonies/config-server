@@ -4,11 +4,23 @@
 
 Add two new endpoints to provide comprehensive schema metadata for the enhanced schema viewer UI. This document outlines the backend changes needed to support the full schema UI integration. Make sure to not invent the wheel, and reuse existing logic where possible.
 
+## Design Decision: Client-Side Search
+
+**Decision**: The backend returns only schema metadata arrays. Frontend builds its own FlexSearch index client-side.
+
+**Rationale**:
+
+- With ~500 schemas at ~200 bytes each = ~100KB of data
+- FlexSearch can build client-side index in 10-30ms
+- Simpler architecture, less backend complexity
+- No need to serialize/deserialize FlexSearch index
+- Frontend has full control over search ranking and fields
+
 ## New API Endpoints
 
-### 1. GET /schemas/index
+### 1. GET /schema/index
 
-**Purpose**: Provide a lightweight, searchable index of all available schemas.
+**Purpose**: Provide a lightweight, searchable index of all available schemas for frontend to build search index.
 
 **Response Schema**:
 
@@ -23,7 +35,6 @@ Add two new endpoints to provide comprehensive schema metadata for the enhanced 
     category: string; // e.g., "common", "infra", "vector"
     title?: string; // From schema title field
   }>;
-  searchIndex: string; // Serialized FlexSearch index
 }
 ```
 
@@ -64,48 +75,25 @@ Add two new endpoints to provide comprehensive schema metadata for the enhanced 
    }
    ```
 
-3. **Create FlexSearch index**:
-
-   ```typescript
-   import { Document } from 'flexsearch';
-
-   function createSearchIndex(schemas: SchemaIndexEntry[]): string {
-     const index = new Document({
-       document: {
-         id: 'id',
-         index: ['name', 'description', 'path', 'title', 'category'],
-         store: ['id', 'name', 'path', 'version', 'description', 'category', 'title'],
-       },
-     });
-
-     schemas.forEach((schema) => {
-       index.add(schema);
-     });
-
-     // Export index for client-side use
-     return index.export();
-   }
-   ```
-
-4. **Cache the result**:
+3. **Cache the result**:
 
    - Generate index once at startup or on-demand
    - Cache in memory (schemas rarely change)
    - Optionally: regenerate on schema package version change
 
-5. **HTTP Response Headers**:
+4. **HTTP Response Headers**:
    ```typescript
    response.setHeader('Cache-Control', 'public, max-age=3600'); // 1 hour
-   response.setHeader('ETag', generateETag(indexData));
    ```
 
 **OpenAPI Spec Addition**:
 
 ```yaml
-/schemas/index:
+/schema/index:
   get:
     operationId: getSchemasIndex
     summary: Get searchable index of all schemas
+    description: Returns metadata for all schemas. Frontend can build client-side search index from this data.
     responses:
       '200':
         description: OK
@@ -115,7 +103,6 @@ Add two new endpoints to provide comprehensive schema metadata for the enhanced 
               type: object
               required:
                 - schemas
-                - searchIndex
               properties:
                 schemas:
                   type: array
@@ -143,9 +130,6 @@ Add two new endpoints to provide comprehensive schema metadata for the enhanced 
                         type: string
                       title:
                         type: string
-                searchIndex:
-                  type: string
-                  description: Serialized FlexSearch index
       '500':
         $ref: '#/components/responses/500InternalServerError'
 ```
@@ -532,40 +516,37 @@ Add two new endpoints to provide comprehensive schema metadata for the enhanced 
 
 ## Dependencies
 
-Add to `package.json`:
+**Note**: FlexSearch is NOT required on the backend. Frontend will use FlexSearch client-side to build search index from the schemas array.
 
-```json
-{
-  "dependencies": {
-    "flexsearch": "<use npm install for latest version>"
-  }
-}
+If frontend needs FlexSearch:
+
+```bash
+npm install flexsearch
 ```
 
 ---
 
 ## Testing Checklist
 
-### GET /schemas/index
+### GET /schema/index
 
-- [ ] Returns all schemas from package
-- [ ] Search index is valid FlexSearch format
-- [ ] Categories are correctly extracted
-- [ ] Proper cache headers set
-- [ ] ETag support works
+- [x] Returns all schemas from package
+- [x] Categories are correctly extracted
+- [x] Proper cache headers set
+- [x] Schemas array has all required metadata fields
 
 ### GET /schema/full
 
-- [ ] Returns 404 for non-existent schema
-- [ ] Raw content matches source schema file
-- [ ] Dereferenced content has no $refs
-- [ ] TypeScript types are correctly extracted
-- [ ] Internal dependencies (#/definitions) correctly found
-- [ ] External dependencies (https://) correctly found
-- [ ] Environment variables extracted at all levels
-- [ ] Environment variables from $refs tagged with refLink
-- [ ] Circular $refs don't cause infinite loops
-- [ ] Required fields correctly identified
+- [x] Returns 404 for non-existent schema
+- [x] Raw content matches source schema file
+- [x] Dereferenced content has no $refs
+- [x] TypeScript types are correctly extracted
+- [x] Internal dependencies (#/definitions) correctly found
+- [x] External dependencies (https://) correctly found
+- [x] Environment variables extracted at all levels
+- [x] Environment variables from $refs tagged with refLink
+- [x] Circular $refs don't cause infinite loops
+- [x] Required fields correctly identified
 
 ---
 

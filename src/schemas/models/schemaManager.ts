@@ -5,7 +5,6 @@ import { type Logger } from '@map-colonies/js-logger';
 import { inject, injectable } from 'tsyringe';
 import type { JSONSchema } from '@apidevtools/json-schema-ref-parser';
 import { $RefParser } from '@apidevtools/json-schema-ref-parser';
-import { Document } from 'flexsearch';
 import type { components } from '@openapi';
 import { SERVICES } from '@common/constants';
 import { setSpanAttributes, withSpan } from '@common/tracing';
@@ -29,7 +28,7 @@ export { schemasBasePath };
 export class SchemaManager {
   private readonly schemaMap: Map<string, JSONSchema> = new Map();
   private readonly fullSchemaCache: Map<string, FullSchemaMetadata> = new Map();
-  private schemaIndexCache: { schemas: SchemaIndexEntry[]; searchIndex: string } | null = null;
+  private schemaIndexCache: { schemas: SchemaIndexEntry[] } | null = null;
 
   public constructor(@inject(SERVICES.LOGGER) private readonly logger: Logger) {}
 
@@ -74,57 +73,15 @@ export class SchemaManager {
     return this.createSchemaTreeNode(schemasBasePath);
   }
 
-  @withSpan()
-  private async createSchemaTreeNode(dirPath: string): Promise<components['schemas']['schemaTree']> {
-    const dir = (await fsPromise.readdir(dirPath, { withFileTypes: true })).filter(
-      (dirent) => dirent.isDirectory() || (dirent.isFile() && dirent.name.endsWith('.schema.json'))
-    );
-
-    const resPromises = dir.map<Promise<ArrayElement<components['schemas']['schemaTree']>>>(async (dirent) => {
-      if (dirent.isDirectory()) {
-        return { name: dirent.name, children: await this.createSchemaTreeNode(path.join(dirPath, dirent.name)) };
-      }
-
-      return {
-        name: dirent.name,
-        id:
-          SCHEMA_DOMAIN.slice(0, LAST_ARRAY_ELEMENT) +
-          path.posix.join(dirPath.split(schemasBasePath)[1] as string, dirent.name.split('.')[0] as string),
-      };
-    });
-
-    return Promise.all(resPromises);
-  }
-
-  @withSpan()
-  private async loadSchema(relativePath: string, isDereferenced = false): Promise<JSONSchema> {
-    const cacheKey = String(isDereferenced) + ':' + relativePath;
-
-    if (this.schemaMap.has(cacheKey)) {
-      this.logger.debug('schema loaded from cache');
-      setSpanAttributes({ [SCHEMA_TRACING_CACHE_KEY]: 'hit' });
-      return this.schemaMap.get(cacheKey) as JSONSchema;
-    }
-    setSpanAttributes({ [SCHEMA_TRACING_CACHE_KEY]: 'miss' });
-
-    const fullPath = path.join(schemasBasePath, relativePath + '.schema.json');
-
-    if (!fs.existsSync(fullPath)) {
-      this.logger.warn({ msg: 'schema not found', path: fullPath });
-      throw new SchemaNotFoundError();
-    }
-
-    const schemaContent = JSON.parse(await fsPromise.readFile(fullPath, { encoding: 'utf-8' })) as JSONSchema;
-    if (!isDereferenced) {
-      this.schemaMap.set(cacheKey, schemaContent);
-    }
-    return schemaContent;
-  }
-
   // New methods for schema index and full schema metadata
 
+  /**
+   * Returns searchable index of all schemas.
+   * Frontend builds FlexSearch index client-side from this data.
+   * With ~500 schemas (~100KB), client-side indexing is fast and simple.
+   */
   @withSpan()
-  public async getSchemaIndex(): Promise<{ schemas: SchemaIndexEntry[]; searchIndex: string }> {
+  public async getSchemaIndex(): Promise<{ schemas: SchemaIndexEntry[] }> {
     if (this.schemaIndexCache) {
       this.logger.debug('schema index loaded from cache');
       return this.schemaIndexCache;
@@ -132,71 +89,9 @@ export class SchemaManager {
 
     this.logger.info({ msg: 'building schema index' });
     const schemas = await this.buildSchemaIndex();
-    const searchIndex = this.createSearchIndex(schemas);
 
-    this.schemaIndexCache = { schemas, searchIndex };
+    this.schemaIndexCache = { schemas };
     return this.schemaIndexCache;
-  }
-
-  @withSpan()
-  private async buildSchemaIndex(): Promise<SchemaIndexEntry[]> {
-    const schemas: SchemaIndexEntry[] = [];
-
-    const collectSchemas = async (dirPath: string, relativePath = ''): Promise<void> => {
-      const entries = await fsPromise.readdir(dirPath, { withFileTypes: true });
-
-      for (const entry of entries) {
-        const entryPath = path.join(dirPath, entry.name);
-        const entryRelativePath = relativePath ? path.posix.join(relativePath, entry.name) : entry.name;
-
-        if (entry.isDirectory()) {
-          await collectSchemas(entryPath, entryRelativePath);
-        } else if (entry.isFile() && entry.name.endsWith('.schema.json')) {
-          try {
-            const schemaContent = JSON.parse(await fsPromise.readFile(entryPath, { encoding: 'utf-8' })) as JSONSchema;
-            const schemaId = schemaContent.$id as string;
-
-            if (schemaId && schemaId.startsWith(SCHEMA_DOMAIN)) {
-              const schemaPath = schemaId.replace(SCHEMA_DOMAIN, '');
-              const pathParts = schemaPath.split('/');
-              const category = pathParts[0] ?? 'unknown';
-              const version = pathParts[pathParts.length - 1] ?? 'v1';
-
-              schemas.push({
-                id: schemaId,
-                name: (schemaContent.title as string) || this.extractNameFromId(schemaId),
-                path: schemaPath,
-                version,
-                description: schemaContent.description as string | undefined,
-                category,
-                title: schemaContent.title as string | undefined,
-              });
-            }
-          } catch (error) {
-            this.logger.warn({ msg: 'Failed to parse schema file', path: entryPath, error });
-          }
-        }
-      }
-    };
-
-    await collectSchemas(schemasBasePath);
-    return schemas;
-  }
-
-  @withSpan()
-  private createSearchIndex(schemas: SchemaIndexEntry[]): string {
-    // For now, return a simple JSON structure that can be used client-side
-    // A more sophisticated FlexSearch export can be added later
-    const searchData = schemas.map((schema) => ({
-      id: schema.id,
-      name: schema.name,
-      description: schema.description || '',
-      path: schema.path,
-      title: schema.title || '',
-      category: schema.category,
-    }));
-
-    return JSON.stringify(searchData);
   }
 
   @withSpan()
@@ -227,8 +122,8 @@ export class SchemaManager {
       path: schemaPath,
       version,
       category,
-      description: rawContent.description as string | undefined,
-      title: rawContent.title as string | undefined,
+      description: rawContent.description,
+      title: rawContent.title,
       rawContent: rawContent as unknown as Record<string, unknown>,
       dereferencedContent: dereferencedContent as unknown as Record<string, unknown>,
       typeContent,
@@ -238,6 +133,98 @@ export class SchemaManager {
 
     this.fullSchemaCache.set(schemaId, metadata);
     return metadata;
+  }
+
+  @withSpan()
+  private async loadSchema(relativePath: string, isDereferenced = false): Promise<JSONSchema> {
+    const cacheKey = String(isDereferenced) + ':' + relativePath;
+
+    if (this.schemaMap.has(cacheKey)) {
+      this.logger.debug('schema loaded from cache');
+      setSpanAttributes({ [SCHEMA_TRACING_CACHE_KEY]: 'hit' });
+      return this.schemaMap.get(cacheKey) as JSONSchema;
+    }
+    setSpanAttributes({ [SCHEMA_TRACING_CACHE_KEY]: 'miss' });
+
+    const fullPath = path.join(schemasBasePath, relativePath + '.schema.json');
+
+    if (!fs.existsSync(fullPath)) {
+      this.logger.warn({ msg: 'schema not found', path: fullPath });
+      throw new SchemaNotFoundError();
+    }
+
+    const schemaContent = JSON.parse(await fsPromise.readFile(fullPath, { encoding: 'utf-8' })) as JSONSchema;
+    if (!isDereferenced) {
+      this.schemaMap.set(cacheKey, schemaContent);
+    }
+    return schemaContent;
+  }
+
+  @withSpan()
+  private async createSchemaTreeNode(dirPath: string): Promise<components['schemas']['schemaTree']> {
+    const dir = (await fsPromise.readdir(dirPath, { withFileTypes: true })).filter(
+      (dirent) => dirent.isDirectory() || (dirent.isFile() && dirent.name.endsWith('.schema.json'))
+    );
+
+    const resPromises = dir.map<Promise<ArrayElement<components['schemas']['schemaTree']>>>(async (dirent) => {
+      if (dirent.isDirectory()) {
+        return { name: dirent.name, children: await this.createSchemaTreeNode(path.join(dirPath, dirent.name)) };
+      }
+
+      return {
+        name: dirent.name,
+        id:
+          SCHEMA_DOMAIN.slice(0, LAST_ARRAY_ELEMENT) +
+          path.posix.join(dirPath.split(schemasBasePath)[1] as string, dirent.name.split('.')[0] as string),
+      };
+    });
+
+    return Promise.all(resPromises);
+  }
+
+  @withSpan()
+  private async buildSchemaIndex(): Promise<SchemaIndexEntry[]> {
+    const schemas: SchemaIndexEntry[] = [];
+
+    const collectSchemas = async (dirPath: string, relativePath = ''): Promise<void> => {
+      const entries = await fsPromise.readdir(dirPath, { withFileTypes: true });
+
+      for (const entry of entries) {
+        const entryPath = path.join(dirPath, entry.name);
+        const entryRelativePath = relativePath ? path.posix.join(relativePath, entry.name) : entry.name;
+
+        if (entry.isDirectory()) {
+          await collectSchemas(entryPath, entryRelativePath);
+        } else if (entry.isFile() && entry.name.endsWith('.schema.json')) {
+          try {
+            const schemaContent = JSON.parse(await fsPromise.readFile(entryPath, { encoding: 'utf-8' })) as JSONSchema;
+            const schemaId = schemaContent.$id as string;
+
+            if (schemaId.startsWith(SCHEMA_DOMAIN)) {
+              const schemaPath = schemaId.replace(SCHEMA_DOMAIN, '');
+              const pathParts = schemaPath.split('/');
+              const category = pathParts[0] ?? 'unknown';
+              const version = pathParts[pathParts.length - 1] ?? 'v1';
+
+              schemas.push({
+                id: schemaId,
+                name: (schemaContent.title as string) || this.extractNameFromId(schemaId),
+                path: schemaPath,
+                version,
+                description: schemaContent.description,
+                category,
+                title: schemaContent.title,
+              });
+            }
+          } catch (err) {
+            this.logger.warn({ msg: 'Failed to parse schema file', path: entryPath, err });
+          }
+        }
+      }
+    };
+
+    await collectSchemas(schemasBasePath);
+    return schemas;
   }
 
   @withSpan()
@@ -252,8 +239,8 @@ export class SchemaManager {
 
       this.logger.debug({ msg: 'TypeScript definition file not found', path: dtsPath });
       return null;
-    } catch (error) {
-      this.logger.warn({ msg: 'Failed to read TypeScript definition', schemaId, error });
+    } catch (err) {
+      this.logger.warn({ msg: 'Failed to read TypeScript definition', schemaId, err });
       return null;
     }
   }
@@ -264,11 +251,13 @@ export class SchemaManager {
     const external = new Set<string>();
 
     const traverse = (obj: unknown): void => {
-      if (!obj || typeof obj !== 'object') return;
+      if (obj === undefined || typeof obj !== 'object') {
+        return;
+      }
 
       const objRecord = obj as Record<string, unknown>;
 
-      if (objRecord.$ref && typeof objRecord.$ref === 'string') {
+      if (objRecord.$ref !== undefined && typeof objRecord.$ref === 'string') {
         if (objRecord.$ref.startsWith('#/')) {
           internal.add(objRecord.$ref);
         } else if (objRecord.$ref.startsWith('https://')) {
@@ -303,12 +292,12 @@ export class SchemaManager {
   ): EnvVar[] {
     const envVars: EnvVar[] = [];
 
-    if (!schema || typeof schema !== 'object') return envVars;
+    if (typeof schema !== 'object') return envVars;
 
     const schemaObj = schema as Record<string, unknown>;
 
     // Handle $ref - resolve and recurse
-    if (schemaObj.$ref && typeof schemaObj.$ref === 'string') {
+    if (schemaObj.$ref !== undefined && typeof schemaObj.$ref === 'string') {
       if (visitedRefs.has(schemaObj.$ref)) return envVars;
       visitedRefs.add(schemaObj.$ref);
 
@@ -326,8 +315,8 @@ export class SchemaManager {
     }
 
     // Check current level for x-env-value
-    if (schemaObj['x-env-value']) {
-      const propertyName = pathPrefix.split('.').pop() || pathPrefix;
+    if (schemaObj['x-env-value'] !== undefined) {
+      const propertyName = pathPrefix.split('.').pop() ?? pathPrefix;
       envVars.push({
         envVariable: schemaObj['x-env-value'] as string,
         configPath: pathPrefix,
@@ -349,7 +338,7 @@ export class SchemaManager {
     });
 
     // Recursively process properties
-    if (schemaObj.properties && typeof schemaObj.properties === 'object') {
+    if (schemaObj.properties !== undefined && typeof schemaObj.properties === 'object') {
       const required = new Set(Array.isArray(schemaObj.required) ? (schemaObj.required as string[]) : []);
       const properties = schemaObj.properties as Record<string, JSONSchema>;
 
@@ -360,7 +349,7 @@ export class SchemaManager {
     }
 
     // Process definitions
-    if (schemaObj.definitions && typeof schemaObj.definitions === 'object') {
+    if (schemaObj.definitions !== undefined && typeof schemaObj.definitions === 'object') {
       const definitions = schemaObj.definitions as Record<string, JSONSchema>;
       Object.entries(definitions).forEach(([, defSchema]) => {
         envVars.push(...this.extractEnvVars(defSchema, pathPrefix, requiredFields, visitedRefs));
@@ -377,7 +366,7 @@ export class SchemaManager {
       const pathSegments = ref.substring(2).split('/');
       let result: unknown = rootSchema;
       for (const segment of pathSegments) {
-        if (result && typeof result === 'object') {
+        if (result !== undefined && typeof result === 'object') {
           result = (result as Record<string, unknown>)[segment];
         } else {
           return null;
@@ -393,8 +382,8 @@ export class SchemaManager {
           const content = fs.readFileSync(fullPath, { encoding: 'utf-8' });
           return JSON.parse(content) as JSONSchema;
         }
-      } catch (error) {
-        this.logger.warn({ msg: 'Failed to resolve external ref', ref, error });
+      } catch (err) {
+        this.logger.warn({ msg: 'Failed to resolve external ref', ref, err });
       }
     }
     return null;

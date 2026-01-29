@@ -74,7 +74,7 @@ describe('schema', function () {
 
   describe('/schemas/index', function () {
     describe('Happy Path', function () {
-      it('should return 200 status code with schemas index and search index', async function () {
+      it('should return 200 status code with schemas index', async function () {
         const response = await requestSender.getSchemasIndex();
 
         expectResponseStatus(response, 200);
@@ -82,9 +82,7 @@ describe('schema', function () {
 
         // Verify structure
         expect(response.body).toHaveProperty('schemas');
-        expect(response.body).toHaveProperty('searchIndex');
         expect(Array.isArray(response.body.schemas)).toBe(true);
-        expect(typeof response.body.searchIndex).toBe('string');
 
         // Verify schemas array has proper structure
         if (response.body.schemas.length > 0) {

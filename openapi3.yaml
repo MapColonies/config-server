@@ -249,9 +249,11 @@ paths:
                     type: string
                   rawContent:
                     type: object
+                    additionalProperties: true
                     description: Raw JSON Schema
                   dereferencedContent:
                     type: object
+                    additionalProperties: true
                     description: Schema with all $refs resolved
                   typeContent:
                     type: string

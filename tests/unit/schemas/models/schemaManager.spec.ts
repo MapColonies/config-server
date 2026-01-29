@@ -71,4 +71,20 @@ describe('SchemaManager', () => {
       expect(schemaTree).toSatisfySchemaInApiSpec('schemaTree');
     });
   });
+
+  describe('#getFullSchemaMetadata', () => {
+    it('should handle schemas with null property values', async () => {
+      // Arrange - This tests the fix for null check in extractDependencies
+      const id = 'https://mapcolonies.com/common/boilerplate/v1';
+
+      // Act
+      const metadata = await schemaManager.getFullSchemaMetadata(id);
+
+      // Assert - Should not throw TypeError when encountering null values
+      expect(metadata).toHaveProperty('id', id);
+      expect(metadata).toHaveProperty('dependencies');
+      expect(metadata.dependencies).toHaveProperty('internal');
+      expect(metadata.dependencies).toHaveProperty('external');
+    });
+  });
 });

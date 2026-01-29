@@ -549,9 +549,13 @@ export interface operations {
             description?: string;
             title?: string;
             /** @description Raw JSON Schema */
-            rawContent: Record<string, never>;
+            rawContent: {
+              [key: string]: unknown;
+            };
             /** @description Schema with all $refs resolved */
-            dereferencedContent: Record<string, never>;
+            dereferencedContent: {
+              [key: string]: unknown;
+            };
             /** @description TypeScript type definitions */
             typeContent?: string | null;
             dependencies: {

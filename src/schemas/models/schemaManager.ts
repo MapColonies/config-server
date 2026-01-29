@@ -22,6 +22,7 @@ type ArrayElement<ArrayType extends readonly unknown[]> = ArrayType extends read
 const SCHEMA_DOMAIN = 'https://mapcolonies.com/';
 const SCHEMA_TRACING_CACHE_KEY = 'schema.cache';
 const LAST_ARRAY_ELEMENT = -1;
+const INTERNAL_REF_PREFIX_LENGTH = 2; // Length of '#/' prefix in internal references
 
 export { schemasBasePath };
 @injectable()
@@ -269,7 +270,7 @@ export class SchemaManager {
       for (const key in objRecord) {
         if (Array.isArray(objRecord[key])) {
           (objRecord[key] as unknown[]).forEach(traverse);
-        } else if (typeof objRecord[key] === 'object') {
+        } else if (objRecord[key] !== null && typeof objRecord[key] === 'object') {
           traverse(objRecord[key]);
         }
       }
@@ -363,7 +364,7 @@ export class SchemaManager {
   private resolveRef(ref: string, rootSchema: JSONSchema): JSONSchema | null {
     if (ref.startsWith('#/')) {
       // Internal reference
-      const pathSegments = ref.substring(2).split('/');
+      const pathSegments = ref.substring(INTERNAL_REF_PREFIX_LENGTH).split('/');
       let result: unknown = rootSchema;
       for (const segment of pathSegments) {
         if (result !== undefined && typeof result === 'object') {

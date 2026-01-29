@@ -36,8 +36,7 @@ export class SchemaController {
       // Set cache headers
       res.setHeader('Cache-Control', 'public, max-age=3600'); // 1 hour
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return res.status(httpStatus.OK).json(indexData as any);
+      return res.status(httpStatus.OK).json(indexData);
     } catch (error) {
       next(error);
     }
@@ -47,8 +46,7 @@ export class SchemaController {
     try {
       const metadata = await this.manager.getFullSchemaMetadata(req.query.id);
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return res.status(httpStatus.OK).json(metadata as any);
+      return res.status(httpStatus.OK).json(metadata);
     } catch (error) {
       if (error instanceof SchemaNotFoundError) {
         (error as HttpError).status = httpStatus.NOT_FOUND;

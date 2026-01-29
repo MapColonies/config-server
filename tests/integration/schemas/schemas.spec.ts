@@ -149,7 +149,7 @@ describe('schema', function () {
         // Redis schema should have env vars like REDIS_HOST, REDIS_PORT, etc.
         expect(response.body.envVars.length).toBeGreaterThan(0);
 
-        const envVarNames = response.body.envVars.map((v: any) => v.envVariable);
+        const envVarNames = response.body.envVars.map((v) => v.envVariable);
         expect(envVarNames).toContain('REDIS_HOST');
         expect(envVarNames).toContain('REDIS_PORT');
       });

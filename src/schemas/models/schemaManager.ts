@@ -257,10 +257,10 @@ export class SchemaManager {
           }
 
           if (braceCount === 0) {
-            // Extract content between the braces (excluding the braces themselves)
-            const startPos = fullContent.indexOf('{', typeSymbolStart + 'readonly [typeSymbol]: '.length) + 1;
-            const endPos = pos - 1; // pos is now after the closing brace
-            return fullContent.substring(startPos, endPos).trim();
+            // Extract content including the braces
+            const startPos = fullContent.indexOf('{', typeSymbolStart + 'readonly [typeSymbol]: '.length);
+            const endPos = pos; // pos is now after the closing brace
+            return fullContent.substring(startPos, endPos);
           }
         }
 

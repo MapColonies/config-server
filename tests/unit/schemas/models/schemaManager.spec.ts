@@ -107,10 +107,11 @@ describe('SchemaManager', () => {
         expect(metadata.typeContent).not.toContain('readonly $id:');
         expect(metadata.typeContent).not.toContain('readonly type:');
 
-        // Should contain the actual type definition structure
-        expect(metadata.typeContent).toContain('{');
+        // Should start and end with braces
+        expect(metadata.typeContent.trimStart()).toMatch(/^\{/);
+        expect(metadata.typeContent.trimEnd()).toMatch(/\}$/);
 
-        // Should not start with 'import' or 'declare'
+        // Should not start with 'import', 'declare', or 'readonly'
         expect(metadata.typeContent.trimStart()).not.toMatch(/^(import|declare|export|readonly)/);
       }
     });

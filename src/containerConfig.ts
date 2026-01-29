@@ -1,7 +1,7 @@
-import config from 'config';
+import config, { IConfig } from 'config';
 import { metrics as OtelMetrics } from '@opentelemetry/api';
 import { DependencyContainer } from 'tsyringe/dist/typings/types';
-import { instanceCachingFactory, instancePerContainerCachingFactory } from 'tsyringe';
+import { instancePerContainerCachingFactory } from 'tsyringe';
 import type { Pool } from 'pg';
 import { initConnection, createDrizzle, createConnectionOptions, DbConfig, Drizzle } from '@db';
 import { InjectionObject, registerDependencies } from '@common/dependencyRegistration';
@@ -34,7 +34,6 @@ export async function registerExternalValues(options?: RegisterOptions): Promise
     { token: CAPABILITIES_ROUTER_SYMBOL, provider: { useFactory: capabilitiesRouterFactory } },
     { token: CONFIG_ROUTER_SYMBOL, provider: { useFactory: configRouterFactory } },
     { token: SERVICES.PG_POOL, provider: { useValue: pool } },
-
     {
       token: SERVICES.DRIZZLE,
       provider: {
@@ -46,10 +45,12 @@ export async function registerExternalValues(options?: RegisterOptions): Promise
     {
       token: SERVICES.HEALTHCHECK,
       provider: {
-        /* v8 ignore next 4 -- @preserve */
-        useFactory: instanceCachingFactory((container) => {
+        useFactory: instancePerContainerCachingFactory((container) => {
           const drizzle = container.resolve<Drizzle>(SERVICES.DRIZZLE);
-          return healthCheck(drizzle);
+          const config = container.resolve<IConfig>(SERVICES.CONFIG);
+
+          const timeoutMs = config.get<number>('db.connectionTimeout');
+          return healthCheck(drizzle, timeoutMs);
         }),
       },
     },

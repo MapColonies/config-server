@@ -57,7 +57,6 @@
       "__name": "DB_PORT",
       "__format": "number"
     },
-    "connectionTimeout": "DB_CONNECTION_TIMEOUT",
     "user": "DB_USERNAME",
     "password": "DB_PASSWORD",
     "enableSslAuth": {
@@ -69,6 +68,10 @@
       "key": "DB_KEY_PATH",
       "cert": "DB_CERT_PATH"
     },
-    "database": "DB_NAME"
+    "database": "DB_NAME",
+    "connectionTimeoutMs": {
+      "__name": "DB_CONNECTION_TIMEOUT",
+      "__format": "number"
+    }
   }
 }

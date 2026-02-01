@@ -193,11 +193,9 @@ paths:
                 - limit
               properties:
                 key:
-                  type: string
-                  description: An opaque identifier for the resource/group
+                  $ref: '#/components/schemas/key'
                 callerId:
-                  type: string
-                  description: The unique ID of the instance holding the lock
+                  $ref: '#/components/schemas/callerId'
                 ttl:
                   type: integer
                   minimum: 1
@@ -233,13 +231,13 @@ paths:
           in: path
           required: true
           schema:
-            type: string
+            $ref: '#/components/schemas/key'
           description: The lock key
         - name: callerId
           in: path
           required: true
           schema:
-            type: string
+            $ref: '#/components/schemas/callerId'
           description: The caller ID
       responses:
         '204':
@@ -525,3 +523,11 @@ components:
             a flag that indicates if the pubsub is enabled for config change
             notifications
           type: boolean
+    callerId:
+      type: string
+      description: The unique ID of the instance holding the lock
+      minLength: 1
+    key:
+      type: string
+      description: An opaque identifier for the resource/group
+      minLength: 3

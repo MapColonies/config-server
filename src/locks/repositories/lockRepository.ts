@@ -131,24 +131,4 @@ export class LockRepository {
     this.logger.debug({ key, callerId, msg: 'Releasing lock' });
     await this.drizzle.delete(locks).where(and(eq(locks.key, key), eq(locks.callerId, callerId)));
   }
-
-  @withSpan()
-  public async getLock(key: string, callerId: string): Promise<Lock | undefined> {
-    const result = await this.drizzle
-      .select()
-      .from(locks)
-      .where(and(eq(locks.key, key), eq(locks.callerId, callerId)))
-      .limit(1);
-
-    return result[0];
-  }
-
-  @withSpan()
-  public async getActiveLocks(key: string): Promise<Lock[]> {
-    const now = new Date();
-    return this.drizzle
-      .select()
-      .from(locks)
-      .where(and(eq(locks.key, key), gt(locks.expiresAt, now)));
-  }
 }

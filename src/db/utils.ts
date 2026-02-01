@@ -6,6 +6,6 @@ import { Drizzle } from './createConnection';
 export const healthCheck = (drizzle: Drizzle, timeoutMs: number): HealthCheck => {
   return async (): Promise<void> => {
     const promise = drizzle.execute(sql`select 1`);
-    await promiseTimeout<Awaited<typeof promise>>(timeoutMs, promise);
+    await promiseTimeout(timeoutMs, promise);
   };
 };

@@ -6,6 +6,7 @@ import { DependencyContainer } from 'tsyringe';
 import { paths, operations } from '@openapi';
 import { getApp } from '@src/app';
 import { SERVICES } from '@common/constants';
+import { SchemaReference } from '@src/schemas/models/types';
 
 const expectResponseStatus: ExpectResponseStatus = expectResponseStatusFactory(expect);
 
@@ -164,20 +165,6 @@ describe('schema', function () {
         // Boilerplate schema references telemetry schemas (children)
         expect(response.body.dependencies.children.length).toBeGreaterThan(0);
 
-        // Helper to collect all IDs from nested structure
-        const collectIds = (nodes: typeof response.body.dependencies.children): string[] => {
-          const ids: string[] = [];
-          for (const node of nodes) {
-            ids.push(node.id);
-            if (node.children && node.children.length > 0) {
-              ids.push(...collectIds(node.children));
-            }
-          }
-          return ids;
-        };
-
-        const allChildIds = collectIds(response.body.dependencies.children);
-
         // Direct children should be at root level
         const rootChildIds = response.body.dependencies.children.map((c) => c.id);
         expect(rootChildIds).toContain('https://mapcolonies.com/common/telemetry/base/v1');
@@ -194,7 +181,7 @@ describe('schema', function () {
         });
 
         // If any child has children, verify nested structure
-        const childrenWithDescendants = response.body.dependencies.children.filter((c) => c.children && c.children.length > 0);
+        const childrenWithDescendants = response.body.dependencies.children.filter((c) => c.children !== undefined && c.children.length > 0);
         if (childrenWithDescendants.length > 0) {
           childrenWithDescendants.forEach((child) => {
             expect(Array.isArray(child.children)).toBe(true);
@@ -279,7 +266,7 @@ describe('schema', function () {
         expectResponseStatus(response, 200);
 
         // Helper to collect all IDs recursively
-        const collectAllIds = (nodes: { id: string; name: string; children?: any[]; parents?: any[] }[], field: 'children' | 'parents'): string[] => {
+        const collectAllIds = (nodes: SchemaReference[], field: 'children' | 'parents'): string[] => {
           const ids: string[] = [];
           for (const node of nodes) {
             ids.push(node.id);

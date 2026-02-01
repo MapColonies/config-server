@@ -49,7 +49,7 @@ export async function registerExternalValues(options?: RegisterOptions): Promise
           const drizzle = container.resolve<Drizzle>(SERVICES.DRIZZLE);
           const config = container.resolve<IConfig>(SERVICES.CONFIG);
 
-          const timeoutMs = config.get<number>('db.connectionTimeout');
+          const timeoutMs = config.get<number>('db.connectionTimeoutMs');
           return healthCheck(drizzle, timeoutMs);
         }),
       },

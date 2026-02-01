@@ -74,7 +74,7 @@ describe('SchemaManager', () => {
 
   describe('#getFullSchemaMetadata', () => {
     it('should handle schemas with null property values', async () => {
-      // Arrange - This tests the fix for null check in extractDependencies
+      // Arrange - This tests the fix for null check in recursive traversal
       const id = 'https://mapcolonies.com/common/boilerplate/v1';
 
       // Act
@@ -83,8 +83,8 @@ describe('SchemaManager', () => {
       // Assert - Should not throw TypeError when encountering null values
       expect(metadata).toHaveProperty('id', id);
       expect(metadata).toHaveProperty('dependencies');
-      expect(metadata.dependencies).toHaveProperty('internal');
-      expect(metadata.dependencies).toHaveProperty('external');
+      expect(metadata.dependencies).toHaveProperty('parents');
+      expect(metadata.dependencies).toHaveProperty('children');
     });
 
     it('should extract only typeSymbol content from TypeScript definitions', async () => {

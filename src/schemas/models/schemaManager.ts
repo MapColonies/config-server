@@ -10,7 +10,7 @@ import { SERVICES } from '@common/constants';
 import { setSpanAttributes, withSpan } from '@common/tracing';
 import { enrichLogContext } from '@common/logger';
 import { SchemaNotFoundError, SchemaPathIsInvalidError } from './errors';
-import type { SchemaIndexEntry, Dependencies, EnvVar, FullSchemaMetadata } from './types';
+import type { SchemaIndexEntry, EnvVar, FullSchemaMetadata, SchemaReference } from './types';
 
 const schemasPackageResolvedPath = require.resolve('@map-colonies/schemas');
 const schemasBasePath = schemasPackageResolvedPath.substring(0, schemasPackageResolvedPath.lastIndexOf('/'));
@@ -109,8 +109,11 @@ export class SchemaManager {
     const dereferencedContent = await this.getSchema(schemaId, true);
 
     const typeContent = await this.getTypeScriptForSchema(schemaId);
-    const dependencies = this.extractDependencies(rawContent);
     const envVars = this.extractEnvVars(rawContent);
+
+    // Get parents and children recursively
+    const parents = await this.getParentSchemas(schemaId);
+    const children = await this.getChildSchemas(schemaId);
 
     // Parse metadata from schemaId
     const schemaPath = schemaId.replace(SCHEMA_DOMAIN, '');
@@ -129,12 +132,141 @@ export class SchemaManager {
       rawContent: rawContent as unknown as Record<string, unknown>,
       dereferencedContent: dereferencedContent as unknown as Record<string, unknown>,
       typeContent,
-      dependencies,
+      dependencies: {
+        parents,
+        children,
+      },
       envVars,
     };
 
     this.fullSchemaCache.set(schemaId, metadata);
     return metadata;
+  }
+
+  /**
+   * Extracts only external references from a schema (for finding children)
+   */
+  @withSpan()
+  private extractExternalRefs(schema: JSONSchema): string[] {
+    const external = new Set<string>();
+
+    const traverse = (obj: unknown): void => {
+      if (obj === undefined || typeof obj !== 'object') {
+        return;
+      }
+
+      const objRecord = obj as Record<string, unknown>;
+
+      if (objRecord.$ref !== undefined && typeof objRecord.$ref === 'string') {
+        if (objRecord.$ref.startsWith('https://')) {
+          external.add(objRecord.$ref);
+        }
+      }
+
+      // Recursively traverse all properties
+      for (const key in objRecord) {
+        if (Array.isArray(objRecord[key])) {
+          (objRecord[key] as unknown[]).forEach(traverse);
+        } else if (objRecord[key] !== null && typeof objRecord[key] === 'object') {
+          traverse(objRecord[key]);
+        }
+      }
+    };
+
+    traverse(schema);
+    return Array.from(external);
+  }
+
+  /**
+   * Recursively gets all parent schemas (schemas that reference this schema)
+   * Returns a nested tree structure
+   */
+  @withSpan()
+  private async getParentSchemas(schemaId: string, visited: Set<string> = new Set()): Promise<SchemaReference[]> {
+    if (visited.has(schemaId)) {
+      return [];
+    }
+    visited.add(schemaId);
+
+    const parents: SchemaReference[] = [];
+    const allSchemas = await this.getSchemaIndex();
+
+    // Check each schema to see if it references our target schema
+    for (const schema of allSchemas.schemas) {
+      if (schema.id === schemaId) {
+        continue; // Skip self
+      }
+
+      try {
+        const schemaContent = await this.getSchema(schema.id, false);
+        const externalRefs = this.extractExternalRefs(schemaContent);
+
+        // Check if this schema has our target as an external dependency
+        if (externalRefs.includes(schemaId)) {
+          const parentNode: SchemaReference = {
+            id: schema.id,
+            name: schema.name,
+          };
+
+          // Recursively get this parent's parents
+          const ancestorParents = await this.getParentSchemas(schema.id, visited);
+          if (ancestorParents.length > 0) {
+            parentNode.parents = ancestorParents;
+          }
+
+          parents.push(parentNode);
+        }
+      } catch (err) {
+        // Skip schemas that can't be loaded
+        this.logger.warn({ msg: 'Failed to load schema while finding parents', schemaId: schema.id, err });
+      }
+    }
+
+    return parents;
+  }
+
+  /**
+   * Recursively gets all child schemas (schemas that this schema references)
+   * Returns a nested tree structure
+   */
+  @withSpan()
+  private async getChildSchemas(schemaId: string, visited: Set<string> = new Set()): Promise<SchemaReference[]> {
+    if (visited.has(schemaId)) {
+      return [];
+    }
+    visited.add(schemaId);
+
+    const children: SchemaReference[] = [];
+
+    try {
+      const schemaContent = await this.getSchema(schemaId, false);
+      const externalRefs = this.extractExternalRefs(schemaContent);
+
+      // Process all external dependencies (children)
+      for (const childId of externalRefs) {
+        try {
+          const childSchema = await this.getSchema(childId, false);
+          const childNode: SchemaReference = {
+            id: childId,
+            name: (childSchema.title as string) || this.extractNameFromId(childId),
+          };
+
+          // Recursively get this child's children
+          const descendantChildren = await this.getChildSchemas(childId, visited);
+          if (descendantChildren.length > 0) {
+            childNode.children = descendantChildren;
+          }
+
+          children.push(childNode);
+        } catch (err) {
+          this.logger.warn({ msg: 'Failed to load child schema', schemaId: childId, err });
+        }
+      }
+    } catch (err) {
+      this.logger.warn({ msg: 'Failed to extract dependencies for schema', schemaId, err });
+    }
+
+    return children;
   }
 
   @withSpan()
@@ -275,44 +407,6 @@ export class SchemaManager {
       this.logger.warn({ msg: 'Failed to read TypeScript definition', schemaId, err });
       return null;
     }
-  }
-
-  @withSpan()
-  private extractDependencies(schema: JSONSchema): Dependencies {
-    const internal = new Set<string>();
-    const external = new Set<string>();
-
-    const traverse = (obj: unknown): void => {
-      if (obj === undefined || typeof obj !== 'object') {
-        return;
-      }
-
-      const objRecord = obj as Record<string, unknown>;
-
-      if (objRecord.$ref !== undefined && typeof objRecord.$ref === 'string') {
-        if (objRecord.$ref.startsWith('#/')) {
-          internal.add(objRecord.$ref);
-        } else if (objRecord.$ref.startsWith('https://')) {
-          external.add(objRecord.$ref);
-        }
-      }
-
-      // Recursively traverse all properties
-      for (const key in objRecord) {
-        if (Array.isArray(objRecord[key])) {
-          (objRecord[key] as unknown[]).forEach(traverse);
-        } else if (objRecord[key] !== null && typeof objRecord[key] === 'object') {
-          traverse(objRecord[key]);
-        }
-      }
-    };
-
-    traverse(schema);
-
-    return {
-      internal: Array.from(internal),
-      external: Array.from(external),
-    };
   }
 
   @withSpan()

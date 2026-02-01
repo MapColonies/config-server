@@ -195,6 +195,19 @@ export type components = {
       children: components['schemas']['schemaTree'];
       name: string;
     };
+    schemaReference: {
+      /**
+       * Format: uri
+       * @description Schema ID
+       */
+      id: string;
+      /** @description Schema name */
+      name: string;
+      /** @description Nested child schemas (recursive) */
+      children?: components['schemas']['schemaReference'][];
+      /** @description Nested parent schemas (recursive) */
+      parents?: components['schemas']['schemaReference'][];
+    };
     config: {
       configName: components['schemas']['configName'];
       schemaId: components['schemas']['schemaId'];
@@ -559,10 +572,10 @@ export interface operations {
             /** @description TypeScript type definitions */
             typeContent?: string | null;
             dependencies: {
-              /** @description Internal references (#/definitions/...) */
-              internal: string[];
-              /** @description External schema references (https://...) */
-              external: string[];
+              /** @description All parent schemas that reference this schema (nested tree structure) */
+              parents: components['schemas']['schemaReference'][];
+              /** @description All child schemas referenced by this schema (nested tree structure) */
+              children: components['schemas']['schemaReference'][];
             };
             envVars: {
               /** @description Environment variable name */

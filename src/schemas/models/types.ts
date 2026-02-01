@@ -1,40 +1,8 @@
-export interface SchemaIndexEntry {
-  id: string;
-  name: string;
-  path: string;
-  version: string;
-  description?: string;
-  category: string;
-  title?: string;
-}
+import type { components, operations } from '@openapi';
 
-export interface Dependencies {
-  internal: string[];
-  external: string[];
-}
-
-export interface EnvVar {
-  envVariable: string; // Matches frontend interface
-  configPath: string; // Matches frontend interface
-  format?: string;
-  type?: string;
-  required?: boolean;
-  description?: string;
-  default?: unknown;
-  refLink?: string;
-}
-
-export interface FullSchemaMetadata {
-  id: string;
-  name: string;
-  path: string;
-  version: string;
-  category: string;
-  description?: string;
-  title?: string;
-  rawContent: Record<string, unknown>;
-  dereferencedContent: Record<string, unknown>;
-  typeContent: string | null;
-  dependencies: Dependencies;
-  envVars: EnvVar[];
-}
+// Re-export types from OpenAPI spec
+export type SchemaReference = components['schemas']['schemaReference'];
+export type SchemaIndexEntry = operations['getSchemasIndex']['responses']['200']['content']['application/json']['schemas'][number];
+export type EnvVar = operations['getFullSchema']['responses']['200']['content']['application/json']['envVars'][number];
+export type Dependencies = operations['getFullSchema']['responses']['200']['content']['application/json']['dependencies'];
+export type FullSchemaMetadata = operations['getFullSchema']['responses']['200']['content']['application/json'];

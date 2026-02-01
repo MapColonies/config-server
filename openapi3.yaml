@@ -262,19 +262,19 @@ paths:
                   dependencies:
                     type: object
                     required:
-                      - internal
-                      - external
+                      - parents
+                      - children
                     properties:
-                      internal:
+                      parents:
                         type: array
                         items:
-                          type: string
-                        description: Internal references (#/definitions/...)
-                      external:
+                          $ref: '#/components/schemas/schemaReference'
+                        description: All parent schemas that reference this schema (nested tree structure)
+                      children:
                         type: array
                         items:
-                          type: string
-                        description: External schema references (https://...)
+                          $ref: '#/components/schemas/schemaReference'
+                        description: All child schemas referenced by this schema (nested tree structure)
                   envVars:
                     type: array
                     items:
@@ -550,6 +550,29 @@ components:
           $ref: '#/components/schemas/schemaTree'
         name:
           type: string
+    schemaReference:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+          format: uri
+          description: Schema ID
+        name:
+          type: string
+          description: Schema name
+        children:
+          type: array
+          items:
+            $ref: '#/components/schemas/schemaReference'
+          description: Nested child schemas (recursive)
+        parents:
+          type: array
+          items:
+            $ref: '#/components/schemas/schemaReference'
+          description: Nested parent schemas (recursive)
     config:
       type: object
       additionalProperties: false

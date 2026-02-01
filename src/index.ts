@@ -2,7 +2,7 @@
 import 'reflect-metadata';
 import { performance } from 'node:perf_hooks';
 import { createServer } from 'node:http';
-import { createTerminus } from '@godaddy/terminus';
+import { createTerminus, HealthCheck } from '@godaddy/terminus';
 import { Logger } from '@map-colonies/js-logger';
 import { container } from 'tsyringe';
 import config from 'config';
@@ -16,8 +16,9 @@ const TIME_PRECISION = 2;
 void getApp()
   .then(([app]) => {
     const logger = container.resolve<Logger>(SERVICES.LOGGER);
-    const stubHealthCheck = async (): Promise<void> => Promise.resolve();
-    const server = createTerminus(createServer(app), { healthChecks: { '/liveness': stubHealthCheck, onSignal: container.resolve('onSignal') } });
+    const healthCheck = container.resolve<HealthCheck>(SERVICES.HEALTHCHECK);
+
+    const server = createTerminus(createServer(app), { healthChecks: { '/liveness': healthCheck, onSignal: container.resolve('onSignal') } });
 
     const isStaticAssetsEnabled = config.get<boolean>('server.staticAssets.enabled');
     const apiPrefix = config.get<string>('server.apiPrefix');

@@ -18,5 +18,6 @@ export const SERVICES = {
   METER: Symbol('Meter'),
   PG_POOL: Symbol('PgPool'),
   DRIZZLE: Symbol('Drizzle'),
+  HEALTHCHECK: Symbol('Healthcheck'),
 } satisfies Record<string, symbol>;
 /* eslint-enable @typescript-eslint/naming-convention */

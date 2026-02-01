@@ -165,6 +165,44 @@ describe('schema', function () {
         expect(response.body.dependencies.internal.length).toBeGreaterThan(0);
         expect(response.body.dependencies.internal).toContain('#/definitions/tls');
       });
+
+      it('should extract external dependencies', async function () {
+        const response = await requestSender.getFullSchema({
+          queryParams: { id: 'https://mapcolonies.com/common/boilerplate/v1' },
+        });
+
+        expectResponseStatus(response, 200);
+
+        // Boilerplate schema has external references to telemetry schemas
+        expect(response.body.dependencies.external.length).toBeGreaterThan(0);
+        expect(response.body.dependencies.external).toContain('https://mapcolonies.com/common/telemetry/base/v1');
+        expect(response.body.dependencies.external).toContain('https://mapcolonies.com/common/telemetry/tracing/v1');
+        expect(response.body.dependencies.external).toContain('https://mapcolonies.com/common/telemetry/logger/v1');
+      });
+
+      it('should return empty envVars array for schemas without environment variables', async function () {
+        const response = await requestSender.getFullSchema({
+          queryParams: { id: 'https://mapcolonies.com/common/circuit-breaker/v1' },
+        });
+
+        expectResponseStatus(response, 200);
+
+        // Circuit-breaker schema has no x-env-value properties
+        expect(response.body.envVars).toEqual([]);
+      });
+
+      it('should return TypeScript type content when available', async function () {
+        const response = await requestSender.getFullSchema({
+          queryParams: { id: 'https://mapcolonies.com/common/redis/v1' },
+        });
+
+        expectResponseStatus(response, 200);
+
+        // TypeScript content should be a non-empty string
+        expect(response.body.typeContent).toBeDefined();
+        expect(typeof response.body.typeContent).toBe('string');
+        expect(response.body.typeContent).not.toBe('');
+      });
     });
 
     describe('Bad Path', function () {

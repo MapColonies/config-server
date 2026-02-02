@@ -5,6 +5,7 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { Pool, type PoolConfig } from 'pg';
 import { configs } from '../configs/models/config';
+import { locks } from '../locks/models/lock';
 
 export type DbConfig = {
   enableSslAuth: boolean;
@@ -31,10 +32,11 @@ export async function initConnection(dbConfig: PoolConfig): Promise<Pool> {
 
 export type Drizzle = ReturnType<typeof createDrizzle>;
 
-export function createDrizzle(pool: Pool): ReturnType<typeof drizzle<{ configs: typeof configs }>> {
+export function createDrizzle(pool: Pool): ReturnType<typeof drizzle<{ configs: typeof configs; locks: typeof locks }>> {
   return drizzle(pool, {
     schema: {
       configs,
+      locks,
     },
   });
 }

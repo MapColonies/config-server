@@ -11,7 +11,7 @@ const dbOptions = createConnectionOptions(config.get('db')) as Omit<Required<Con
 };
 
 const drizzleConfig: DrizzleConfig = {
-  schema: ['./src/configs/models/config.ts'],
+  schema: ['./src/configs/models/config.ts', './src/locks/models/lock.ts'],
   out: './src/db/migrations',
   dialect: 'postgresql', // 'pg' | 'mysql2' | 'better-sqlite' | 'libsql' | 'turso'
   dbCredentials: dbOptions,

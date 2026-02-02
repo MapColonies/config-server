@@ -175,6 +175,77 @@ paths:
           $ref: '#/components/responses/400BadRequest'
         '500':
           $ref: '#/components/responses/500InternalServerError'
+  /locks:
+    post:
+      operationId: acquireLock
+      summary: Acquire a lock slot for a specific key
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+                - key
+                - callerId
+                - ttl
+                - limit
+              properties:
+                key:
+                  $ref: '#/components/schemas/key'
+                callerId:
+                  $ref: '#/components/schemas/callerId'
+                ttl:
+                  type: integer
+                  minimum: 1
+                  description: Time to live in seconds
+                limit:
+                  type: integer
+                  minimum: 1
+                  description: Maximum number of concurrent locks for this key
+      responses:
+        '200':
+          description: Lock acquired or renewed successfully
+        '423':
+          description: Locked - Concurrency limit reached
+          headers:
+            Retry-After:
+              description: Number of seconds to wait before retrying
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error'
+        '400':
+          $ref: '#/components/responses/400BadRequest'
+        '500':
+          $ref: '#/components/responses/500InternalServerError'
+  /locks/{key}/{callerId}:
+    delete:
+      operationId: releaseLock
+      summary: Release a lock for a specific key and caller
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/key'
+          description: The lock key
+        - name: callerId
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/callerId'
+          description: The caller ID
+      responses:
+        '204':
+          description: Lock released successfully
+        '400':
+          $ref: '#/components/responses/400BadRequest'
+        '500':
+          $ref: '#/components/responses/500InternalServerError'
 security: []
 components:
   responses:
@@ -452,3 +523,11 @@ components:
             a flag that indicates if the pubsub is enabled for config change
             notifications
           type: boolean
+    callerId:
+      type: string
+      description: The unique ID of the instance holding the lock
+      minLength: 1
+    key:
+      type: string
+      description: An opaque identifier for the resource/group
+      minLength: 3

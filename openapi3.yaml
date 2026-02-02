@@ -7,7 +7,7 @@ info:
   description: >-
     This is a config server that provides the means to manage all the
     configurations
-  version: 2.0.7
+  version: 2.1.0
   license:
     name: MIT
     url: https://opensource.org/licenses/MIT
@@ -109,7 +109,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/config'
         '304':
-          description: Not Modified - Config has not changed since the ETag provided in If-None-Match header
+          description: >-
+            Not Modified - Config has not changed since the ETag provided in
+            If-None-Match header
         '400':
           $ref: '#/components/responses/400BadRequest'
         '404':
@@ -164,7 +166,9 @@ paths:
     get:
       operationId: getSchemasIndex
       summary: Get searchable index of all schemas
-      description: Returns metadata for all schemas. Frontend can build client-side search index from this data.
+      description: >-
+        Returns metadata for all schemas. Frontend can build client-side search
+        index from this data.
       responses:
         '200':
           description: OK
@@ -271,12 +275,16 @@ paths:
                         type: array
                         items:
                           $ref: '#/components/schemas/schemaReference'
-                        description: All parent schemas that reference this schema (nested tree structure)
+                        description: >-
+                          All parent schemas that reference this schema (nested
+                          tree structure)
                       children:
                         type: array
                         items:
                           $ref: '#/components/schemas/schemaReference'
-                        description: All child schemas referenced by this schema (nested tree structure)
+                        description: >-
+                          All child schemas referenced by this schema (nested
+                          tree structure)
                   envVars:
                     type: array
                     items:
@@ -308,7 +316,9 @@ paths:
                         refLink:
                           type: string
                           format: uri
-                          description: External schema reference if this env var comes from a $ref
+                          description: >-
+                            External schema reference if this env var comes from
+                            a $ref
         '400':
           $ref: '#/components/responses/400BadRequest'
         '404':
@@ -362,6 +372,8 @@ paths:
       responses:
         '200':
           description: Lock acquired or renewed successfully
+        '400':
+          $ref: '#/components/responses/400BadRequest'
         '423':
           description: Locked - Concurrency limit reached
           headers:
@@ -373,8 +385,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/error'
-        '400':
-          $ref: '#/components/responses/400BadRequest'
         '500':
           $ref: '#/components/responses/500InternalServerError'
   /locks/{key}/{callerId}:

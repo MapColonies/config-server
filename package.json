@@ -1,6 +1,6 @@
 {
   "name": "config-server",
-  "version": "2.0.7",
+  "version": "2.1.0",
   "description": "This is a api server that serves and modifies configuration",
   "main": "./src/index.ts",
   "scripts": {

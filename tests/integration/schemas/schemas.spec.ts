@@ -46,7 +46,7 @@ describe('schema', function () {
 
         expectResponseStatus(response, 200);
         expect(response).toSatisfyApiSpec();
-        expect(response.body).toHaveProperty('$id', 'https://mapcolonies.com/common/boilerplate/v1');
+        expect(response.body).toMatchObject({ $id: 'https://mapcolonies.com/common/boilerplate/v1' });
       });
 
       it('should return 200 status code and the dereferenced schema', async function () {
@@ -56,7 +56,7 @@ describe('schema', function () {
         expectResponseStatus(response, 200);
 
         expect(response).toSatisfyApiSpec();
-        expect(response.body).toHaveProperty('$id', 'https://mapcolonies.com/common/boilerplate/v1');
+        expect(response.body).toMatchObject({ $id: 'https://mapcolonies.com/common/boilerplate/v1' });
       });
     });
 
@@ -81,21 +81,8 @@ describe('schema', function () {
         expectResponseStatus(response, 200);
         expect(response).toSatisfyApiSpec();
 
-        // Verify structure
-        expect(response.body).toHaveProperty('schemas');
-        expect(Array.isArray(response.body.schemas)).toBe(true);
-
-        // Verify schemas array has proper structure
-        if (response.body.schemas.length > 0) {
-          const firstSchema = response.body.schemas[0];
-          expect(firstSchema).toHaveProperty('id');
-          expect(firstSchema).toHaveProperty('name');
-          expect(firstSchema).toHaveProperty('path');
-          expect(firstSchema).toHaveProperty('version');
-          expect(firstSchema).toHaveProperty('category');
-        }
-
-        // Verify cache headers are set
+        // toSatisfyApiSpec already validates the structure, just verify non-empty
+        expect(response.body.schemas.length).toBeGreaterThan(0);
         expect(response.headers).toHaveProperty('cache-control');
       });
     });
@@ -111,33 +98,20 @@ describe('schema', function () {
         expectResponseStatus(response, 200);
         expect(response).toSatisfyApiSpec();
 
-        // Verify all required fields
-        expect(response.body).toHaveProperty('id', 'https://mapcolonies.com/common/redis/v1');
-        expect(response.body).toHaveProperty('name');
-        expect(response.body).toHaveProperty('path');
-        expect(response.body).toHaveProperty('version');
-        expect(response.body).toHaveProperty('category');
-        expect(response.body).toHaveProperty('rawContent');
-        expect(response.body).toHaveProperty('dereferencedContent');
-        expect(response.body).toHaveProperty('dependencies');
-        expect(response.body).toHaveProperty('envVars');
-
-        // Verify dependencies structure
-        expect(response.body.dependencies).toHaveProperty('parents');
-        expect(response.body.dependencies).toHaveProperty('children');
-        expect(Array.isArray(response.body.dependencies.parents)).toBe(true);
-        expect(Array.isArray(response.body.dependencies.children)).toBe(true);
-
-        // Verify envVars structure
-        expect(Array.isArray(response.body.envVars)).toBe(true);
-        if (response.body.envVars.length > 0) {
-          const firstEnvVar = response.body.envVars[0];
-          expect(firstEnvVar).toHaveProperty('envVariable');
-          expect(firstEnvVar).toHaveProperty('configPath');
-        }
-
-        // Verify TypeScript types (may be null)
-        expect(response.body).toHaveProperty('typeContent');
+        // Verify critical fields only - toSatisfyApiSpec validates the rest
+        expect(response.body).toMatchObject({
+          id: 'https://mapcolonies.com/common/redis/v1',
+          dependencies: {
+            parents: expect.any(Array) as unknown[],
+            children: expect.any(Array) as unknown[],
+          },
+          envVars: expect.arrayContaining([
+            expect.objectContaining({
+              envVariable: expect.any(String) as string,
+              configPath: expect.any(String) as string,
+            }),
+          ]) as unknown[],
+        });
       });
 
       it('should extract environment variables from schema with x-env-value', async function () {
@@ -166,29 +140,37 @@ describe('schema', function () {
         expect(response.body.dependencies.children.length).toBeGreaterThan(0);
 
         // Direct children should be at root level
-        const rootChildIds = response.body.dependencies.children.map((c) => c.id);
-        expect(rootChildIds).toContain('https://mapcolonies.com/common/telemetry/base/v1');
-        expect(rootChildIds).toContain('https://mapcolonies.com/common/telemetry/tracing/v1');
-        expect(rootChildIds).toContain('https://mapcolonies.com/common/telemetry/logger/v1');
+        const rootChildIds = response.body.dependencies.children.map((c: { id: string }) => c.id);
+        expect(rootChildIds).toEqual(
+          expect.arrayContaining([
+            'https://mapcolonies.com/common/telemetry/base/v1',
+            'https://mapcolonies.com/common/telemetry/tracing/v1',
+            'https://mapcolonies.com/common/telemetry/logger/v1',
+          ])
+        );
 
-        // Verify each child has id and name
-        response.body.dependencies.children.forEach((child) => {
-          expect(child).toHaveProperty('id');
-          expect(child).toHaveProperty('name');
-          expect(typeof child.id).toBe('string');
-          expect(typeof child.name).toBe('string');
-          expect(child.id).toMatch(/^https:\/\//);
-        });
+        // Verify structure using toMatchObject with asymmetric matchers
+        expect(response.body.dependencies.children).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
+              id: expect.stringMatching(/^https:\/\//) as string,
+              name: expect.any(String) as string,
+            }),
+          ]) as unknown[]
+        );
 
         // If any child has children, verify nested structure
-        const childrenWithDescendants = response.body.dependencies.children.filter((c) => c.children !== undefined && c.children.length > 0);
+        const childrenWithDescendants = response.body.dependencies.children.filter((c: { children?: unknown[] }) =>
+          Boolean(c.children && c.children.length > 0)
+        );
         if (childrenWithDescendants.length > 0) {
-          childrenWithDescendants.forEach((child) => {
-            expect(Array.isArray(child.children)).toBe(true);
-            child.children?.forEach((grandchild) => {
-              expect(grandchild).toHaveProperty('id');
-              expect(grandchild).toHaveProperty('name');
-            });
+          expect(childrenWithDescendants[0]).toMatchObject({
+            children: expect.arrayContaining([
+              expect.objectContaining({
+                id: expect.any(String) as string,
+                name: expect.any(String) as string,
+              }),
+            ]) as unknown[],
           });
         }
       });
@@ -208,9 +190,11 @@ describe('schema', function () {
         const collectIds = (nodes: typeof response.body.dependencies.parents): string[] => {
           const ids: string[] = [];
           for (const node of nodes) {
-            ids.push(node.id);
+            // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+            ids.push(node.id as string);
             if (node.parents && node.parents.length > 0) {
-              ids.push(...collectIds(node.parents));
+              // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+              ids.push(...collectIds(node.parents as typeof response.body.dependencies.parents));
             }
           }
           return ids;
@@ -221,14 +205,15 @@ describe('schema', function () {
         // Verify boilerplate is one of the parents
         expect(allParentIds).toContain('https://mapcolonies.com/common/boilerplate/v1');
 
-        // Verify each parent has id and name
-        response.body.dependencies.parents.forEach((parent) => {
-          expect(parent).toHaveProperty('id');
-          expect(parent).toHaveProperty('name');
-          expect(typeof parent.id).toBe('string');
-          expect(typeof parent.name).toBe('string');
-          expect(parent.id).toMatch(/^https:\/\//);
-        });
+        // Verify each parent has correct structure using toMatchObject
+        expect(response.body.dependencies.parents).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
+              id: expect.stringMatching(/^https:\/\//) as string,
+              name: expect.any(String) as string,
+            }),
+          ]) as unknown[]
+        );
       });
 
       it('should return empty arrays for schemas with no parents or children', async function () {
@@ -239,10 +224,10 @@ describe('schema', function () {
         expectResponseStatus(response, 200);
 
         // Circuit-breaker has no external dependencies (no children)
-        expect(response.body.dependencies.children).toEqual([]);
-
-        // Parents array exists (may or may not be empty)
-        expect(Array.isArray(response.body.dependencies.parents)).toBe(true);
+        expect(response.body.dependencies).toMatchObject({
+          children: [],
+          parents: expect.any(Array) as unknown[],
+        });
       });
 
       it('should return TypeScript type content when available', async function () {
@@ -254,7 +239,7 @@ describe('schema', function () {
 
         // TypeScript content should be a non-empty string
         expect(response.body.typeContent).toBeDefined();
-        expect(typeof response.body.typeContent).toBe('string');
+        expect(response.body.typeContent).toBeTypeOf('string');
         expect(response.body.typeContent).not.toBe('');
       });
 

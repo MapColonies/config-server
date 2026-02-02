@@ -201,6 +201,8 @@ paths:
                           type: string
                         title:
                           type: string
+        '404':
+          $ref: '#/components/responses/404NotFound'
         '500':
           $ref: '#/components/responses/500InternalServerError'
   /schema/full:

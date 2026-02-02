@@ -7,6 +7,8 @@ export const schemaRouterFactory: FactoryFunction<Router> = (dependencyContainer
   const controller = dependencyContainer.resolve(SchemaController);
 
   router.get('/tree', controller.getSchemasTree);
+  router.get('/index', controller.getSchemasIndex);
+  router.get('/full', controller.getFullSchema);
   router.get('/', controller.getSchema);
 
   return router;

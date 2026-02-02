@@ -85,6 +85,43 @@ export type paths = {
     patch?: never;
     trace?: never;
   };
+  '/schema/index': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Get searchable index of all schemas
+     * @description Returns metadata for all schemas. Frontend can build client-side search index from this data.
+     */
+    get: operations['getSchemasIndex'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/schema/full': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Get comprehensive schema metadata */
+    get: operations['getFullSchema'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/capabilities': {
     parameters: {
       query?: never;
@@ -191,6 +228,19 @@ export type components = {
     schemaTreeDir: {
       children: components['schemas']['schemaTree'];
       name: string;
+    };
+    schemaReference: {
+      /**
+       * Format: uri
+       * @description Schema ID
+       */
+      id: string;
+      /** @description Schema name */
+      name: string;
+      /** @description Nested child schemas (recursive) */
+      children?: components['schemas']['schemaReference'][];
+      /** @description Nested parent schemas (recursive) */
+      parents?: components['schemas']['schemaReference'][];
     };
     config: {
       configName: components['schemas']['configName'];
@@ -483,6 +533,110 @@ export interface operations {
         };
       };
       400: components['responses']['400BadRequest'];
+      500: components['responses']['500InternalServerError'];
+    };
+  };
+  getSchemasIndex: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            schemas: {
+              /** Format: uri */
+              id: string;
+              name: string;
+              path: string;
+              version: string;
+              description?: string;
+              category: string;
+              title?: string;
+            }[];
+          };
+        };
+      };
+      500: components['responses']['500InternalServerError'];
+    };
+  };
+  getFullSchema: {
+    parameters: {
+      query: {
+        /** @description The id of the requested schema */
+        id: components['schemas']['schemaId'];
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': {
+            /** Format: uri */
+            id: string;
+            name: string;
+            path: string;
+            version: string;
+            category: string;
+            description?: string;
+            title?: string;
+            /** @description Raw JSON Schema */
+            rawContent: {
+              [key: string]: unknown;
+            };
+            /** @description Schema with all $refs resolved */
+            dereferencedContent: {
+              [key: string]: unknown;
+            };
+            /** @description TypeScript type definitions */
+            typeContent?: string | null;
+            dependencies: {
+              /** @description All parent schemas that reference this schema (nested tree structure) */
+              parents: components['schemas']['schemaReference'][];
+              /** @description All child schemas referenced by this schema (nested tree structure) */
+              children: components['schemas']['schemaReference'][];
+            };
+            envVars: {
+              /** @description Environment variable name */
+              envVariable: string;
+              /** @description JSON path to the property (e.g., "db.host") */
+              configPath: string;
+              /** @description Format hint (from x-env-format or format field) */
+              format?: string;
+              /** @description JSON schema type (e.g., "string", "integer") */
+              type?: string;
+              /** @description Whether this field is required */
+              required?: boolean;
+              /** @description Schema description */
+              description?: string;
+              /** @description Default value (any type) */
+              default?: unknown;
+              /**
+               * Format: uri
+               * @description External schema reference if this env var comes from a $ref
+               */
+              refLink?: string;
+            }[];
+          };
+        };
+      };
+      400: components['responses']['400BadRequest'];
+      404: components['responses']['404NotFound'];
       500: components['responses']['500InternalServerError'];
     };
   };

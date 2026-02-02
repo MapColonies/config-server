@@ -19,7 +19,7 @@ describe('SchemaManager', () => {
       const schema = await schemaManager.getSchema(id);
 
       // Assert
-      expect(schema).toHaveProperty('$id', id);
+      expect(schema).toMatchObject({ $id: id });
     });
 
     test.each(['..', '../avi/..', 'avi/../../../avi'])(`the path %p is invalid`, async (path) => {
@@ -38,8 +38,8 @@ describe('SchemaManager', () => {
       const schema = await schemaManager.getSchema(id, true);
 
       // Assert
-      expect(schema).toHaveProperty('$id', id);
-      expect(schema).toHaveProperty('allOf.[0].$id', 'https://mapcolonies.com/common/db/partial/v1');
+      expect(schema).toMatchObject({ $id: id });
+      expect(schema).toHaveProperty('allOf[0].$id', 'https://mapcolonies.com/common/db/partial/v1');
     });
 
     it('should not mix between dereferenced and non-dereferenced schemas in cache (issue #26 regression)', async () => {
@@ -69,6 +69,56 @@ describe('SchemaManager', () => {
 
       // Assert
       expect(schemaTree).toSatisfySchemaInApiSpec('schemaTree');
+    });
+  });
+
+  describe('#getFullSchemaMetadata', () => {
+    it('should handle schemas with null property values', async () => {
+      // Arrange - This tests the fix for null check in recursive traversal
+      const id = 'https://mapcolonies.com/common/boilerplate/v1';
+
+      // Act
+      const metadata = await schemaManager.getFullSchemaMetadata(id);
+
+      // Assert - Should not throw TypeError when encountering null values
+      expect(metadata).toMatchObject({
+        id,
+        dependencies: {
+          parents: expect.any(Array) as unknown[],
+          children: expect.any(Array) as unknown[],
+        },
+      });
+    });
+
+    it('should extract only typeSymbol content from TypeScript definitions', async () => {
+      // Arrange
+      const id = 'https://mapcolonies.com/common/boilerplate/v1';
+
+      // Act
+      const metadata = await schemaManager.getFullSchemaMetadata(id);
+
+      // Assert
+      expect(metadata.typeContent).not.toBeNull();
+      if (metadata.typeContent !== null && metadata.typeContent !== undefined) {
+        const content = metadata.typeContent;
+
+        // Should not contain import statements or declarations
+        expect(content).not.toContain('import {');
+        expect(content).not.toContain('declare const');
+        expect(content).not.toContain('export type');
+
+        // Should not contain readonly fields that come after typeSymbol
+        expect(content).not.toContain('readonly description:');
+        expect(content).not.toContain('readonly $id:');
+        expect(content).not.toContain('readonly type:');
+
+        // Should start and end with braces
+        expect(content.trimStart()).toMatch(/^\{/);
+        expect(content.trimEnd()).toMatch(/\}$/);
+
+        // Should not start with 'import', 'declare', or 'readonly'
+        expect(content.trimStart()).not.toMatch(/^(import|declare|export|readonly)/);
+      }
     });
   });
 });

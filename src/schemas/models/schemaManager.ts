@@ -3,12 +3,14 @@ import fs from 'node:fs';
 import fsPromise from 'node:fs/promises';
 import { type Logger } from '@map-colonies/js-logger';
 import { inject, injectable } from 'tsyringe';
-import { JSONSchema, $RefParser } from '@apidevtools/json-schema-ref-parser';
-import { components } from '@openapi';
+import type { JSONSchema } from '@apidevtools/json-schema-ref-parser';
+import { $RefParser } from '@apidevtools/json-schema-ref-parser';
+import type { components } from '@openapi';
 import { SERVICES } from '@common/constants';
 import { setSpanAttributes, withSpan } from '@common/tracing';
 import { enrichLogContext } from '@common/logger';
 import { SchemaNotFoundError, SchemaPathIsInvalidError } from './errors';
+import type { SchemaIndexEntry, EnvVar, FullSchemaMetadata, SchemaReference } from './types';
 
 const schemasPackageResolvedPath = require.resolve('@map-colonies/schemas');
 const schemasBasePath = schemasPackageResolvedPath.substring(0, schemasPackageResolvedPath.lastIndexOf('/'));
@@ -20,11 +22,16 @@ type ArrayElement<ArrayType extends readonly unknown[]> = ArrayType extends read
 const SCHEMA_DOMAIN = 'https://mapcolonies.com/';
 const SCHEMA_TRACING_CACHE_KEY = 'schema.cache';
 const LAST_ARRAY_ELEMENT = -1;
+const INTERNAL_REF_PREFIX_LENGTH = 2; // Length of '#/' prefix in internal references
+const NOT_FOUND = -1; // Return value from indexOf when string is not found
 
 export { schemasBasePath };
 @injectable()
 export class SchemaManager {
   private readonly schemaMap: Map<string, JSONSchema> = new Map();
+  private readonly fullSchemaCache: Map<string, FullSchemaMetadata> = new Map();
+  private schemaIndexCache: { schemas: SchemaIndexEntry[] } | null = null;
+
   public constructor(@inject(SERVICES.LOGGER) private readonly logger: Logger) {}
 
   // TODO: still undecided between input being id or path. will decide later
@@ -68,26 +75,198 @@ export class SchemaManager {
     return this.createSchemaTreeNode(schemasBasePath);
   }
 
-  @withSpan()
-  private async createSchemaTreeNode(dirPath: string): Promise<components['schemas']['schemaTree']> {
-    const dir = (await fsPromise.readdir(dirPath, { withFileTypes: true })).filter(
-      (dirent) => dirent.isDirectory() || (dirent.isFile() && dirent.name.endsWith('.schema.json'))
-    );
+  // New methods for schema index and full schema metadata
 
-    const resPromises = dir.map<Promise<ArrayElement<components['schemas']['schemaTree']>>>(async (dirent) => {
-      if (dirent.isDirectory()) {
-        return { name: dirent.name, children: await this.createSchemaTreeNode(path.join(dirPath, dirent.name)) };
+  /**
+   * Returns searchable index of all schemas.
+   * Frontend builds FlexSearch index client-side from this data.
+   * With ~500 schemas (~100KB), client-side indexing is fast and simple.
+   */
+  @withSpan()
+  public async getSchemaIndex(): Promise<{ schemas: SchemaIndexEntry[] }> {
+    if (this.schemaIndexCache) {
+      this.logger.debug('schema index loaded from cache');
+      return this.schemaIndexCache;
+    }
+
+    this.logger.info({ msg: 'building schema index' });
+    const schemas = await this.buildSchemaIndex();
+
+    this.schemaIndexCache = { schemas };
+    return this.schemaIndexCache;
+  }
+
+  @withSpan()
+  public async getFullSchemaMetadata(schemaId: string): Promise<FullSchemaMetadata> {
+    if (this.fullSchemaCache.has(schemaId)) {
+      this.logger.debug('full schema metadata loaded from cache');
+      return this.fullSchemaCache.get(schemaId) as FullSchemaMetadata;
+    }
+
+    this.logger.info({ msg: 'generating full schema metadata', schemaId });
+
+    const rawContent = await this.getSchema(schemaId, false);
+    const dereferencedContent = await this.getSchema(schemaId, true);
+
+    const typeContent = await this.getTypeScriptForSchema(schemaId);
+    const envVars = this.extractEnvVars(rawContent);
+
+    // Get parents and children recursively
+    const parents = await this.getParentSchemas(schemaId);
+    const children = await this.getChildSchemas(schemaId);
+
+    // Parse metadata from schemaId
+    const schemaPath = schemaId.replace(SCHEMA_DOMAIN, '');
+    const pathParts = schemaPath.split('/');
+    const category = pathParts[0] ?? 'unknown';
+    const version = pathParts[pathParts.length - 1] ?? 'v1';
+
+    const metadata: FullSchemaMetadata = {
+      id: schemaId,
+      name: (rawContent.title as string) || this.extractNameFromId(schemaId),
+      path: schemaPath,
+      version,
+      category,
+      description: rawContent.description,
+      title: rawContent.title,
+      rawContent: rawContent as unknown as Record<string, unknown>,
+      dereferencedContent: dereferencedContent as unknown as Record<string, unknown>,
+      typeContent,
+      dependencies: {
+        parents,
+        children,
+      },
+      envVars,
+    };
+
+    this.fullSchemaCache.set(schemaId, metadata);
+    return metadata;
+  }
+
+  /**
+   * Extracts only external references from a schema (for finding children)
+   */
+  @withSpan()
+  private extractExternalRefs(schema: JSONSchema): string[] {
+    const external = new Set<string>();
+
+    const traverse = (obj: unknown): void => {
+      if (obj === undefined || typeof obj !== 'object') {
+        return;
       }
 
-      return {
-        name: dirent.name,
-        id:
-          SCHEMA_DOMAIN.slice(0, LAST_ARRAY_ELEMENT) +
-          path.posix.join(dirPath.split(schemasBasePath)[1] as string, dirent.name.split('.')[0] as string),
-      };
-    });
+      const objRecord = obj as Record<string, unknown>;
 
-    return Promise.all(resPromises);
+      if (objRecord.$ref !== undefined && typeof objRecord.$ref === 'string') {
+        if (objRecord.$ref.startsWith('https://')) {
+          external.add(objRecord.$ref);
+        }
+      }
+
+      // Recursively traverse all properties
+      for (const key in objRecord) {
+        if (Array.isArray(objRecord[key])) {
+          (objRecord[key] as unknown[]).forEach(traverse);
+        } else if (objRecord[key] !== null && typeof objRecord[key] === 'object') {
+          traverse(objRecord[key]);
+        }
+      }
+    };
+
+    traverse(schema);
+    return Array.from(external);
+  }
+
+  /**
+   * Recursively gets all parent schemas (schemas that reference this schema)
+   * Returns a nested tree structure
+   */
+  @withSpan()
+  private async getParentSchemas(schemaId: string, visited: Set<string> = new Set()): Promise<SchemaReference[]> {
+    if (visited.has(schemaId)) {
+      return [];
+    }
+    visited.add(schemaId);
+
+    const parents: SchemaReference[] = [];
+    const allSchemas = await this.getSchemaIndex();
+
+    // Check each schema to see if it references our target schema
+    for (const schema of allSchemas.schemas) {
+      if (schema.id === schemaId) {
+        continue; // Skip self
+      }
+
+      try {
+        const schemaContent = await this.getSchema(schema.id, false);
+        const externalRefs = this.extractExternalRefs(schemaContent);
+
+        // Check if this schema has our target as an external dependency
+        if (externalRefs.includes(schemaId)) {
+          const parentNode: SchemaReference = {
+            id: schema.id,
+            name: schema.name,
+          };
+
+          // Recursively get this parent's parents
+          const ancestorParents = await this.getParentSchemas(schema.id, visited);
+          if (ancestorParents.length > 0) {
+            parentNode.parents = ancestorParents;
+          }
+
+          parents.push(parentNode);
+        }
+      } catch (err) {
+        // Skip schemas that can't be loaded
+        this.logger.warn({ msg: 'Failed to load schema while finding parents', schemaId: schema.id, err });
+      }
+    }
+
+    return parents;
+  }
+
+  /**
+   * Recursively gets all child schemas (schemas that this schema references)
+   * Returns a nested tree structure
+   */
+  @withSpan()
+  private async getChildSchemas(schemaId: string, visited: Set<string> = new Set()): Promise<SchemaReference[]> {
+    if (visited.has(schemaId)) {
+      return [];
+    }
+    visited.add(schemaId);
+
+    const children: SchemaReference[] = [];
+
+    try {
+      const schemaContent = await this.getSchema(schemaId, false);
+      const externalRefs = this.extractExternalRefs(schemaContent);
+
+      // Process all external dependencies (children)
+      for (const childId of externalRefs) {
+        try {
+          const childSchema = await this.getSchema(childId, false);
+          const childNode: SchemaReference = {
+            id: childId,
+            name: (childSchema.title as string) || this.extractNameFromId(childId),
+          };
+
+          // Recursively get this child's children
+          const descendantChildren = await this.getChildSchemas(childId, visited);
+          if (descendantChildren.length > 0) {
+            childNode.children = descendantChildren;
+          }
+
+          children.push(childNode);
+        } catch (err) {
+          this.logger.warn({ msg: 'Failed to load child schema', schemaId: childId, err });
+        }
+      }
+    } catch (err) {
+      this.logger.warn({ msg: 'Failed to extract dependencies for schema', schemaId, err });
+    }
+
+    return children;
   }
 
   @withSpan()
@@ -113,5 +292,233 @@ export class SchemaManager {
       this.schemaMap.set(cacheKey, schemaContent);
     }
     return schemaContent;
+  }
+
+  @withSpan()
+  private async createSchemaTreeNode(dirPath: string): Promise<components['schemas']['schemaTree']> {
+    const dir = (await fsPromise.readdir(dirPath, { withFileTypes: true })).filter(
+      (dirent) => dirent.isDirectory() || (dirent.isFile() && dirent.name.endsWith('.schema.json'))
+    );
+
+    const resPromises = dir.map<Promise<ArrayElement<components['schemas']['schemaTree']>>>(async (dirent) => {
+      if (dirent.isDirectory()) {
+        return { name: dirent.name, children: await this.createSchemaTreeNode(path.join(dirPath, dirent.name)) };
+      }
+
+      return {
+        name: dirent.name,
+        id:
+          SCHEMA_DOMAIN.slice(0, LAST_ARRAY_ELEMENT) +
+          path.posix.join(dirPath.split(schemasBasePath)[1] as string, dirent.name.split('.')[0] as string),
+      };
+    });
+
+    return Promise.all(resPromises);
+  }
+
+  @withSpan()
+  private async buildSchemaIndex(): Promise<SchemaIndexEntry[]> {
+    const schemas: SchemaIndexEntry[] = [];
+
+    const collectSchemas = async (dirPath: string, relativePath = ''): Promise<void> => {
+      const entries = await fsPromise.readdir(dirPath, { withFileTypes: true });
+
+      for (const entry of entries) {
+        const entryPath = path.join(dirPath, entry.name);
+        const entryRelativePath = relativePath ? path.posix.join(relativePath, entry.name) : entry.name;
+
+        if (entry.isDirectory()) {
+          await collectSchemas(entryPath, entryRelativePath);
+        } else if (entry.isFile() && entry.name.endsWith('.schema.json')) {
+          try {
+            const schemaContent = JSON.parse(await fsPromise.readFile(entryPath, { encoding: 'utf-8' })) as JSONSchema;
+            const schemaId = schemaContent.$id as string;
+
+            if (schemaId.startsWith(SCHEMA_DOMAIN)) {
+              const schemaPath = schemaId.replace(SCHEMA_DOMAIN, '');
+              const pathParts = schemaPath.split('/');
+              const category = pathParts[0] ?? 'unknown';
+              const version = pathParts[pathParts.length - 1] ?? 'v1';
+
+              schemas.push({
+                id: schemaId,
+                name: (schemaContent.title as string) || this.extractNameFromId(schemaId),
+                path: schemaPath,
+                version,
+                description: schemaContent.description,
+                category,
+                title: schemaContent.title,
+              });
+            }
+          } catch (err) {
+            this.logger.warn({ msg: 'Failed to parse schema file', path: entryPath, err });
+          }
+        }
+      }
+    };
+
+    await collectSchemas(schemasBasePath);
+    return schemas;
+  }
+
+  @withSpan()
+  private async getTypeScriptForSchema(schemaId: string): Promise<string | null> {
+    try {
+      const schemaPath = schemaId.replace(SCHEMA_DOMAIN, '');
+      const dtsPath = path.join(schemasBasePath, schemaPath + '.schema.d.ts');
+
+      if (fs.existsSync(dtsPath)) {
+        const fullContent = await fsPromise.readFile(dtsPath, { encoding: 'utf-8' });
+
+        // Extract only the typeSymbol content by matching balanced braces
+        const typeSymbolStart = fullContent.indexOf('readonly [typeSymbol]: {');
+        if (typeSymbolStart !== NOT_FOUND) {
+          // Start after the opening brace
+          let braceCount = 1;
+          let pos = fullContent.indexOf('{', typeSymbolStart + 'readonly [typeSymbol]: '.length);
+          pos++; // Move past the opening brace
+
+          // Find the matching closing brace
+          while (pos < fullContent.length && braceCount > 0) {
+            if (fullContent[pos] === '{') {
+              braceCount++;
+            } else if (fullContent[pos] === '}') {
+              braceCount--;
+            }
+            pos++;
+          }
+
+          if (braceCount === 0) {
+            // Extract content including the braces
+            const startPos = fullContent.indexOf('{', typeSymbolStart + 'readonly [typeSymbol]: '.length);
+            const endPos = pos; // pos is now after the closing brace
+            return fullContent.substring(startPos, endPos);
+          }
+        }
+
+        // Fallback: return full content if pattern not found
+        this.logger.debug({ msg: 'Could not extract typeSymbol, returning full content', path: dtsPath });
+        return fullContent;
+      }
+
+      this.logger.debug({ msg: 'TypeScript definition file not found', path: dtsPath });
+      return null;
+    } catch (err) {
+      this.logger.warn({ msg: 'Failed to read TypeScript definition', schemaId, err });
+      return null;
+    }
+  }
+
+  @withSpan()
+  private extractEnvVars(
+    schema: JSONSchema,
+    pathPrefix = '',
+    requiredFields: Set<string> = new Set(),
+    visitedRefs: Set<string> = new Set()
+  ): EnvVar[] {
+    const envVars: EnvVar[] = [];
+
+    if (typeof schema !== 'object') return envVars;
+
+    const schemaObj = schema as Record<string, unknown>;
+
+    // Handle $ref - resolve and recurse
+    if (schemaObj.$ref !== undefined && typeof schemaObj.$ref === 'string') {
+      if (visitedRefs.has(schemaObj.$ref)) return envVars;
+      visitedRefs.add(schemaObj.$ref);
+
+      const resolvedSchema = this.resolveRef(schemaObj.$ref, schema);
+      if (resolvedSchema) {
+        const refVars = this.extractEnvVars(resolvedSchema, pathPrefix, requiredFields, visitedRefs);
+
+        // Tag with refLink if external
+        if (schemaObj.$ref.startsWith('https://')) {
+          refVars.forEach((v) => (v.refLink = schemaObj.$ref as string));
+        }
+
+        envVars.push(...refVars);
+      }
+    }
+
+    // Check current level for x-env-value
+    if (schemaObj['x-env-value'] !== undefined) {
+      const propertyName = pathPrefix.split('.').pop() ?? pathPrefix;
+      envVars.push({
+        envVariable: schemaObj['x-env-value'] as string,
+        configPath: pathPrefix,
+        format: (schemaObj['x-env-format'] as string) || (schemaObj.format as string),
+        type: (schemaObj.type as string) || 'any',
+        required: requiredFields.has(propertyName),
+        description: schemaObj.description as string | undefined,
+        default: schemaObj.default,
+      });
+    }
+
+    // Handle allOf, oneOf, anyOf
+    ['allOf', 'oneOf', 'anyOf'].forEach((key) => {
+      if (Array.isArray(schemaObj[key])) {
+        (schemaObj[key] as JSONSchema[]).forEach((subSchema) => {
+          envVars.push(...this.extractEnvVars(subSchema, pathPrefix, requiredFields, visitedRefs));
+        });
+      }
+    });
+
+    // Recursively process properties
+    if (schemaObj.properties !== undefined && typeof schemaObj.properties === 'object') {
+      const required = new Set(Array.isArray(schemaObj.required) ? (schemaObj.required as string[]) : []);
+      const properties = schemaObj.properties as Record<string, JSONSchema>;
+
+      Object.entries(properties).forEach(([propName, propSchema]) => {
+        const newPath = pathPrefix ? `${pathPrefix}.${propName}` : propName;
+        envVars.push(...this.extractEnvVars(propSchema, newPath, required, visitedRefs));
+      });
+    }
+
+    // Process definitions
+    if (schemaObj.definitions !== undefined && typeof schemaObj.definitions === 'object') {
+      const definitions = schemaObj.definitions as Record<string, JSONSchema>;
+      Object.entries(definitions).forEach(([, defSchema]) => {
+        envVars.push(...this.extractEnvVars(defSchema, pathPrefix, requiredFields, visitedRefs));
+      });
+    }
+
+    return envVars;
+  }
+
+  @withSpan()
+  private resolveRef(ref: string, rootSchema: JSONSchema): JSONSchema | null {
+    if (ref.startsWith('#/')) {
+      // Internal reference
+      const pathSegments = ref.substring(INTERNAL_REF_PREFIX_LENGTH).split('/');
+      let result: unknown = rootSchema;
+      for (const segment of pathSegments) {
+        if (result !== undefined && typeof result === 'object') {
+          result = (result as Record<string, unknown>)[segment];
+        } else {
+          return null;
+        }
+      }
+      return result as JSONSchema;
+    } else if (ref.startsWith('https://')) {
+      // External reference - load that schema synchronously from cache or file
+      try {
+        const schemaPath = ref.replace(SCHEMA_DOMAIN, '');
+        const fullPath = path.join(schemasBasePath, schemaPath + '.schema.json');
+        if (fs.existsSync(fullPath)) {
+          const content = fs.readFileSync(fullPath, { encoding: 'utf-8' });
+          return JSON.parse(content) as JSONSchema;
+        }
+      } catch (err) {
+        this.logger.warn({ msg: 'Failed to resolve external ref', ref, err });
+      }
+    }
+    return null;
+  }
+
+  private extractNameFromId(schemaId: string): string {
+    const pathPart = schemaId.replace(SCHEMA_DOMAIN, '');
+    const parts = pathPart.split('/');
+    // Convert path like "common/redis/v1" to "commonRedisV1"
+    return parts.map((part, index) => (index === 0 ? part : part.charAt(0).toUpperCase() + part.slice(1))).join('');
   }
 }

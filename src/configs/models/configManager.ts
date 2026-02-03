@@ -4,7 +4,8 @@ import { type Logger } from '@map-colonies/js-logger';
 import { inject, injectable } from 'tsyringe';
 import { Clone } from '@sinclair/typebox/value';
 import pointer, { type JsonObject } from 'json-pointer';
-import { parseISO } from 'date-fns';
+import { formatISO, parseISO } from 'date-fns';
+import { createCache } from 'async-cache-dedupe';
 import { paths, components } from '@openapi';
 import type { Prettify } from '@common/interfaces';
 import { SERVICES } from '@common/constants';
@@ -12,12 +13,14 @@ import { enrichLogContext } from '@common/logger';
 import { setSpanAttributes, withSpan } from '@common/tracing';
 import { filesTreeGenerator, removeSchemaVersion } from '@common/utils';
 import { ConfigRepository, ConfigRefResponse, ConfigSearchParams, SqlPaginationParams } from '../repositories/configRepository';
-import { schemasBasePath } from '../../schemas/models/schemaManager';
+import { SchemaManager, schemasBasePath } from '../../schemas/models/schemaManager';
+import type { EnvVar } from '../../schemas/models/types';
 import { Config, SortOption } from './config';
 import { Validator } from './configValidator';
 import { ConfigNotFoundError, ConfigSchemaMismatchError, ConfigValidationError, ConfigVersionMismatchError } from './errors';
 import { ConfigReference } from './configReference';
 import { getConfigCacheKey, HashPropagationHelper } from './hashPropagationHelpers';
+import type { ConfigFullMetadata, ConfigReference as ConfigReferenceType, ConfigStats, EnvVarWithValue } from './types';
 
 type GetConfigOptions = Prettify<Omit<NonNullable<paths['/config']['get']['parameters']['query']>, 'sort'> & { sort?: SortOption[] }>;
 
@@ -26,14 +29,32 @@ type DefaultConfigToInsert = Parameters<ConfigManager['createConfig']>[0] & {
   visited: boolean;
 };
 
+// Constants for configuration metadata
+const MAX_RECURSION_DEPTH = 2;
+const NOT_FOUND_INDEX = -1;
+
 @injectable()
 export class ConfigManager {
+  private readonly fullConfigCache: ReturnType<typeof createCache>;
+
   public constructor(
     @inject(SERVICES.LOGGER) private readonly logger: Logger,
     @inject(ConfigRepository) private readonly configRepository: ConfigRepository,
     @inject(Validator) private readonly configValidator: Validator,
-    @inject(HashPropagationHelper) private readonly hashPropagationHelper: HashPropagationHelper
-  ) {}
+    @inject(HashPropagationHelper) private readonly hashPropagationHelper: HashPropagationHelper,
+    @inject(SchemaManager) private readonly schemaManager: SchemaManager
+  ) {
+    // Initialize async-cache-dedupe for full config metadata
+    this.fullConfigCache = createCache({
+      ttl: 300, // 5 minutes in seconds
+      storage: { type: 'memory' },
+    });
+
+    // Define cached function for full config metadata
+    this.fullConfigCache.define('getMetadata', async ({ name, schemaId, version }: { name: string; schemaId: string; version?: number }) => {
+      return this.generateFullConfigMetadata(name, schemaId, version);
+    });
+  }
 
   @withSpan()
   public async getConfig(name: string, schemaId: string, version?: number, shouldDereferenceConfig?: boolean): Promise<Config> {
@@ -520,5 +541,463 @@ export class ConfigManager {
 
     await this.createConfig(config);
     this.logger.info(`Inserted default config ${name}`);
+  }
+
+  /**
+   * Calculates statistics about a config
+   */
+  @withSpan()
+  private calculateConfigStats(config: object, refs: ConfigReference[]): ConfigStats {
+    const jsonString = JSON.stringify(config);
+
+    return {
+      configSize: Buffer.byteLength(jsonString, 'utf8'),
+      keyCount: this.countKeys(config),
+      refCount: refs.length,
+      depth: this.calculateDepth(config),
+    };
+  }
+
+  /**
+   * Recursively counts all keys in an object
+   */
+  private countKeys(obj: unknown): number {
+    if (typeof obj !== 'object' || obj === null) {
+      return 0;
+    }
+
+    let count = 0;
+
+    if (Array.isArray(obj)) {
+      for (const item of obj) {
+        count += this.countKeys(item);
+      }
+    } else {
+      for (const key in obj) {
+        count++; // Count this key
+        count += this.countKeys((obj as Record<string, unknown>)[key]);
+      }
+    }
+
+    return count;
+  }
+
+  /**
+   * Calculates maximum nesting depth of an object
+   */
+  private calculateDepth(obj: unknown, currentDepth: number = 0): number {
+    if (typeof obj !== 'object' || obj === null) {
+      return currentDepth;
+    }
+
+    let maxDepth = currentDepth;
+
+    if (Array.isArray(obj)) {
+      for (const item of obj) {
+        maxDepth = Math.max(maxDepth, this.calculateDepth(item, currentDepth + 1));
+      }
+    } else {
+      for (const key in obj) {
+        maxDepth = Math.max(maxDepth, this.calculateDepth((obj as Record<string, unknown>)[key], currentDepth + 1));
+      }
+    }
+
+    return maxDepth;
+  }
+
+  /**
+   * Applies schema defaults to a config object
+   * Uses AJV's useDefaults feature (already configured in Validator)
+   */
+  @withSpan()
+  private async applySchemaDefaults(config: object, schemaId: string): Promise<object> {
+    const configCopy = Clone(config);
+
+    // Validate with AJV - this mutates configCopy to fill in defaults
+    // due to useDefaults: true in Validator constructor
+    await this.configValidator.isValid(schemaId, configCopy);
+
+    // configCopy now has defaults applied
+    return configCopy;
+  }
+
+  /**
+   * Enriches env var data with current actual values from the config
+   */
+  private enrichEnvVarsWithCurrentValues(envVars: EnvVar[], configWithDefaults: object): EnvVarWithValue[] {
+    return envVars.map((envVar) => {
+      const actualValue = this.getValueAtPath(configWithDefaults, envVar.configPath);
+
+      // Determine if using default or config-provided value
+      const isUsingDefault = JSON.stringify(actualValue) === JSON.stringify(envVar.default);
+
+      return {
+        ...envVar,
+        currentValue: actualValue,
+        valueSource: isUsingDefault ? 'default' : 'config',
+      };
+    });
+  }
+
+  /**
+   * Retrieves value at a JSON path like "database.host"
+   */
+  private getValueAtPath(obj: unknown, path: string): unknown {
+    if (!path) {
+      return obj;
+    }
+
+    const parts = path.split('.');
+    let current = obj;
+
+    for (const part of parts) {
+      if (typeof current === 'object' && current !== null && part in current) {
+        current = (current as Record<string, unknown>)[part];
+      } else {
+        return undefined;
+      }
+    }
+
+    return current;
+  }
+
+  /**
+   * Extracts human-readable name from schema ID
+   * Example: "https://mapcolonies.com/common/db/v1" → "common.db"
+   */
+  private extractNameFromSchemaId(schemaId: string): string {
+    const parts = schemaId.replace('https://mapcolonies.com/', '').split('/');
+    const EXCLUDE_LAST_ELEMENT = -1;
+    return parts.slice(0, EXCLUDE_LAST_ELEMENT).join('.');
+  }
+
+  /**
+   * Extracts version from schema ID
+   * Example: "https://mapcolonies.com/common/db/v1" → "v1"
+   */
+  private extractVersionFromSchemaId(schemaId: string): string {
+    const parts = schemaId.split('/');
+    const lastIndex = parts.length + NOT_FOUND_INDEX;
+    return parts[lastIndex] ?? 'v1';
+  }
+
+  /**
+   * Extracts category from schema ID
+   * Example: "https://mapcolonies.com/common/db/v1" → "common"
+   */
+  private extractCategoryFromSchemaId(schemaId: string): string {
+    const parts = schemaId.replace('https://mapcolonies.com/', '').split('/');
+    return parts[0] ?? 'unknown';
+  }
+
+  /**
+   * Builds a ConfigReference node from one or more config versions
+   * Merges multiple versions into a single node with version array
+   */
+  private buildConfigReferenceNode(
+    configs: { configName: string; version: number; schemaId: string; isLatest: boolean; createdAt?: Date; createdBy?: string; hash?: string }[]
+  ): ConfigReferenceType {
+    if (configs.length === 1) {
+      // Single version - simple node
+      return {
+        configName: configs[0]!.configName,
+        version: configs[0]!.version,
+        schemaId: configs[0]!.schemaId,
+        isLatest: configs[0]!.isLatest,
+      };
+    }
+
+    // Multiple versions - merge them
+    const firstConfig = configs[0]!;
+    return {
+      configName: firstConfig.configName,
+      version: configs.map((c) => c.version), // Array of versions
+      schemaId: firstConfig.schemaId,
+      isLatest: configs.some((c) => c.isLatest),
+      versions: configs
+        .filter((c) => c.createdAt !== undefined && c.createdBy !== undefined && c.hash !== undefined)
+        .map((c) => ({
+          version: c.version,
+          createdAt: formatISO(c.createdAt!),
+          createdBy: c.createdBy!,
+          isLatest: c.isLatest,
+          hash: c.hash!,
+        })),
+    } as ConfigReferenceType;
+  }
+
+  /**
+   * Recursively gets child configs (configs that this config references)
+   * Returns a nested tree structure with depth limit
+   * Pattern: Based on schemaManager.getChildSchemas()
+   */
+  @withSpan()
+  private async getChildConfigs(
+    configName: string,
+    schemaId: string,
+    version: number,
+    visited: Set<string> = new Set(),
+    currentDepth: number = 0,
+    maxDepth: number = MAX_RECURSION_DEPTH
+  ): Promise<ConfigReferenceType[]> {
+    // Stop at max depth
+    if (currentDepth >= maxDepth) {
+      return [];
+    }
+
+    // Prevent circular dependencies
+    const cacheKey = `${configName}:${schemaId}:${version}`;
+    if (visited.has(cacheKey)) {
+      return [];
+    }
+    visited.add(cacheKey);
+
+    const children: ConfigReferenceType[] = [];
+
+    try {
+      // Get the config
+      const config = await this.configRepository.getConfig(configName, schemaId, version);
+      if (!config) {
+        return [];
+      }
+
+      // Extract refs from this config
+      const refs = this.listConfigRefs(config.config);
+      if (refs.length === 0) {
+        return [];
+      }
+
+      // Get the actual referenced configs (non-recursive)
+      const resolvedRefs = await this.configRepository.getConfigRefs(refs);
+
+      // Group by configName + schemaId to merge versions
+      const groupedRefs = new Map<string, typeof resolvedRefs>();
+      for (const ref of resolvedRefs) {
+        const key = `${ref.configName}:${ref.schemaId}`;
+        const existing = groupedRefs.get(key) ?? [];
+        existing.push(ref);
+        groupedRefs.set(key, existing);
+      }
+
+      // Build tree nodes with version merging
+      for (const [, refGroup] of groupedRefs) {
+        const firstRef = refGroup[0]!;
+        const childNode = this.buildConfigReferenceNode(refGroup);
+
+        // Recursively get this child's children (using first ref's version)
+        const descendantChildren = await this.getChildConfigs(
+          firstRef.configName,
+          firstRef.schemaId,
+          firstRef.version,
+          visited,
+          currentDepth + 1,
+          maxDepth
+        );
+
+        if (descendantChildren.length > 0) {
+          childNode.children = descendantChildren;
+        }
+
+        children.push(childNode);
+      }
+    } catch (err) {
+      this.logger.warn({
+        msg: 'Failed to extract child configs',
+        configName,
+        schemaId,
+        version,
+        err,
+      });
+    }
+
+    return children;
+  }
+
+  /**
+   * Recursively gets parent configs (configs that reference this config)
+   * Returns a nested tree structure with depth limit
+   * Pattern: Based on schemaManager.getParentSchemas()
+   */
+  @withSpan()
+  private async getParentConfigs(
+    configName: string,
+    schemaId: string,
+    version: number,
+    visited: Set<string> = new Set(),
+    currentDepth: number = 0,
+    maxDepth: number = MAX_RECURSION_DEPTH
+  ): Promise<ConfigReferenceType[]> {
+    // Stop at max depth
+    if (currentDepth >= maxDepth) {
+      return [];
+    }
+
+    // Prevent circular dependencies
+    const cacheKey = `${configName}:${schemaId}:${version}`;
+    if (visited.has(cacheKey)) {
+      return [];
+    }
+    visited.add(cacheKey);
+
+    const parents: ConfigReferenceType[] = [];
+
+    try {
+      // Use existing repository method to get direct parents
+      const directParents = await this.configRepository.getParentConfigs(configName, schemaId, version);
+
+      if (directParents.length === 0) {
+        return [];
+      }
+
+      // Group by configName + schemaId to merge versions
+      const groupedParents = new Map<string, typeof directParents>();
+      for (const parent of directParents) {
+        const key = `${parent.configName}:${parent.schemaId}`;
+        const existing = groupedParents.get(key) ?? [];
+        existing.push(parent);
+        groupedParents.set(key, existing);
+      }
+
+      // Build tree nodes with version merging
+      for (const [, parentGroup] of groupedParents) {
+        const firstParent = parentGroup[0]!;
+        const parentNode = this.buildConfigReferenceNode(parentGroup);
+
+        // Recursively get this parent's parents (ancestors)
+        const ancestorParents = await this.getParentConfigs(
+          firstParent.configName,
+          firstParent.schemaId,
+          firstParent.version,
+          visited,
+          currentDepth + 1,
+          maxDepth
+        );
+
+        if (ancestorParents.length > 0) {
+          parentNode.parents = ancestorParents;
+        }
+
+        parents.push(parentNode);
+      }
+    } catch (err) {
+      this.logger.warn({
+        msg: 'Failed to find parent configs',
+        configName,
+        schemaId,
+        version,
+        err,
+      });
+    }
+
+    return parents;
+  }
+
+  /**
+   * Generate comprehensive config metadata (uncached)
+   * Internal method used by cached getFullConfigMetadata
+   */
+  @withSpan()
+  private async generateFullConfigMetadata(name: string, schemaId: string, version?: number): Promise<ConfigFullMetadata> {
+    this.logger.info({ msg: 'Generating full config metadata', name, schemaId, version });
+
+    // 1. Fetch raw and resolved config in parallel
+    const [rawConfig, resolvedResult] = await Promise.all([
+      this.getConfig(name, schemaId, version, false),
+      this.configRepository.getConfigRecursive(name, schemaId, version),
+    ]);
+
+    if (!resolvedResult) {
+      throw new ConfigNotFoundError('Config not found');
+    }
+
+    const [resolvedConfigData, refs] = resolvedResult;
+
+    // Apply refs to get fully resolved config
+    const resolvedConfig = Clone(resolvedConfigData.config);
+    if (refs.length > 0) {
+      this.replaceRefs(resolvedConfig, refs);
+    }
+
+    // 2. Apply schema defaults to resolved config
+    const configWithDefaults = await this.applySchemaDefaults(resolvedConfig, schemaId);
+
+    // 3. Fetch additional data in parallel
+    const [allVersions, schema, childTree, parentTree] = await Promise.all([
+      this.configRepository.getConfigs({ configName: name, schemaId }, { limit: 1000, offset: 0 }),
+      this.schemaManager.getSchema(schemaId, false),
+      this.getChildConfigs(name, schemaId, rawConfig.version, new Set(), 0, MAX_RECURSION_DEPTH),
+      this.getParentConfigs(name, schemaId, rawConfig.version, new Set(), 0, MAX_RECURSION_DEPTH),
+    ]);
+
+    // 4. Extract and enrich env vars
+    const baseEnvVars = this.schemaManager.extractEnvVars(schema);
+    const envVars = this.enrichEnvVarsWithCurrentValues(baseEnvVars, configWithDefaults);
+
+    // 5. Calculate statistics
+    const configRefs = this.listConfigRefs(rawConfig.config);
+    const stats = this.calculateConfigStats(rawConfig.config, configRefs);
+
+    // 6. Build metadata object
+    const metadata: ConfigFullMetadata = {
+      id: `${name}:${schemaId}:${rawConfig.version}`,
+      configName: name,
+      version: rawConfig.version,
+      schemaId,
+      isLatest: rawConfig.isLatest,
+      createdAt: formatISO(rawConfig.createdAt),
+      createdBy: rawConfig.createdBy,
+      hash: rawConfig.hash,
+
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+      rawConfig: rawConfig.config as Record<string, unknown>,
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+      resolvedConfig: resolvedConfig as Record<string, unknown>,
+
+      configWithDefaults: configWithDefaults as Record<string, unknown>,
+
+      schema: {
+        id: schemaId,
+        name: this.extractNameFromSchemaId(schemaId),
+        version: this.extractVersionFromSchemaId(schemaId),
+        category: this.extractCategoryFromSchemaId(schemaId),
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+        description: schema.description as string | undefined,
+      },
+
+      dependencies: {
+        children: childTree,
+        parents: parentTree,
+      },
+
+      versions: {
+        total: allVersions.totalCount,
+        all: allVersions.configs.map((c) => ({
+          version: c.version,
+          createdAt: formatISO(c.createdAt),
+          createdBy: c.createdBy,
+          isLatest: c.isLatest,
+          hash: c.hash,
+        })),
+      },
+
+      envVars,
+      stats,
+    };
+
+    return metadata;
+  }
+
+  /**
+   * Get comprehensive config metadata for inspector page (cached)
+   * Pattern: Based on schemaManager.getFullSchemaMetadata()
+   */
+  @withSpan()
+  public async getFullConfigMetadata(name: string, schemaId: string, version?: number): Promise<ConfigFullMetadata> {
+    // Use cached function - the define() method adds getMetadata dynamically to the cache object
+    // TypeScript doesn't track this dynamic addition, so we need to cast to access the method
+    type CacheWithGetMetadata = ReturnType<typeof createCache> & {
+      getMetadata: (params: { name: string; schemaId: string; version?: number }) => Promise<ConfigFullMetadata>;
+    };
+    return (this.fullConfigCache as CacheWithGetMetadata).getMetadata({ name, schemaId, version });
   }
 }

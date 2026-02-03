@@ -410,7 +410,7 @@ export class SchemaManager {
   }
 
   @withSpan()
-  private extractEnvVars(
+  public extractEnvVars(
     schema: JSONSchema,
     pathPrefix = '',
     requiredFields: Set<string> = new Set(),

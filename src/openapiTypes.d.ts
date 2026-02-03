@@ -51,6 +51,33 @@ export type paths = {
     patch?: never;
     trace?: never;
   };
+  '/config/{name}/{version}/full': {
+    parameters: {
+      query: {
+        /** @description The id of the requested schema */
+        schemaId: components['schemas']['schemaId'];
+      };
+      header?: never;
+      path: {
+        /** @description The name of the config */
+        name: components['parameters']['ConfigNamePath'];
+        version: 'latest' | components['schemas']['version'];
+      };
+      cookie?: never;
+    };
+    /**
+     * Get comprehensive config metadata for inspector page
+     * @description Returns all data needed for config inspector including raw/resolved/defaults config, dependencies, versions, env vars, and stats. Single endpoint replaces multiple API calls.
+     */
+    get: operations['getFullConfig'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/schema': {
     parameters: {
       query?: never;
@@ -242,10 +269,18 @@ export type components = {
       /** @description Nested parent schemas (recursive) */
       parents?: components['schemas']['schemaReference'][];
     };
-    config: {
+    /** @description Core metadata fields shared by config and configFullMetadata */
+    configBaseMetadata: {
       configName: components['schemas']['configName'];
       schemaId: components['schemas']['schemaId'];
       version: components['schemas']['version'];
+      readonly createdAt: components['schemas']['createdAt'];
+      readonly createdBy: components['schemas']['createdBy'];
+      readonly isLatest?: boolean;
+      /** @description Merkle-tree hash of config body and dependencies for caching */
+      readonly hash?: string;
+    };
+    config: components['schemas']['configBaseMetadata'] & {
       /** @example {
        *       "host": "localhost",
        *       "port": 8080
@@ -253,11 +288,128 @@ export type components = {
       config: {
         [key: string]: unknown;
       };
-      readonly createdAt: components['schemas']['createdAt'];
-      readonly createdBy: components['schemas']['createdBy'];
-      readonly isLatest?: boolean;
-      /** @description Merkle-tree hash of config body and dependencies for caching */
-      readonly hash?: string;
+    };
+    /** @description Comprehensive config metadata for inspector page - extends base config metadata with additional fields */
+    configFullMetadata: components['schemas']['configBaseMetadata'] & {
+      /**
+       * @description Composite ID (configName:schemaId:version)
+       * @example database-config:https://mapcolonies.com/db/v1:2
+       */
+      id: string;
+      /** @description Config with $refs intact (as stored) - same as 'config' field from base schema */
+      rawConfig: {
+        [key: string]: unknown;
+      };
+      /** @description Config with all $refs dereferenced */
+      resolvedConfig: {
+        [key: string]: unknown;
+      };
+      /** @description Config with $refs resolved AND schema defaults applied (actual runtime values) */
+      configWithDefaults: {
+        [key: string]: unknown;
+      };
+      /** @description Lightweight schema metadata */
+      schema: {
+        /** Format: uri */
+        id: string;
+        name: string;
+        version: string;
+        category: string;
+        description?: string;
+      };
+      /** @description Recursive dependency trees (max 2 levels deep) */
+      dependencies: {
+        /** @description Configs referenced by this config (nested tree, max 2 levels) */
+        children: components['schemas']['configReference'][];
+        /** @description Configs that reference this config (nested tree, max 2 levels) */
+        parents: components['schemas']['configReference'][];
+      };
+      /** @description Version history for this config name */
+      versions: {
+        /** @description Total number of versions */
+        total: number;
+        all: components['schemas']['versionInfo'][];
+      };
+      /** @description Environment variables with current values */
+      envVars: components['schemas']['envVarWithValue'][];
+      stats: components['schemas']['configStats'];
+    };
+    /** @description Recursive tree node for config dependencies (similar to schemaReference) */
+    configReference: {
+      configName: components['schemas']['configName'];
+      /** @description Single version number or array if multiple versions merged */
+      version?: components['schemas']['version'] | components['schemas']['version'][];
+      schemaId: components['schemas']['schemaId'];
+      /** @description True if any of the versions is the latest */
+      isLatest: boolean;
+      /** @description Version details when multiple versions are merged */
+      versions?: components['schemas']['versionInfo'][];
+      /** @description Nested child configs (recursive, max 2 levels deep) */
+      children?: components['schemas']['configReference'][];
+      /** @description Nested parent configs (recursive, max 2 levels deep) */
+      parents?: components['schemas']['configReference'][];
+    };
+    /** @description Metadata about a specific config version */
+    versionInfo: {
+      version: components['schemas']['version'];
+      createdAt: components['schemas']['createdAt'];
+      createdBy: components['schemas']['createdBy'];
+      isLatest: boolean;
+      /** @description Merkle-tree hash of this version */
+      hash: string;
+    };
+    /** @description Environment variable with current actual value from resolved config */
+    envVarWithValue: {
+      /** @description Environment variable name (e.g., "DB_HOST") */
+      envVariable: string;
+      /** @description JSON path in config (e.g., "database.host") */
+      configPath: string;
+      /** @description Format hint from x-env-format or format field */
+      format?: string;
+      /** @description JSON schema type (e.g., "string", "integer") */
+      type?: string;
+      /** @description Whether this field is required by schema */
+      required?: boolean;
+      /** @description Schema description */
+      description?: string;
+      /** @description Default value from schema (any type) */
+      default?: unknown;
+      /**
+       * Format: uri
+       * @description External schema reference if this env var comes from a $ref
+       */
+      refLink?: string;
+    } & {
+      /** @description Actual value from resolved config with defaults applied */
+      currentValue?: unknown;
+      /**
+       * @description Whether value comes from schema default or config override
+       * @enum {string}
+       */
+      valueSource?: 'default' | 'config';
+    };
+    /** @description Computed statistics about config structure */
+    configStats: {
+      /**
+       * @description Byte size of config JSON
+       * @example 2048
+       */
+      configSize: number;
+      /**
+       * @description Total number of keys in config (recursive count)
+       * @example 42
+       */
+      keyCount: number;
+      /**
+       * @description Number of $ref objects in config
+       * @example 3
+       */
+      refCount: number;
+      /**
+       * @description Maximum nesting depth of config object
+       * @example 5
+       */
+      depth: number;
     };
     capabilities: {
       /** @description The version of the server */
@@ -267,6 +419,10 @@ export type components = {
       /** @description a flag that indicates if the pubsub is enabled for config change notifications */
       pubSubEnabled: boolean;
     };
+    /** @description The unique ID of the instance holding the lock */
+    callerId: string;
+    /** @description An opaque identifier for the resource/group */
+    key: string;
   };
   responses: {
     /** @description BadRequest */
@@ -486,6 +642,36 @@ export interface operations {
       500: components['responses']['500InternalServerError'];
     };
   };
+  getFullConfig: {
+    parameters: {
+      query: {
+        /** @description The id of the requested schema */
+        schemaId: components['schemas']['schemaId'];
+      };
+      header?: never;
+      path: {
+        /** @description The name of the config */
+        name: components['parameters']['ConfigNamePath'];
+        version: 'latest' | components['schemas']['version'];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['configFullMetadata'];
+        };
+      };
+      400: components['responses']['400BadRequest'];
+      404: components['responses']['404NotFound'];
+      500: components['responses']['500InternalServerError'];
+    };
+  };
   getSchema: {
     parameters: {
       query: {
@@ -565,6 +751,7 @@ export interface operations {
           };
         };
       };
+      404: components['responses']['404NotFound'];
       500: components['responses']['500InternalServerError'];
     };
   };
@@ -672,10 +859,8 @@ export interface operations {
     requestBody: {
       content: {
         'application/json': {
-          /** @description An opaque identifier for the resource/group */
-          key: string;
-          /** @description The unique ID of the instance holding the lock */
-          callerId: string;
+          key: components['schemas']['key'];
+          callerId: components['schemas']['callerId'];
           /** @description Time to live in seconds */
           ttl: number;
           /** @description Maximum number of concurrent locks for this key */
@@ -712,9 +897,9 @@ export interface operations {
       header?: never;
       path: {
         /** @description The lock key */
-        key: string;
+        key: components['schemas']['key'];
         /** @description The caller ID */
-        callerId: string;
+        callerId: components['schemas']['callerId'];
       };
       cookie?: never;
     };

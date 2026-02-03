@@ -101,6 +101,21 @@ export class ConfigController {
     }
   };
 
+  public getFullConfig: TypedRequestHandler<'/config/{name}/{version}/full', 'get'> = async (req, res, next) => {
+    const version = req.params.version !== 'latest' ? req.params.version : undefined;
+
+    try {
+      const fullMetadata = await this.manager.getFullConfigMetadata(req.params.name, req.query.schemaId, version);
+
+      return res.status(httpStatus.OK).json(fullMetadata);
+    } catch (error) {
+      if (error instanceof ConfigNotFoundError) {
+        (error as HttpError).status = httpStatus.NOT_FOUND;
+      }
+      next(error);
+    }
+  };
+
   public postConfig: TypedRequestHandler<'/config', 'post'> = async (req, res, next) => {
     try {
       enrichLogContext({ configName: req.body.configName, schemaId: req.body.schemaId });

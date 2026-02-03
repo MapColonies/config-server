@@ -12,6 +12,7 @@ export const configRouterFactory: FactoryFunction<Router> = (dependencyContainer
 
   router.get('/', controller.getConfigs);
   router.post('/', controller.postConfig);
+  router.get('/:name/:version/full', controller.getFullConfig);
   router.get('/:name/:version', controller.getConfigByVersion);
 
   return router;

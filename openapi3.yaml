@@ -729,7 +729,11 @@ components:
           required:
             - config
           properties:
-            # Re-declare properties from configBaseMetadata to satisfy additionalProperties: false
+            # NOTE: OpenAPI 3.0 limitation workaround
+            # We re-declare all properties from configBaseMetadata here because `additionalProperties: false`
+            # doesn't recognize properties inherited via $ref in allOf. This duplication only exists in the
+            # OpenAPI spec - the generated TypeScript types properly use intersection types without duplication.
+            # In OpenAPI 3.1+, we could use `unevaluatedProperties: false` instead to avoid this.
             configName:
               $ref: '#/components/schemas/configName'
             schemaId:

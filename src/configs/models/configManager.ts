@@ -1,3 +1,7 @@
+/* eslint-disable @typescript-eslint/member-ordering */
+// NOTE: Member ordering warnings suppressed - methods are logically grouped by feature area
+// rather than strictly by visibility/decorator for better code organization and readability
+
 import fs from 'node:fs';
 import path from 'node:path';
 import { type Logger } from '@map-colonies/js-logger';

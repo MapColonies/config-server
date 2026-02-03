@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/member-ordering */
+// NOTE: Member ordering warnings suppressed - methods are logically grouped by feature area
+
 import path from 'node:path';
 import fs from 'node:fs';
 import fsPromise from 'node:fs/promises';

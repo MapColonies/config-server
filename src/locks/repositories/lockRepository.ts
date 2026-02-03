@@ -1,10 +1,10 @@
-import { and, eq, lt, min, count, gt, sql } from 'drizzle-orm';
+import { and, eq, lt, min, count, sql } from 'drizzle-orm';
 import { inject, scoped, Lifecycle } from 'tsyringe';
 import type { Logger } from '@map-colonies/js-logger';
 import type { Drizzle } from '@db';
 import { SERVICES } from '@common/constants';
 import { withSpan } from '@common/tracing';
-import { locks, type Lock } from '../models/lock';
+import { locks } from '../models/lock';
 
 const MILLISECONDS_IN_SECOND = 1000;
 

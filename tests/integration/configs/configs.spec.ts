@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import 'jest-extended';
 import 'jest-openapi';
 import 'jest-sorted';

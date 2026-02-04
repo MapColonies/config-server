@@ -9,7 +9,8 @@ import { inject, injectable } from 'tsyringe';
 import { Clone } from '@sinclair/typebox/value';
 import pointer, { type JsonObject } from 'json-pointer';
 import { formatISO, parseISO } from 'date-fns';
-import { createCache } from 'async-cache-dedupe';
+import { Cache, createCache } from 'async-cache-dedupe';
+import { get } from 'lodash';
 import { paths, components } from '@openapi';
 import type { Prettify } from '@common/interfaces';
 import { SERVICES } from '@common/constants';
@@ -19,11 +20,13 @@ import { filesTreeGenerator, removeSchemaVersion } from '@common/utils';
 import { ConfigRepository, ConfigRefResponse, ConfigSearchParams, SqlPaginationParams } from '../repositories/configRepository';
 import { SchemaManager, schemasBasePath } from '../../schemas/models/schemaManager';
 import type { EnvVar } from '../../schemas/models/types';
+import { extractNameFromSchemaId, extractVersionFromSchemaId, extractCategoryFromSchemaId } from '../../schemas/models/schemaUtils';
 import { Config, SortOption } from './config';
 import { Validator } from './configValidator';
 import { ConfigNotFoundError, ConfigSchemaMismatchError, ConfigValidationError, ConfigVersionMismatchError } from './errors';
 import { ConfigReference } from './configReference';
 import { getConfigCacheKey, HashPropagationHelper } from './hashPropagationHelpers';
+import { calculateDepth, countKeys } from './configStatsHelpers';
 import type { ConfigFullMetadata, ConfigReference as ConfigReferenceType, ConfigStats, EnvVarWithValue } from './types';
 
 type GetConfigOptions = Prettify<Omit<NonNullable<paths['/config']['get']['parameters']['query']>, 'sort'> & { sort?: SortOption[] }>;
@@ -35,11 +38,12 @@ type DefaultConfigToInsert = Parameters<ConfigManager['createConfig']>[0] & {
 
 // Constants for configuration metadata
 const MAX_RECURSION_DEPTH = 2;
-const NOT_FOUND_INDEX = -1;
 
 @injectable()
 export class ConfigManager {
-  private readonly fullConfigCache: ReturnType<typeof createCache>;
+  private readonly fullConfigCache: Cache & {
+    getMetadata: (args: { name: string; schemaId: string; version?: number }) => Promise<ConfigFullMetadata>;
+  };
 
   public constructor(
     @inject(SERVICES.LOGGER) private readonly logger: Logger,
@@ -49,13 +53,13 @@ export class ConfigManager {
     @inject(SchemaManager) private readonly schemaManager: SchemaManager
   ) {
     // Initialize async-cache-dedupe for full config metadata
-    this.fullConfigCache = createCache({
+    const cache = createCache({
       ttl: 300, // 5 minutes in seconds
       storage: { type: 'memory' },
     });
 
     // Define cached function for full config metadata
-    this.fullConfigCache.define('getMetadata', async ({ name, schemaId, version }: { name: string; schemaId: string; version?: number }) => {
+    this.fullConfigCache = cache.define('getMetadata', async ({ name, schemaId, version }: { name: string; schemaId: string; version?: number }) => {
       return this.generateFullConfigMetadata(name, schemaId, version);
     });
   }
@@ -282,15 +286,6 @@ export class ConfigManager {
     }
   }
 
-  /**
-   * Calculates a Merkle-tree hash for a config based on its body and dependency hashes.
-   * Hash = SHA256(StableJSON(Body) + SortedListOf(DependencyHashes))
-   * @param configBody - The configuration body to hash
-   * @param refs - The list of config references
-   * @param resolvedRefs - The resolved config references with their hashes
-   * @returns The calculated hash as a hex string
-   */
-  @withSpan()
   /**
    * Propagates hash changes to all parent configurations that depend on the updated config.
    * Updates parent hashes in-place without creating new versions.
@@ -556,57 +551,10 @@ export class ConfigManager {
 
     return {
       configSize: Buffer.byteLength(jsonString, 'utf8'),
-      keyCount: this.countKeys(config),
+      keyCount: countKeys(config),
       refCount: refs.length,
-      depth: this.calculateDepth(config),
+      depth: calculateDepth(config),
     };
-  }
-
-  /**
-   * Recursively counts all keys in an object
-   */
-  private countKeys(obj: unknown): number {
-    if (typeof obj !== 'object' || obj === null) {
-      return 0;
-    }
-
-    let count = 0;
-
-    if (Array.isArray(obj)) {
-      for (const item of obj) {
-        count += this.countKeys(item);
-      }
-    } else {
-      for (const key in obj) {
-        count++; // Count this key
-        count += this.countKeys((obj as Record<string, unknown>)[key]);
-      }
-    }
-
-    return count;
-  }
-
-  /**
-   * Calculates maximum nesting depth of an object
-   */
-  private calculateDepth(obj: unknown, currentDepth: number = 0): number {
-    if (typeof obj !== 'object' || obj === null) {
-      return currentDepth;
-    }
-
-    let maxDepth = currentDepth;
-
-    if (Array.isArray(obj)) {
-      for (const item of obj) {
-        maxDepth = Math.max(maxDepth, this.calculateDepth(item, currentDepth + 1));
-      }
-    } else {
-      for (const key in obj) {
-        maxDepth = Math.max(maxDepth, this.calculateDepth((obj as Record<string, unknown>)[key], currentDepth + 1));
-      }
-    }
-
-    return maxDepth;
   }
 
   /**
@@ -630,7 +578,7 @@ export class ConfigManager {
    */
   private enrichEnvVarsWithCurrentValues(envVars: EnvVar[], configWithDefaults: object): EnvVarWithValue[] {
     return envVars.map((envVar) => {
-      const actualValue = this.getValueAtPath(configWithDefaults, envVar.configPath);
+      const actualValue = get(configWithDefaults, envVar.configPath) as unknown;
 
       // Determine if using default or config-provided value
       const isUsingDefault = JSON.stringify(actualValue) === JSON.stringify(envVar.default);
@@ -641,57 +589,6 @@ export class ConfigManager {
         valueSource: isUsingDefault ? 'default' : 'config',
       };
     });
-  }
-
-  /**
-   * Retrieves value at a JSON path like "database.host"
-   */
-  private getValueAtPath(obj: unknown, path: string): unknown {
-    if (!path) {
-      return obj;
-    }
-
-    const parts = path.split('.');
-    let current = obj;
-
-    for (const part of parts) {
-      if (typeof current === 'object' && current !== null && part in current) {
-        current = (current as Record<string, unknown>)[part];
-      } else {
-        return undefined;
-      }
-    }
-
-    return current;
-  }
-
-  /**
-   * Extracts human-readable name from schema ID
-   * Example: "https://mapcolonies.com/common/db/v1" → "common.db"
-   */
-  private extractNameFromSchemaId(schemaId: string): string {
-    const parts = schemaId.replace('https://mapcolonies.com/', '').split('/');
-    const EXCLUDE_LAST_ELEMENT = -1;
-    return parts.slice(0, EXCLUDE_LAST_ELEMENT).join('.');
-  }
-
-  /**
-   * Extracts version from schema ID
-   * Example: "https://mapcolonies.com/common/db/v1" → "v1"
-   */
-  private extractVersionFromSchemaId(schemaId: string): string {
-    const parts = schemaId.split('/');
-    const lastIndex = parts.length + NOT_FOUND_INDEX;
-    return parts[lastIndex] ?? 'v1';
-  }
-
-  /**
-   * Extracts category from schema ID
-   * Example: "https://mapcolonies.com/common/db/v1" → "common"
-   */
-  private extractCategoryFromSchemaId(schemaId: string): string {
-    const parts = schemaId.replace('https://mapcolonies.com/', '').split('/');
-    return parts[0] ?? 'unknown';
   }
 
   /**
@@ -951,20 +848,17 @@ export class ConfigManager {
       createdBy: rawConfig.createdBy,
       hash: rawConfig.hash,
 
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
-      rawConfig: rawConfig.config as Record<string, unknown>,
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
-      resolvedConfig: resolvedConfig as Record<string, unknown>,
+      rawConfig: rawConfig.config,
+      resolvedConfig,
 
       configWithDefaults: configWithDefaults as Record<string, unknown>,
 
       schema: {
         id: schemaId,
-        name: this.extractNameFromSchemaId(schemaId),
-        version: this.extractVersionFromSchemaId(schemaId),
-        category: this.extractCategoryFromSchemaId(schemaId),
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
-        description: schema.description as string | undefined,
+        name: extractNameFromSchemaId(schemaId),
+        version: extractVersionFromSchemaId(schemaId),
+        category: extractCategoryFromSchemaId(schemaId),
+        description: schema.description,
       },
 
       dependencies: {
@@ -992,15 +886,9 @@ export class ConfigManager {
 
   /**
    * Get comprehensive config metadata for inspector page (cached)
-   * Pattern: Based on schemaManager.getFullSchemaMetadata()
    */
   @withSpan()
   public async getFullConfigMetadata(name: string, schemaId: string, version?: number): Promise<ConfigFullMetadata> {
-    // Use cached function - the define() method adds getMetadata dynamically to the cache object
-    // TypeScript doesn't track this dynamic addition, so we need to cast to access the method
-    type CacheWithGetMetadata = ReturnType<typeof createCache> & {
-      getMetadata: (params: { name: string; schemaId: string; version?: number }) => Promise<ConfigFullMetadata>;
-    };
-    return (this.fullConfigCache as CacheWithGetMetadata).getMetadata({ name, schemaId, version });
+    return this.fullConfigCache.getMetadata({ name, schemaId, version });
   }
 }

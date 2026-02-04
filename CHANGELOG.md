@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [2.1.0](https://github.com/MapColonies/config-server/compare/v2.0.7...v2.1.0) (2026-02-02)
+
+
+### Features
+
+* add lock mechanism MAPCO-9472 ([#144](https://github.com/MapColonies/config-server/issues/144)) ([8aef090](https://github.com/MapColonies/config-server/commit/8aef0904b0caf9f7fe5070ebe75b78241d025149))
+* add support for hashing and not modified requests MAPCO-9471 ([#142](https://github.com/MapColonies/config-server/issues/142)) ([553efe3](https://github.com/MapColonies/config-server/commit/553efe39563b2cd7348a8473557e96d4450e0c53))
+* new schema endpoints ([#145](https://github.com/MapColonies/config-server/issues/145)) ([1247cd3](https://github.com/MapColonies/config-server/commit/1247cd34ed2c48ac4e139c518f8fbeb78c1713f7))
+* updated with the newest version of map-colonies packages ([#140](https://github.com/MapColonies/config-server/issues/140)) ([158a010](https://github.com/MapColonies/config-server/commit/158a01069f5e8f36d8f1ab3fe118494c3442269f))
+
+
+### Bug Fixes
+
+* add DB connection check to liveness route MAPCO-8134 ([#143](https://github.com/MapColonies/config-server/issues/143)) ([7abcce5](https://github.com/MapColonies/config-server/commit/7abcce57b08f5b4a6c50a6cccf8cbe5f5754eb39))
+* delete unnecessary pluses ([7abcce5](https://github.com/MapColonies/config-server/commit/7abcce57b08f5b4a6c50a6cccf8cbe5f5754eb39))
+
 ## [2.0.7](https://github.com/MapColonies/config-server/compare/v2.0.6...v2.0.7) (2026-01-19)
 
 

@@ -61,11 +61,11 @@ ADD CONSTRAINT "config_name_schema_id_version_pk" PRIMARY KEY ("name", "schema_i
 
 --> statement-breakpoint
 ALTER TABLE "config_server"."config_refs"
-ADD CONSTRAINT "config_refs_original_config_fk" FOREIGN KEY ("name", "schema_id", "version") REFERENCES "config_server"."config" ("name", "schema_id", "version") ON DELETE no action ON UPDATE no action;
+ADD CONSTRAINT "config_refs_original_config_fk" FOREIGN KEY ("name", "schema_id", "version") REFERENCES "config_server"."config" ("name", "schema_id", "version") ON DELETE NO ACTION ON UPDATE NO ACTION;
 
 --> statement-breakpoint
 ALTER TABLE "config_server"."config_refs"
-ADD CONSTRAINT "config_refs_child_config_fk" FOREIGN KEY ("ref_name", "ref_schema_id", "ref_version") REFERENCES "config_server"."config" ("name", "schema_id", "version") ON DELETE no action ON UPDATE no action;
+ADD CONSTRAINT "config_refs_child_config_fk" FOREIGN KEY ("ref_name", "ref_schema_id", "ref_version") REFERENCES "config_server"."config" ("name", "schema_id", "version") ON DELETE NO ACTION ON UPDATE NO ACTION;
 
 ALTER TABLE "config_server"."config"
 ADD COLUMN "config_schema_version" text DEFAULT 'v2';

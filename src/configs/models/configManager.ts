@@ -36,11 +36,11 @@ type DefaultConfigToInsert = Parameters<ConfigManager['createConfig']>[0] & {
   visited: boolean;
 };
 
-type FullConfigMetadataParams = {
+interface FullConfigMetadataParams {
   name: string;
   schemaId: string;
   version?: number;
-};
+}
 
 // Constants for configuration metadata
 const MAX_RECURSION_DEPTH = 2;

@@ -584,7 +584,8 @@ export class ConfigManager {
    */
   private enrichEnvVarsWithCurrentValues(envVars: EnvVar[], configWithDefaults: object): EnvVarWithValue[] {
     return envVars.map((envVar) => {
-      const actualValue = get(configWithDefaults, envVar.configPath) as unknown;
+      // Handle empty path (root level) - return the whole config
+      const actualValue = envVar.configPath ? (get(configWithDefaults, envVar.configPath) as unknown) : configWithDefaults;
 
       // Determine if using default or config-provided value
       const isUsingDefault = JSON.stringify(actualValue) === JSON.stringify(envVar.default);

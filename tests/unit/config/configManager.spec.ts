@@ -30,7 +30,8 @@ describe('ConfigManager', () => {
     configValidator = {} as Validator;
     hashPropagationHelper = {} as HashPropagationHelper;
     hashPropagationHelper.calculateConfigHash = vi.fn().mockReturnValue('mock-hash');
-    configManager = new ConfigManager(logger, configRepository, configValidator, hashPropagationHelper);
+    const schemaManager = {} as unknown; // Mock schema manager for tests
+    configManager = new ConfigManager(logger, configRepository, configValidator, hashPropagationHelper, schemaManager);
   });
 
   afterEach(() => {

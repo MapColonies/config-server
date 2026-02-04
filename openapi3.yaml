@@ -691,15 +691,15 @@ components:
           items:
             $ref: '#/components/schemas/schemaReference'
           description: Nested parent schemas (recursive)
-    configBaseMetadata:
+    config:
       type: object
-      description: Core metadata fields shared by config and configFullMetadata
       required:
         - configName
         - schemaId
         - version
         - createdAt
         - createdBy
+        - config
       properties:
         configName:
           $ref: '#/components/schemas/configName'
@@ -722,137 +722,122 @@ components:
           type: string
           readOnly: true
           description: Merkle-tree hash of config body and dependencies for caching
-    config:
-      allOf:
-        - $ref: '#/components/schemas/configBaseMetadata'
-        - type: object
-          required:
-            - config
-          properties:
-            # NOTE: OpenAPI 3.0 limitation workaround
-            # We re-declare all properties from configBaseMetadata here because `additionalProperties: false`
-            # doesn't recognize properties inherited via $ref in allOf. This duplication only exists in the
-            # OpenAPI spec - the generated TypeScript types properly use intersection types without duplication.
-            # In OpenAPI 3.1+, we could use `unevaluatedProperties: false` instead to avoid this.
-            configName:
-              $ref: '#/components/schemas/configName'
-            schemaId:
-              $ref: '#/components/schemas/schemaId'
-            version:
-              $ref: '#/components/schemas/version'
-            createdAt:
-              readOnly: true
-              allOf:
-                - $ref: '#/components/schemas/createdAt'
-            createdBy:
-              readOnly: true
-              allOf:
-                - $ref: '#/components/schemas/createdBy'
-            isLatest:
-              type: boolean
-              readOnly: true
-            hash:
-              type: string
-              readOnly: true
-              description: Merkle-tree hash of config body and dependencies for caching
-            # Additional property specific to config
-            config:
-              additionalProperties: true
-              example:
-                host: localhost
-                port: 8080
-          additionalProperties: false
+        config:
+          additionalProperties: true
+          example:
+            host: localhost
+            port: 8080
+      additionalProperties: false
     configFullMetadata:
-      description: Comprehensive config metadata for inspector page - extends base config metadata with additional fields
-      allOf:
-        - $ref: '#/components/schemas/configBaseMetadata'
-        - type: object
-          description: Additional metadata for inspector
+      description: Comprehensive config metadata for inspector page
+      type: object
+      required:
+        - configName
+        - schemaId
+        - version
+        - createdAt
+        - createdBy
+        - rawConfig
+        - resolvedConfig
+        - configWithDefaults
+        - schema
+        - dependencies
+        - versions
+        - envVars
+        - stats
+      additionalProperties: false
+      properties:
+        configName:
+          $ref: '#/components/schemas/configName'
+        schemaId:
+          $ref: '#/components/schemas/schemaId'
+        version:
+          $ref: '#/components/schemas/version'
+        createdAt:
+          readOnly: true
+          allOf:
+            - $ref: '#/components/schemas/createdAt'
+        createdBy:
+          readOnly: true
+          allOf:
+            - $ref: '#/components/schemas/createdBy'
+        isLatest:
+          type: boolean
+          readOnly: true
+        hash:
+          type: string
+          readOnly: true
+          description: Merkle-tree hash of config body and dependencies for caching
+        rawConfig:
+          type: object
+          additionalProperties: true
+          description: Config with $refs intact (as stored) - same as 'config' field from base schema
+        resolvedConfig:
+          type: object
+          additionalProperties: true
+          description: Config with all $refs dereferenced
+        configWithDefaults:
+          type: object
+          additionalProperties: true
+          description: Config with $refs resolved AND schema defaults applied (actual runtime values)
+        schema:
+          type: object
+          description: Lightweight schema metadata
           required:
             - id
-            - rawConfig
-            - resolvedConfig
-            - configWithDefaults
-            - schema
-            - dependencies
-            - versions
-            - envVars
-            - stats
+            - name
+            - version
+            - category
           properties:
             id:
               type: string
-              description: Composite ID (configName:schemaId:version)
-              example: 'database-config:https://mapcolonies.com/db/v1:2'
-            rawConfig:
-              type: object
-              additionalProperties: true
-              description: Config with $refs intact (as stored) - same as 'config' field from base schema
-            resolvedConfig:
-              type: object
-              additionalProperties: true
-              description: Config with all $refs dereferenced
-            configWithDefaults:
-              type: object
-              additionalProperties: true
-              description: Config with $refs resolved AND schema defaults applied (actual runtime values)
-            schema:
-              type: object
-              description: Lightweight schema metadata
-              required:
-                - id
-                - name
-                - version
-                - category
-              properties:
-                id:
-                  type: string
-                  format: uri
-                name:
-                  type: string
-                version:
-                  type: string
-                category:
-                  type: string
-                description:
-                  type: string
-            dependencies:
-              type: object
-              description: Recursive dependency trees (max 2 levels deep)
-              required:
-                - children
-                - parents
-              properties:
-                children:
-                  type: array
-                  items:
-                    $ref: '#/components/schemas/configReference'
-                  description: Configs referenced by this config (nested tree, max 2 levels)
-                parents:
-                  type: array
-                  items:
-                    $ref: '#/components/schemas/configReference'
-                  description: Configs that reference this config (nested tree, max 2 levels)
-            versions:
-              type: object
-              description: Version history for this config name
-              required:
-                - total
-                - all
-              properties:
-                total:
-                  type: integer
-                  description: Total number of versions
-                all:
-                  type: array
-                  items:
-                    $ref: '#/components/schemas/versionInfo'
-            envVars:
+              format: uri
+            name:
+              type: string
+            version:
+              type: string
+            category:
+              type: string
+            description:
+              type: string
+        dependencies:
+          type: object
+          description: Recursive dependency trees (max 2 levels deep)
+          required:
+            - children
+            - parents
+          properties:
+            children:
               type: array
-              description: Environment variables with current values
               items:
-                $ref: '#/components/schemas/envVarWithValue'
-            stats:
-              $ref: '#/components/schemas/configStats'
+                $ref: '#/components/schemas/configReference'
+              description: Configs referenced by this config (nested tree, max 2 levels)
+            parents:
+              type: array
+              items:
+                $ref: '#/components/schemas/configReference'
+              description: Configs that reference this config (nested tree, max 2 levels)
+        versions:
+          type: object
+          description: Version history for this config name
+          required:
+            - total
+            - all
+          properties:
+            total:
+              type: integer
+              description: Total number of versions
+            all:
+              type: array
+              items:
+                $ref: '#/components/schemas/versionInfo'
+        envVars:
+          type: array
+          description: Environment variables with current values
+          items:
+            $ref: '#/components/schemas/envVarWithValue'
+        stats:
+          $ref: '#/components/schemas/configStats'
     configReference:
       type: object
       description: Recursive tree node for config dependencies (similar to schemaReference)

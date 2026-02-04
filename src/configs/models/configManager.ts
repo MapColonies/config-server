@@ -943,7 +943,6 @@ export class ConfigManager {
 
     // 6. Build metadata object
     const metadata: ConfigFullMetadata = {
-      id: `${name}:${schemaId}:${rawConfig.version}`,
       configName: name,
       version: rawConfig.version,
       schemaId,

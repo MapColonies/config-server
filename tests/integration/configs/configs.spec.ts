@@ -1229,54 +1229,48 @@ describe('config', function () {
         expectResponseStatus(response, 200);
         expect(response).toSatisfyApiSpec();
 
-        // Verify basic metadata
-        expect(response.body).toHaveProperty('id', 'config1:https://mapcolonies.com/simpleSchema/v1:1');
-        expect(response.body).toHaveProperty('configName', 'config1');
-        expect(response.body).toHaveProperty('version', 1);
-        expect(response.body).toHaveProperty('schemaId', 'https://mapcolonies.com/simpleSchema/v1');
-        expect(response.body).toHaveProperty('isLatest', false);
-        expect(response.body).toHaveProperty('createdAt');
-        expect(response.body).toHaveProperty('createdBy', 'user1');
-        expect(response.body).toHaveProperty('hash', 'hash-config1-v1');
+        // Verify structure and values using toMatchObject
+        expect(response.body).toMatchObject({
+          configName: 'config1',
+          version: 1,
+          schemaId: 'https://mapcolonies.com/simpleSchema/v1',
+          isLatest: false,
+          createdBy: 'user1',
+          hash: 'hash-config1-v1',
+          rawConfig: { name: 'name1', age: 1 },
+          schema: {
+            id: 'https://mapcolonies.com/simpleSchema/v1',
+            name: 'simpleSchema',
+            version: 'v1',
+            category: 'simpleSchema',
+          },
+          dependencies: {
+            children: expect.any(Array),
+            parents: expect.any(Array),
+          },
+          versions: {
+            total: expect.any(Number),
+            all: expect.any(Array),
+          },
+          stats: {
+            configSize: expect.any(Number),
+            keyCount: expect.any(Number),
+            refCount: 0, // Simple config has no refs
+            depth: expect.any(Number),
+          },
+        });
 
-        // Verify config variants
-        expect(response.body).toHaveProperty('rawConfig');
-        expect(response.body.rawConfig).toStrictEqual({ name: 'name1', age: 1 });
-        expect(response.body).toHaveProperty('resolvedConfig');
-        expect(response.body).toHaveProperty('configWithDefaults');
+        // Verify additional properties exist
+        expect(response.body).toEqual(
+          expect.objectContaining({
+            createdAt: expect.any(String),
+            resolvedConfig: expect.any(Object),
+            configWithDefaults: expect.any(Object),
+            envVars: expect.any(Array),
+          })
+        );
 
-        // Verify schema info
-        expect(response.body).toHaveProperty('schema');
-        expect(response.body.schema).toHaveProperty('id', 'https://mapcolonies.com/simpleSchema/v1');
-        expect(response.body.schema).toHaveProperty('name', 'simpleSchema');
-        expect(response.body.schema).toHaveProperty('version', 'v1');
-        expect(response.body.schema).toHaveProperty('category', 'simpleSchema');
-
-        // Verify dependencies structure
-        expect(response.body).toHaveProperty('dependencies');
-        expect(response.body.dependencies).toHaveProperty('children');
-        expect(response.body.dependencies).toHaveProperty('parents');
-        expect(Array.isArray(response.body.dependencies.children)).toBe(true);
-        expect(Array.isArray(response.body.dependencies.parents)).toBe(true);
-
-        // Verify versions info
-        expect(response.body).toHaveProperty('versions');
-        expect(response.body.versions).toHaveProperty('total');
-        expect(response.body.versions).toHaveProperty('all');
-        expect(Array.isArray(response.body.versions.all)).toBe(true);
         expect(response.body.versions.total).toBeGreaterThan(0);
-
-        // Verify env vars
-        expect(response.body).toHaveProperty('envVars');
-        expect(Array.isArray(response.body.envVars)).toBe(true);
-
-        // Verify stats
-        expect(response.body).toHaveProperty('stats');
-        expect(response.body.stats).toHaveProperty('configSize');
-        expect(response.body.stats).toHaveProperty('keyCount');
-        expect(response.body.stats).toHaveProperty('refCount');
-        expect(response.body.stats).toHaveProperty('depth');
-        expect(response.body.stats.refCount).toBe(0); // Simple config has no refs
       });
 
       it('should return 200 status code for latest version', async function () {
@@ -1287,9 +1281,12 @@ describe('config', function () {
 
         expectResponseStatus(response, 200);
         expect(response).toSatisfyApiSpec();
-        expect(response.body.version).toBe(1); // config2 only has version 1
-        expect(response.body.isLatest).toBe(true);
-        expect(response.body.rawConfig).toStrictEqual({ name: 'name3', age: 3 });
+
+        expect(response.body).toMatchObject({
+          version: 1, // config2 only has version 1
+          isLatest: true,
+          rawConfig: { name: 'name3', age: 3 },
+        });
       });
 
       it('should return resolved config with refs dereferenced for config with references', async function () {
@@ -1302,14 +1299,21 @@ describe('config', function () {
         expect(response).toSatisfyApiSpec();
 
         // Raw config should contain the $ref
-        expect(response.body.rawConfig).toHaveProperty('manager');
-        expect(response.body.rawConfig.manager).toHaveProperty('$ref');
+        expect(response.body.rawConfig).toMatchObject({
+          manager: {
+            $ref: expect.objectContaining({
+              configName: expect.any(String),
+              schemaId: expect.any(String),
+            }),
+          },
+        });
 
         // Resolved config should have refs dereferenced
-        expect(response.body.resolvedConfig).toHaveProperty('manager');
-        expect(response.body.resolvedConfig.manager).toStrictEqual({
-          name: 'name4',
-          age: 5,
+        expect(response.body.resolvedConfig).toMatchObject({
+          manager: {
+            name: 'name4',
+            age: 5,
+          },
         });
         expect(JSON.stringify(response.body.resolvedConfig)).not.toContain('$ref');
 
@@ -1327,23 +1331,29 @@ describe('config', function () {
         expect(response).toSatisfyApiSpec();
 
         // config4 has versions 1, 2, and 3
-        expect(response.body.versions.total).toBe(3);
+        expect(response.body.versions).toMatchObject({
+          total: 3,
+          all: expect.arrayContaining([
+            expect.objectContaining({ version: 1 }),
+            expect.objectContaining({ version: 2 }),
+            expect.objectContaining({ version: 3 }),
+          ]),
+        });
+
         expect(response.body.versions.all).toHaveLength(3);
 
-        // Verify all versions are present
-        const versions = response.body.versions.all.map((v: { version: number }) => v.version);
-        expect(versions).toContain(1);
-        expect(versions).toContain(2);
-        expect(versions).toContain(3);
-
         // Verify each version has required fields
-        for (const versionInfo of response.body.versions.all) {
-          expect(versionInfo).toHaveProperty('version');
-          expect(versionInfo).toHaveProperty('createdAt');
-          expect(versionInfo).toHaveProperty('createdBy');
-          expect(versionInfo).toHaveProperty('isLatest');
-          expect(versionInfo).toHaveProperty('hash');
-        }
+        response.body.versions.all.forEach((versionInfo: unknown) => {
+          expect(versionInfo).toEqual(
+            expect.objectContaining({
+              version: expect.any(Number),
+              createdAt: expect.any(String),
+              createdBy: expect.any(String),
+              isLatest: expect.any(Boolean),
+              hash: expect.any(String),
+            })
+          );
+        });
       });
 
       it('should return schema defaults applied in configWithDefaults', async function () {
@@ -1370,11 +1380,14 @@ describe('config', function () {
 
         // This config references config3, so it should have children
         expect(response.body.dependencies.children.length).toBeGreaterThan(0);
-        const child = response.body.dependencies.children[0];
-        expect(child).toHaveProperty('configName');
-        expect(child).toHaveProperty('version');
-        expect(child).toHaveProperty('schemaId');
-        expect(child).toHaveProperty('isLatest');
+        expect(response.body.dependencies.children[0]).toEqual(
+          expect.objectContaining({
+            configName: expect.any(String),
+            version: expect.any(Number),
+            schemaId: expect.any(String),
+            isLatest: expect.any(Boolean),
+          })
+        );
       });
 
       it('should return dependency trees for config with parents', async function () {
@@ -1500,9 +1513,11 @@ describe('config', function () {
         expect(JSON.stringify(response.body.resolvedConfig)).not.toContain('$ref');
 
         // Verify the latest version of config3 was used (version 2)
-        expect(response.body.resolvedConfig.manager).toStrictEqual({
-          name: 'name5',
-          age: 6,
+        expect(response.body.resolvedConfig).toMatchObject({
+          manager: {
+            name: 'name5',
+            age: 6,
+          },
         });
       });
 
@@ -1516,10 +1531,16 @@ describe('config', function () {
         expect(response).toSatisfyApiSpec();
 
         // Verify stats are calculated
+        expect(response.body.stats).toMatchObject({
+          configSize: expect.any(Number),
+          keyCount: expect.any(Number),
+          depth: expect.any(Number),
+          refCount: 1, // config-ref-2 has 1 reference
+        });
+
         expect(response.body.stats.configSize).toBeGreaterThan(0);
         expect(response.body.stats.keyCount).toBeGreaterThan(0);
         expect(response.body.stats.depth).toBeGreaterThanOrEqual(1);
-        expect(response.body.stats.refCount).toBe(1); // config-ref-2 has 1 reference
       });
     });
   });

@@ -269,8 +269,7 @@ export type components = {
       /** @description Nested parent schemas (recursive) */
       parents?: components['schemas']['schemaReference'][];
     };
-    /** @description Core metadata fields shared by config and configFullMetadata */
-    configBaseMetadata: {
+    config: {
       configName: components['schemas']['configName'];
       schemaId: components['schemas']['schemaId'];
       version: components['schemas']['version'];
@@ -279,8 +278,6 @@ export type components = {
       readonly isLatest?: boolean;
       /** @description Merkle-tree hash of config body and dependencies for caching */
       readonly hash?: string;
-    };
-    config: components['schemas']['configBaseMetadata'] & {
       /** @example {
        *       "host": "localhost",
        *       "port": 8080
@@ -289,13 +286,16 @@ export type components = {
         [key: string]: unknown;
       };
     };
-    /** @description Comprehensive config metadata for inspector page - extends base config metadata with additional fields */
-    configFullMetadata: components['schemas']['configBaseMetadata'] & {
-      /**
-       * @description Composite ID (configName:schemaId:version)
-       * @example database-config:https://mapcolonies.com/db/v1:2
-       */
-      id: string;
+    /** @description Comprehensive config metadata for inspector page */
+    configFullMetadata: {
+      configName: components['schemas']['configName'];
+      schemaId: components['schemas']['schemaId'];
+      version: components['schemas']['version'];
+      readonly createdAt: components['schemas']['createdAt'];
+      readonly createdBy: components['schemas']['createdBy'];
+      readonly isLatest?: boolean;
+      /** @description Merkle-tree hash of config body and dependencies for caching */
+      readonly hash?: string;
       /** @description Config with $refs intact (as stored) - same as 'config' field from base schema */
       rawConfig: {
         [key: string]: unknown;

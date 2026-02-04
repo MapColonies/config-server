@@ -2,13 +2,11 @@ global:
   cloudProvider: {}
   tracing: {}
   metrics: {}
-  mcLabelsAndAnnotations:
-    environment: development
-  
-mcLabelsAndAnnotations:
+
+mclabels:
   component: backend
-  partOf: config-management
   owner: infra
+  partOf: config-management
   prometheus:
     enabled: true
 

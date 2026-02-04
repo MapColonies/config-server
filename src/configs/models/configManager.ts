@@ -27,7 +27,7 @@ import { ConfigNotFoundError, ConfigSchemaMismatchError, ConfigValidationError, 
 import { ConfigReference } from './configReference';
 import { getConfigCacheKey, HashPropagationHelper } from './hashPropagationHelpers';
 import { calculateDepth, countKeys } from './configStatsHelpers';
-import type { ConfigFullMetadata, ConfigReference as ConfigReferenceType, ConfigStats, EnvVarWithValue } from './types';
+import type { ConfigFullMetadata, ConfigReference as ConfigReferenceType, ConfigStats, EnvVarWithValue, VersionInfo } from './types';
 
 type GetConfigOptions = Prettify<Omit<NonNullable<paths['/config']['get']['parameters']['query']>, 'sort'> & { sort?: SortOption[] }>;
 
@@ -36,13 +36,19 @@ type DefaultConfigToInsert = Parameters<ConfigManager['createConfig']>[0] & {
   visited: boolean;
 };
 
+type FullConfigMetadataParams = {
+  name: string;
+  schemaId: string;
+  version?: number;
+};
+
 // Constants for configuration metadata
 const MAX_RECURSION_DEPTH = 2;
 
 @injectable()
 export class ConfigManager {
   private readonly fullConfigCache: Cache & {
-    getMetadata: (args: { name: string; schemaId: string; version?: number }) => Promise<ConfigFullMetadata>;
+    getMetadata: (args: FullConfigMetadataParams) => Promise<ConfigFullMetadata>;
   };
 
   public constructor(
@@ -59,8 +65,8 @@ export class ConfigManager {
     });
 
     // Define cached function for full config metadata
-    this.fullConfigCache = cache.define('getMetadata', async ({ name, schemaId, version }: { name: string; schemaId: string; version?: number }) => {
-      return this.generateFullConfigMetadata(name, schemaId, version);
+    this.fullConfigCache = cache.define('getMetadata', async (params: FullConfigMetadataParams) => {
+      return this.generateFullConfigMetadata(params.name, params.schemaId, params.version);
     });
   }
 
@@ -596,7 +602,7 @@ export class ConfigManager {
    * Merges multiple versions into a single node with version array
    */
   private buildConfigReferenceNode(
-    configs: { configName: string; version: number; schemaId: string; isLatest: boolean; createdAt?: Date; createdBy?: string; hash?: string }[]
+    configs: (Pick<Config, 'configName' | 'version' | 'schemaId' | 'isLatest'> & Partial<Pick<Config, 'createdAt' | 'createdBy' | 'hash'>>)[]
   ): ConfigReferenceType {
     if (configs.length === 1) {
       // Single version - simple node
@@ -617,13 +623,15 @@ export class ConfigManager {
       isLatest: configs.some((c) => c.isLatest),
       versions: configs
         .filter((c) => c.createdAt !== undefined && c.createdBy !== undefined && c.hash !== undefined)
-        .map((c) => ({
-          version: c.version,
-          createdAt: formatISO(c.createdAt!),
-          createdBy: c.createdBy!,
-          isLatest: c.isLatest,
-          hash: c.hash!,
-        })),
+        .map(
+          (c): VersionInfo => ({
+            version: c.version,
+            createdAt: formatISO(c.createdAt!),
+            createdBy: c.createdBy!,
+            isLatest: c.isLatest,
+            hash: c.hash!,
+          })
+        ),
     } as ConfigReferenceType;
   }
 
@@ -868,13 +876,15 @@ export class ConfigManager {
 
       versions: {
         total: allVersions.totalCount,
-        all: allVersions.configs.map((c) => ({
-          version: c.version,
-          createdAt: formatISO(c.createdAt),
-          createdBy: c.createdBy,
-          isLatest: c.isLatest,
-          hash: c.hash,
-        })),
+        all: allVersions.configs.map(
+          (c): VersionInfo => ({
+            version: c.version,
+            createdAt: formatISO(c.createdAt),
+            createdBy: c.createdBy,
+            isLatest: c.isLatest,
+            hash: c.hash,
+          })
+        ),
       },
 
       envVars,

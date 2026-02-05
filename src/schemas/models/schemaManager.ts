@@ -417,7 +417,8 @@ export class SchemaManager {
     schema: JSONSchema,
     pathPrefix = '',
     requiredFields: Set<string> = new Set(),
-    visitedRefs: Set<string> = new Set()
+    visitedRefs: Set<string> = new Set(),
+    rootSchema?: JSONSchema
   ): EnvVar[] {
     const envVars: EnvVar[] = [];
 
@@ -425,14 +426,17 @@ export class SchemaManager {
 
     const schemaObj = schema as Record<string, unknown>;
 
+    // Use schema as root if not provided (first call)
+    const root = rootSchema ?? schema;
+
     // Handle $ref - resolve and recurse
     if (schemaObj.$ref !== undefined && typeof schemaObj.$ref === 'string') {
       if (visitedRefs.has(schemaObj.$ref)) return envVars;
       visitedRefs.add(schemaObj.$ref);
 
-      const resolvedSchema = this.resolveRef(schemaObj.$ref, schema);
+      const resolvedSchema = this.resolveRef(schemaObj.$ref, root);
       if (resolvedSchema) {
-        const refVars = this.extractEnvVars(resolvedSchema, pathPrefix, requiredFields, visitedRefs);
+        const refVars = this.extractEnvVars(resolvedSchema, pathPrefix, requiredFields, visitedRefs, root);
 
         // Tag with refLink if external
         if (schemaObj.$ref.startsWith('https://')) {
@@ -461,7 +465,7 @@ export class SchemaManager {
     ['allOf', 'oneOf', 'anyOf'].forEach((key) => {
       if (Array.isArray(schemaObj[key])) {
         (schemaObj[key] as JSONSchema[]).forEach((subSchema) => {
-          envVars.push(...this.extractEnvVars(subSchema, pathPrefix, requiredFields, visitedRefs));
+          envVars.push(...this.extractEnvVars(subSchema, pathPrefix, requiredFields, visitedRefs, root));
         });
       }
     });
@@ -473,17 +477,13 @@ export class SchemaManager {
 
       Object.entries(properties).forEach(([propName, propSchema]) => {
         const newPath = pathPrefix ? `${pathPrefix}.${propName}` : propName;
-        envVars.push(...this.extractEnvVars(propSchema, newPath, required, visitedRefs));
+        envVars.push(...this.extractEnvVars(propSchema, newPath, required, visitedRefs, root));
       });
     }
 
-    // Process definitions
-    if (schemaObj.definitions !== undefined && typeof schemaObj.definitions === 'object') {
-      const definitions = schemaObj.definitions as Record<string, JSONSchema>;
-      Object.entries(definitions).forEach(([, defSchema]) => {
-        envVars.push(...this.extractEnvVars(defSchema, pathPrefix, requiredFields, visitedRefs));
-      });
-    }
+    // Note: We don't process definitions directly here.
+    // Definitions should only be processed when they're referenced via $ref.
+    // This prevents duplicates and ensures proper path prefixes.
 
     return envVars;
   }

@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [2.2.0](https://github.com/MapColonies/config-server/compare/v2.1.0...v2.2.0) (2026-02-10)
+
+
+### Features
+
+* config full endpoint ([#146](https://github.com/MapColonies/config-server/issues/146)) ([f8b67ea](https://github.com/MapColonies/config-server/commit/f8b67ea0960e5c2f39c08ab6cc2fa768ca1fb992))
+
+
+### Helm Changes
+
+* update mclabels structure in values.yaml ([#149](https://github.com/MapColonies/config-server/issues/149)) ([7c0fe6f](https://github.com/MapColonies/config-server/commit/7c0fe6f15261c53ac18c2276548e085c7a82d99d))
+
 ## [2.1.0](https://github.com/MapColonies/config-server/compare/v2.0.7...v2.1.0) (2026-02-02)
 
 

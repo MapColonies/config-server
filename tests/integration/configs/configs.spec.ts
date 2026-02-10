@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import 'jest-extended';
 import 'jest-openapi';
 import 'jest-sorted';
@@ -1215,6 +1216,333 @@ describe('config', function () {
       // This ensures the recursive CTE processed configs in correct topological order
       // If grandparent used stale parent hash, the hashes would be wrong
       expect(grandparentHashAfter).not.toBe(parentHashAfter);
+    });
+  });
+
+  describe('GET /config/{name}/{version}/full', function () {
+    describe('Happy Path', function () {
+      it('should return 200 status code with comprehensive config metadata for a simple config', async function () {
+        const response = await requestSender.getFullConfig({
+          pathParams: { name: 'config1', version: 1 },
+          queryParams: { schemaId: 'https://mapcolonies.com/simpleSchema/v1' },
+        });
+
+        expectResponseStatus(response, 200);
+        expect(response).toSatisfyApiSpec();
+
+        // Verify structure and values using toMatchObject
+        expect(response.body).toMatchObject({
+          configName: 'config1',
+          version: 1,
+          schemaId: 'https://mapcolonies.com/simpleSchema/v1',
+          isLatest: false,
+          createdBy: 'user1',
+          hash: 'hash-config1-v1',
+          rawConfig: { name: 'name1', age: 1 },
+          schema: {
+            id: 'https://mapcolonies.com/simpleSchema/v1',
+            name: 'simpleSchema',
+            version: 'v1',
+            category: 'simpleSchema',
+          },
+          dependencies: {
+            children: expect.any(Array),
+            parents: expect.any(Array),
+          },
+          versions: {
+            total: expect.any(Number),
+            all: expect.any(Array),
+          },
+          stats: {
+            configSize: expect.any(Number),
+            keyCount: expect.any(Number),
+            refCount: 0, // Simple config has no refs
+            depth: expect.any(Number),
+          },
+        });
+
+        // Verify additional properties exist
+        expect(response.body).toEqual(
+          expect.objectContaining({
+            createdAt: expect.any(String),
+            resolvedConfig: expect.any(Object),
+            configWithDefaults: expect.any(Object),
+            envVars: expect.any(Array),
+          })
+        );
+
+        expect(response.body.versions.total).toBeGreaterThan(0);
+      });
+
+      it('should return 200 status code for latest version', async function () {
+        const response = await requestSender.getFullConfig({
+          pathParams: { name: 'config2', version: 'latest' },
+          queryParams: { schemaId: 'https://mapcolonies.com/simpleSchema/v1' },
+        });
+
+        expectResponseStatus(response, 200);
+        expect(response).toSatisfyApiSpec();
+
+        expect(response.body).toMatchObject({
+          version: 1, // config2 only has version 1
+          isLatest: true,
+          rawConfig: { name: 'name3', age: 3 },
+        });
+      });
+
+      it('should return resolved config with refs dereferenced for config with references', async function () {
+        const response = await requestSender.getFullConfig({
+          pathParams: { name: 'config-ref-2', version: 1 },
+          queryParams: { schemaId: 'https://mapcolonies.com/schemaWithRef/v1' },
+        });
+
+        expectResponseStatus(response, 200);
+        expect(response).toSatisfyApiSpec();
+
+        // Raw config should contain the $ref
+        expect(response.body.rawConfig).toMatchObject({
+          manager: {
+            $ref: expect.objectContaining({
+              configName: expect.any(String),
+              schemaId: expect.any(String),
+            }),
+          },
+        });
+
+        // Resolved config should have refs dereferenced
+        expect(response.body.resolvedConfig).toMatchObject({
+          manager: {
+            name: 'name4',
+            age: 5,
+          },
+        });
+        expect(JSON.stringify(response.body.resolvedConfig)).not.toContain('$ref');
+
+        // Stats should reflect the reference
+        expect(response.body.stats.refCount).toBeGreaterThan(0);
+      });
+
+      it('should return all versions for a config with multiple versions', async function () {
+        const response = await requestSender.getFullConfig({
+          pathParams: { name: 'config4', version: 1 },
+          queryParams: { schemaId: 'https://mapcolonies.com/simpleSchema/v1' },
+        });
+
+        expectResponseStatus(response, 200);
+        expect(response).toSatisfyApiSpec();
+
+        // config4 has versions 1, 2, and 3
+        expect(response.body.versions).toMatchObject({
+          total: 3,
+          all: expect.arrayContaining([
+            expect.objectContaining({ version: 1 }),
+            expect.objectContaining({ version: 2 }),
+            expect.objectContaining({ version: 3 }),
+          ]),
+        });
+
+        expect(response.body.versions.all).toHaveLength(3);
+
+        // Verify each version has required fields
+        response.body.versions.all.forEach((versionInfo: unknown) => {
+          expect(versionInfo).toEqual(
+            expect.objectContaining({
+              version: expect.any(Number),
+              createdAt: expect.any(String),
+              createdBy: expect.any(String),
+              isLatest: expect.any(Boolean),
+              hash: expect.any(String),
+            })
+          );
+        });
+      });
+
+      it('should return schema defaults applied in configWithDefaults', async function () {
+        const response = await requestSender.getFullConfig({
+          pathParams: { name: 'config-ref-1', version: 1 },
+          queryParams: { schemaId: 'https://mapcolonies.com/schemaWithRef/v1' },
+        });
+
+        expectResponseStatus(response, 200);
+        expect(response).toSatisfyApiSpec();
+
+        // configWithDefaults should have schema defaults applied
+        expect(response.body.configWithDefaults).toHaveProperty('role', 'manager'); // default from schema
+      });
+
+      it('should return dependency trees for config with children', async function () {
+        const response = await requestSender.getFullConfig({
+          pathParams: { name: 'config-ref-2', version: 1 },
+          queryParams: { schemaId: 'https://mapcolonies.com/schemaWithRef/v1' },
+        });
+
+        expectResponseStatus(response, 200);
+        expect(response).toSatisfyApiSpec();
+
+        // This config references config3, so it should have children
+        expect(response.body.dependencies.children.length).toBeGreaterThan(0);
+        expect(response.body.dependencies.children[0]).toEqual(
+          expect.objectContaining({
+            configName: expect.any(String),
+            version: expect.any(Number),
+            schemaId: expect.any(String),
+            isLatest: expect.any(Boolean),
+          })
+        );
+      });
+
+      it('should return dependency trees for config with parents', async function () {
+        // config3 is referenced by config-ref-2, so it should have parents
+        const response = await requestSender.getFullConfig({
+          pathParams: { name: 'config3', version: 1 },
+          queryParams: { schemaId: 'https://mapcolonies.com/simpleSchema/v1' },
+        });
+
+        expectResponseStatus(response, 200);
+        expect(response).toSatisfyApiSpec();
+
+        // This config is referenced by others, so it should have parents
+        expect(response.body.dependencies.parents.length).toBeGreaterThan(0);
+      });
+    });
+
+    describe('Bad Path', function () {
+      it('should return 404 status code when the config does not exist', async function () {
+        const response = await requestSender.getFullConfig({
+          pathParams: { name: 'non-existent-config', version: 1 },
+          queryParams: { schemaId: 'https://mapcolonies.com/simpleSchema/v1' },
+        });
+
+        expectResponseStatus(response, 404);
+        expect(response).toSatisfyApiSpec();
+      });
+
+      it('should return 404 status code when the version does not exist', async function () {
+        const response = await requestSender.getFullConfig({
+          pathParams: { name: 'config1', version: 999 },
+          queryParams: { schemaId: 'https://mapcolonies.com/simpleSchema/v1' },
+        });
+
+        expectResponseStatus(response, 404);
+        expect(response).toSatisfyApiSpec();
+      });
+
+      it('should return 400 status code when using invalid version format', async function () {
+        const response = await requestSender.getFullConfig({
+          pathParams: { name: 'config1', version: 'invalid' as unknown as number },
+          queryParams: { schemaId: 'https://mapcolonies.com/simpleSchema/v1' },
+        });
+
+        expectResponseStatus(response, 400);
+        expect(response).toSatisfyApiSpec();
+      });
+
+      it('should return 400 status code when schemaId is missing', async function () {
+        const response = await requestSender.getFullConfig({
+          pathParams: { name: 'config1', version: 1 },
+          queryParams: {} as { schemaId: string },
+        });
+
+        expectResponseStatus(response, 400);
+        expect(response).toSatisfyApiSpec();
+      });
+    });
+
+    describe('Sad Path', function () {
+      it('should return 500 status code when an internal error occurs', async function () {
+        // Use a unique config name that won't be used by other tests
+        const uniqueConfigName = `sad-path-test-${Date.now()}`;
+
+        // Mock getConfigRecursive to fail for this specific config
+        const configRepo = dependencyContainer.resolve(ConfigRepository);
+        const originalMethod = configRepo.getConfigRecursive.bind(configRepo);
+        const spy = vi.spyOn(configRepo, 'getConfigRecursive').mockImplementation(async (name, schemaId, version) => {
+          if (name === uniqueConfigName) {
+            throw new Error('Database is down');
+          }
+          return originalMethod(name, schemaId, version);
+        });
+
+        const response = await requestSender.getFullConfig({
+          pathParams: { name: uniqueConfigName, version: 1 },
+          queryParams: { schemaId: 'https://mapcolonies.com/simpleSchema/v1' },
+        });
+
+        expectResponseStatus(response, 500);
+        expect(response).toSatisfyApiSpec();
+
+        // Clean up spy immediately to prevent state pollution
+        spy.mockRestore();
+      });
+    });
+
+    describe('Caching Behavior', function () {
+      it('should return consistent results on repeated calls (caching works)', async function () {
+        // First call
+        const response1 = await requestSender.getFullConfig({
+          pathParams: { name: 'config2', version: 1 },
+          queryParams: { schemaId: 'https://mapcolonies.com/simpleSchema/v1' },
+        });
+
+        expectResponseStatus(response1, 200);
+
+        // Second call - should get same result (potentially from cache)
+        const response2 = await requestSender.getFullConfig({
+          pathParams: { name: 'config2', version: 1 },
+          queryParams: { schemaId: 'https://mapcolonies.com/simpleSchema/v1' },
+        });
+
+        expectResponseStatus(response2, 200);
+
+        // Verify both responses are identical
+        expect(response1.body).toStrictEqual(response2.body);
+      });
+    });
+
+    describe('Complex Scenarios', function () {
+      it('should handle configs with latest version references correctly', async function () {
+        // config-ref-3 uses 'latest' version reference
+        const response = await requestSender.getFullConfig({
+          pathParams: { name: 'config-ref-3', version: 1 },
+          queryParams: { schemaId: 'https://mapcolonies.com/schemaWithRef/v1' },
+        });
+
+        expectResponseStatus(response, 200);
+        expect(response).toSatisfyApiSpec();
+
+        // Verify resolved config has no $ref markers
+        expect(JSON.stringify(response.body.resolvedConfig)).not.toContain('$ref');
+
+        // Verify the latest version of config3 was used (version 2)
+        expect(response.body.resolvedConfig).toMatchObject({
+          manager: {
+            name: 'name5',
+            age: 6,
+          },
+        });
+      });
+
+      it('should calculate correct stats for configs with references', async function () {
+        const response = await requestSender.getFullConfig({
+          pathParams: { name: 'config-ref-2', version: 1 },
+          queryParams: { schemaId: 'https://mapcolonies.com/schemaWithRef/v1' },
+        });
+
+        expectResponseStatus(response, 200);
+        expect(response).toSatisfyApiSpec();
+
+        // Verify stats are calculated
+        expect(response.body.stats).toMatchObject({
+          configSize: expect.any(Number),
+          keyCount: expect.any(Number),
+          depth: expect.any(Number),
+          refCount: 1, // config-ref-2 has 1 reference
+        });
+
+        expect(response.body.stats.configSize).toBeGreaterThan(0);
+        expect(response.body.stats.keyCount).toBeGreaterThan(0);
+        expect(response.body.stats.depth).toBeGreaterThanOrEqual(1);
+      });
     });
   });
 });

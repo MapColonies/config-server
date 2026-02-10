@@ -530,7 +530,7 @@ describe('locks', function () {
       vi.advanceTimersByTime(10000);
 
       // Try to acquire - might be locked or not depending on implementation
-      const response2 = await requestSender.acquireLock({
+      await requestSender.acquireLock({
         requestBody: { key, callerId: 'caller-2', ttl, limit },
       });
 

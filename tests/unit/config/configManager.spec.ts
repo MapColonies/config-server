@@ -8,6 +8,7 @@ import { ConfigNotFoundError, ConfigVersionMismatchError, ConfigValidationError,
 import * as utils from '@src/common/utils';
 import { ConfigReference } from '@src/configs/models/configReference';
 import { HashPropagationHelper } from '@src/configs/models/hashPropagationHelpers';
+import { SchemaManager } from '@src/schemas/models/schemaManager';
 
 vi.mock('../../../src/common/utils', async () => {
   return {
@@ -30,7 +31,8 @@ describe('ConfigManager', () => {
     configValidator = {} as Validator;
     hashPropagationHelper = {} as HashPropagationHelper;
     hashPropagationHelper.calculateConfigHash = vi.fn().mockReturnValue('mock-hash');
-    configManager = new ConfigManager(logger, configRepository, configValidator, hashPropagationHelper);
+    const schemaManager = {} as SchemaManager; // Mock schema manager for tests
+    configManager = new ConfigManager(logger, configRepository, configValidator, hashPropagationHelper, schemaManager);
   });
 
   afterEach(() => {

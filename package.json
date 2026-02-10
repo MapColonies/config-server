@@ -49,6 +49,7 @@
     "@sinclair/typebox": "^0.34.30",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
+    "async-cache-dedupe": "^3.4.0",
     "compression": "^1.8.0",
     "config": "^3.3.12",
     "date-fns": "^4.1.0",

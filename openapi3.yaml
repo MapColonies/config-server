@@ -118,6 +118,41 @@ paths:
           $ref: '#/components/responses/404NotFound'
         '500':
           $ref: '#/components/responses/500InternalServerError'
+  /config/{name}/{version}/full:
+    parameters:
+      - $ref: '#/components/parameters/ConfigNamePath'
+      - in: path
+        name: version
+        required: true
+        schema:
+          oneOf:
+            - type: string
+              enum:
+                - latest
+            - $ref: '#/components/schemas/version'
+      - in: query
+        name: schemaId
+        description: The id of the requested schema
+        required: true
+        schema:
+          $ref: '#/components/schemas/schemaId'
+    get:
+      operationId: getFullConfig
+      summary: Get comprehensive config metadata for inspector page
+      description: Returns all data needed for config inspector including raw/resolved/defaults config, dependencies, versions, env vars, and stats. Single endpoint replaces multiple API calls.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/configFullMetadata'
+        '400':
+          $ref: '#/components/responses/400BadRequest'
+        '404':
+          $ref: '#/components/responses/404NotFound'
+        '500':
+          $ref: '#/components/responses/500InternalServerError'
   /schema:
     get:
       parameters:
@@ -658,14 +693,13 @@ components:
           description: Nested parent schemas (recursive)
     config:
       type: object
-      additionalProperties: false
       required:
         - configName
         - schemaId
         - version
-        - config
         - createdAt
         - createdBy
+        - config
       properties:
         configName:
           $ref: '#/components/schemas/configName'
@@ -673,11 +707,6 @@ components:
           $ref: '#/components/schemas/schemaId'
         version:
           $ref: '#/components/schemas/version'
-        config:
-          additionalProperties: true
-          example:
-            host: localhost
-            port: 8080
         createdAt:
           readOnly: true
           allOf:
@@ -693,6 +722,248 @@ components:
           type: string
           readOnly: true
           description: Merkle-tree hash of config body and dependencies for caching
+        config:
+          additionalProperties: true
+          example:
+            host: localhost
+            port: 8080
+      additionalProperties: false
+    configFullMetadata:
+      description: Comprehensive config metadata for inspector page
+      type: object
+      required:
+        - configName
+        - schemaId
+        - version
+        - createdAt
+        - createdBy
+        - rawConfig
+        - resolvedConfig
+        - configWithDefaults
+        - schema
+        - dependencies
+        - versions
+        - envVars
+        - stats
+      additionalProperties: false
+      properties:
+        configName:
+          $ref: '#/components/schemas/configName'
+        schemaId:
+          $ref: '#/components/schemas/schemaId'
+        version:
+          $ref: '#/components/schemas/version'
+        createdAt:
+          readOnly: true
+          allOf:
+            - $ref: '#/components/schemas/createdAt'
+        createdBy:
+          readOnly: true
+          allOf:
+            - $ref: '#/components/schemas/createdBy'
+        isLatest:
+          type: boolean
+          readOnly: true
+        hash:
+          type: string
+          readOnly: true
+          description: Merkle-tree hash of config body and dependencies for caching
+        rawConfig:
+          type: object
+          additionalProperties: true
+          description: Config with $refs intact (as stored) - same as 'config' field from base schema
+        resolvedConfig:
+          type: object
+          additionalProperties: true
+          description: Config with all $refs dereferenced
+        configWithDefaults:
+          type: object
+          additionalProperties: true
+          description: Config with $refs resolved AND schema defaults applied (actual runtime values)
+        schema:
+          type: object
+          description: Lightweight schema metadata
+          required:
+            - id
+            - name
+            - version
+            - category
+          properties:
+            id:
+              type: string
+              format: uri
+            name:
+              type: string
+            version:
+              type: string
+            category:
+              type: string
+            description:
+              type: string
+        dependencies:
+          type: object
+          description: Recursive dependency trees (max 2 levels deep)
+          required:
+            - children
+            - parents
+          properties:
+            children:
+              type: array
+              items:
+                $ref: '#/components/schemas/configReference'
+              description: Configs referenced by this config (nested tree, max 2 levels)
+            parents:
+              type: array
+              items:
+                $ref: '#/components/schemas/configReference'
+              description: Configs that reference this config (nested tree, max 2 levels)
+        versions:
+          type: object
+          description: Version history for this config name
+          required:
+            - total
+            - all
+          properties:
+            total:
+              type: integer
+              description: Total number of versions
+            all:
+              type: array
+              items:
+                $ref: '#/components/schemas/versionInfo'
+        envVars:
+          type: array
+          description: Environment variables with current values
+          items:
+            $ref: '#/components/schemas/envVarWithValue'
+        stats:
+          $ref: '#/components/schemas/configStats'
+    configReference:
+      type: object
+      description: Recursive tree node for config dependencies (similar to schemaReference)
+      required:
+        - configName
+        - schemaId
+        - isLatest
+      properties:
+        configName:
+          $ref: '#/components/schemas/configName'
+        version:
+          description: Single version number or array if multiple versions merged
+          oneOf:
+            - $ref: '#/components/schemas/version'
+            - type: array
+              items:
+                $ref: '#/components/schemas/version'
+              description: Multiple versions merged into single node
+        schemaId:
+          $ref: '#/components/schemas/schemaId'
+        isLatest:
+          type: boolean
+          description: True if any of the versions is the latest
+        versions:
+          type: array
+          items:
+            $ref: '#/components/schemas/versionInfo'
+          description: Version details when multiple versions are merged
+        children:
+          type: array
+          items:
+            $ref: '#/components/schemas/configReference'
+          description: Nested child configs (recursive, max 2 levels deep)
+        parents:
+          type: array
+          items:
+            $ref: '#/components/schemas/configReference'
+          description: Nested parent configs (recursive, max 2 levels deep)
+    versionInfo:
+      type: object
+      description: Metadata about a specific config version
+      required:
+        - version
+        - createdAt
+        - createdBy
+        - isLatest
+        - hash
+      properties:
+        version:
+          $ref: '#/components/schemas/version'
+        createdAt:
+          $ref: '#/components/schemas/createdAt'
+        createdBy:
+          $ref: '#/components/schemas/createdBy'
+        isLatest:
+          type: boolean
+        hash:
+          type: string
+          description: Merkle-tree hash of this version
+    envVarWithValue:
+      description: Environment variable with current actual value from resolved config
+      allOf:
+        - type: object
+          required:
+            - envVariable
+            - configPath
+          properties:
+            envVariable:
+              type: string
+              description: Environment variable name (e.g., "DB_HOST")
+            configPath:
+              type: string
+              description: JSON path in config (e.g., "database.host")
+            format:
+              type: string
+              description: Format hint from x-env-format or format field
+            type:
+              type: string
+              description: JSON schema type (e.g., "string", "integer")
+            required:
+              type: boolean
+              description: Whether this field is required by schema
+            description:
+              type: string
+              description: Schema description
+            default:
+              description: Default value from schema (any type)
+            refLink:
+              type: string
+              format: uri
+              description: External schema reference if this env var comes from a $ref
+        - type: object
+          properties:
+            currentValue:
+              description: Actual value from resolved config with defaults applied
+            valueSource:
+              type: string
+              enum:
+                - default
+                - config
+              description: Whether value comes from schema default or config override
+    configStats:
+      type: object
+      description: Computed statistics about config structure
+      required:
+        - configSize
+        - keyCount
+        - refCount
+        - depth
+      properties:
+        configSize:
+          type: integer
+          description: Byte size of config JSON
+          example: 2048
+        keyCount:
+          type: integer
+          description: Total number of keys in config (recursive count)
+          example: 42
+        refCount:
+          type: integer
+          description: Number of $ref objects in config
+          example: 3
+        depth:
+          type: integer
+          description: Maximum nesting depth of config object
+          example: 5
     capabilities:
       type: object
       required:

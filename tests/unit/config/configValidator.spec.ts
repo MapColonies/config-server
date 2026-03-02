@@ -1,9 +1,9 @@
-import { describe, beforeEach, it, expect, vi, Mock } from 'vitest';
+import { describe, beforeEach, it, expect, vi, type Mock } from 'vitest';
 
 import betterAjvErrors from '@sidvind/better-ajv-errors';
 import { jsLogger } from '@map-colonies/js-logger';
 import { Validator } from '@src/configs/models/configValidator';
-import { SchemaManager } from '@src/schemas/models/schemaManager';
+import type { SchemaManager } from '@src/schemas/models/schemaManager';
 
 vi.mock('@sidvind/better-ajv-errors');
 

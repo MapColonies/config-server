@@ -5,20 +5,25 @@ import 'jest-sorted';
 
 import fs from 'node:fs';
 import { describe, beforeAll, afterAll, it, expect, vi } from 'vitest';
-import { Logger, jsLogger } from '@map-colonies/js-logger';
+import { type Logger, jsLogger } from '@map-colonies/js-logger';
 import httpStatusCodes from 'http-status-codes';
-import { DependencyContainer } from 'tsyringe';
+import type { DependencyContainer } from 'tsyringe';
 import { faker } from '@faker-js/faker';
-import { JSONSchema } from '@apidevtools/json-schema-ref-parser';
-import { createRequestSender, RequestSender, expectResponseStatusFactory, ExpectResponseStatus } from '@map-colonies/openapi-helpers/requestSender';
-import { paths, operations } from '@openapi';
+import type { JSONSchema } from '@apidevtools/json-schema-ref-parser';
+import {
+  createRequestSender,
+  type RequestSender,
+  expectResponseStatusFactory,
+  type ExpectResponseStatus,
+} from '@map-colonies/openapi-helpers/requestSender';
+import type { paths, operations } from '@openapi';
 import { ConfigRepository } from '@src/configs/repositories/configRepository';
 import { SchemaManager } from '@src/schemas/models/schemaManager';
-import { Drizzle } from '@src/db/createConnection';
+import type { Drizzle } from '@src/db/createConnection';
 import { getApp } from '@src/app';
 import { ConfigManager } from '@src/configs/models/configManager';
 import { SERVICES } from '@common/constants';
-import { Config, configs, configsRefs } from '@src/configs/models/config';
+import { type Config, configs, configsRefs } from '@src/configs/models/config';
 import * as utils from '@common/utils';
 import { SchemaNotFoundError } from '@src/schemas/models/errors';
 import {

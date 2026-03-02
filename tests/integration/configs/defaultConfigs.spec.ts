@@ -4,7 +4,7 @@ import 'jest-sorted';
 
 import { describe, beforeAll, it, expect } from 'vitest';
 import { jsLogger } from '@map-colonies/js-logger';
-import { DependencyContainer } from 'tsyringe';
+import type { DependencyContainer } from 'tsyringe';
 import { getApp } from '@src/app';
 import { ConfigManager } from '@src/configs/models/configManager';
 import { SERVICES } from '@common/constants';

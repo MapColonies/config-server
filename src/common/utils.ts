@@ -1,8 +1,8 @@
-import fs, { promises as fsPromise } from 'node:fs';
+import { promises as fsPromise, type Dirent } from 'node:fs';
 
 const LAST_INDEX = -1;
 
-export async function* filesTreeGenerator(directory: string, filenameFilter?: (filename: string) => boolean): AsyncGenerator<fs.Dirent> {
+export async function* filesTreeGenerator(directory: string, filenameFilter?: (filename: string) => boolean): AsyncGenerator<Dirent> {
   for await (const dirent of await fsPromise.opendir(directory, { recursive: true })) {
     if (dirent.isFile() && (!filenameFilter || filenameFilter(dirent.name))) {
       yield dirent;

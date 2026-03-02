@@ -9,7 +9,6 @@ import { inject, injectable } from 'tsyringe';
 import { Clone } from '@sinclair/typebox/value';
 import pointer, { type JsonObject } from 'json-pointer';
 import { formatISO, parseISO } from 'date-fns';
-import { Cache, createCache } from 'async-cache-dedupe';
 import { get } from 'lodash';
 import { paths, components } from '@openapi';
 import type { Prettify } from '@common/interfaces';
@@ -36,39 +35,18 @@ type DefaultConfigToInsert = Parameters<ConfigManager['createConfig']>[0] & {
   visited: boolean;
 };
 
-interface FullConfigMetadataParams {
-  name: string;
-  schemaId: string;
-  version?: number;
-}
-
 // Constants for configuration metadata
 const MAX_RECURSION_DEPTH = 2;
 
 @injectable()
 export class ConfigManager {
-  private readonly fullConfigCache: Cache & {
-    getMetadata: (args: FullConfigMetadataParams) => Promise<ConfigFullMetadata>;
-  };
-
   public constructor(
     @inject(SERVICES.LOGGER) private readonly logger: Logger,
     @inject(ConfigRepository) private readonly configRepository: ConfigRepository,
     @inject(Validator) private readonly configValidator: Validator,
     @inject(HashPropagationHelper) private readonly hashPropagationHelper: HashPropagationHelper,
     @inject(SchemaManager) private readonly schemaManager: SchemaManager
-  ) {
-    // Initialize async-cache-dedupe for full config metadata
-    const cache = createCache({
-      ttl: 300, // 5 minutes in seconds
-      storage: { type: 'memory' },
-    });
-
-    // Define cached function for full config metadata
-    this.fullConfigCache = cache.define('getMetadata', async (params: FullConfigMetadataParams) => {
-      return this.generateFullConfigMetadata(params.name, params.schemaId, params.version);
-    });
-  }
+  ) {}
 
   @withSpan()
   public async getConfig(name: string, schemaId: string, version?: number, shouldDereferenceConfig?: boolean): Promise<Config> {
@@ -803,11 +781,10 @@ export class ConfigManager {
   }
 
   /**
-   * Generate comprehensive config metadata (uncached)
-   * Internal method used by cached getFullConfigMetadata
+   * Get comprehensive config metadata for inspector page
    */
   @withSpan()
-  private async generateFullConfigMetadata(name: string, schemaId: string, version?: number): Promise<ConfigFullMetadata> {
+  public async getFullConfigMetadata(name: string, schemaId: string, version?: number): Promise<ConfigFullMetadata> {
     this.logger.info({ msg: 'Generating full config metadata', name, schemaId, version });
 
     // 1. Fetch raw and resolved config in parallel
@@ -893,13 +870,5 @@ export class ConfigManager {
     };
 
     return metadata;
-  }
-
-  /**
-   * Get comprehensive config metadata for inspector page (cached)
-   */
-  @withSpan()
-  public async getFullConfigMetadata(name: string, schemaId: string, version?: number): Promise<ConfigFullMetadata> {
-    return this.fullConfigCache.getMetadata({ name, schemaId, version });
   }
 }

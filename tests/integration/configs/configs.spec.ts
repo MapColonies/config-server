@@ -1476,29 +1476,6 @@ describe('config', function () {
       });
     });
 
-    describe('Caching Behavior', function () {
-      it('should return consistent results on repeated calls (caching works)', async function () {
-        // First call
-        const response1 = await requestSender.getFullConfig({
-          pathParams: { name: 'config2', version: 1 },
-          queryParams: { schemaId: 'https://mapcolonies.com/simpleSchema/v1' },
-        });
-
-        expectResponseStatus(response1, 200);
-
-        // Second call - should get same result (potentially from cache)
-        const response2 = await requestSender.getFullConfig({
-          pathParams: { name: 'config2', version: 1 },
-          queryParams: { schemaId: 'https://mapcolonies.com/simpleSchema/v1' },
-        });
-
-        expectResponseStatus(response2, 200);
-
-        // Verify both responses are identical
-        expect(response1.body).toStrictEqual(response2.body);
-      });
-    });
-
     describe('Complex Scenarios', function () {
       it('should handle configs with latest version references correctly', async function () {
         // config-ref-3 uses 'latest' version reference

@@ -1,10 +1,10 @@
-import config, { IConfig } from 'config';
+import config, { type IConfig } from 'config';
 import { metrics as OtelMetrics } from '@opentelemetry/api';
-import { DependencyContainer } from 'tsyringe/dist/typings/types';
+import type { DependencyContainer } from 'tsyringe/dist/typings/types';
 import { instancePerContainerCachingFactory } from 'tsyringe';
 import type { Pool } from 'pg';
-import { initConnection, createDrizzle, createConnectionOptions, DbConfig, Drizzle } from '@db';
-import { InjectionObject, registerDependencies } from '@common/dependencyRegistration';
+import { initConnection, createDrizzle, createConnectionOptions, type DbConfig, type Drizzle } from '@db';
+import { type InjectionObject, registerDependencies } from '@common/dependencyRegistration';
 import { SERVICES, SERVICE_NAME } from '@common/constants';
 import { tracing } from '@common/tracing';
 import { SCHEMA_ROUTER_SYMBOL, schemaRouterFactory } from './schemas/routes/schemaRouter';

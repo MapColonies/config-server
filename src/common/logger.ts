@@ -1,14 +1,14 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
-import { type IncomingMessage, ServerResponse } from 'node:http';
+import type { IncomingMessage, ServerResponse } from 'node:http';
 import { get } from 'lodash';
 import * as api from '@opentelemetry/api';
-import { Logger, LoggerOptions, jsLogger } from '@map-colonies/js-logger';
+import { type Logger, type LoggerOptions, jsLogger } from '@map-colonies/js-logger';
 import { getOtelMixin } from '@map-colonies/tracing-utils';
-import { NextFunction, Request, Response } from 'express';
+import type { NextFunction, Request, Response } from 'express';
 import type { AttributeValue, Attributes } from '@opentelemetry/api';
-import { DependencyContainer } from 'tsyringe';
+import type { DependencyContainer } from 'tsyringe';
 import { SERVICES } from './constants';
-import { IConfig } from './interfaces';
+import type { IConfig } from './interfaces';
 
 const logContext = new AsyncLocalStorage<Attributes>();
 

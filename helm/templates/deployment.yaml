@@ -4,7 +4,7 @@
 {{- $cloudProviderDockerRegistryUrl := include "config-server.cloudProviderDockerRegistryUrl" . -}}
 {{- $cloudProviderImagePullSecretName := include "config-server.cloudProviderImagePullSecretName" . -}}
 {{- $imageTag := include "config-server.tag" . -}}
-{{ $postgresSecretName := ternary .Values.dbConfig.secretName (printf "%s%s" .Release.Name "-postgres-secret") .Values.dbConfig.useExternalSecret }}
+{{ $postgresSecretName := ternary .Values.dbConfig.secretName (include "config-server.fullname" .) .Values.dbConfig.useExternalSecret }}
 {{- if .Values.enabled -}}
 apiVersion: apps/v1
 kind: Deployment
@@ -87,8 +87,18 @@ spec:
           envFrom:
             - configMapRef:
                 name: {{ include "config-server.fullname" . }}
-            - secretRef:
-                name: {{ include "config-server.fullname" . }}
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $postgresSecretName }}
+                  key: username
+            {{- if not .Values.dbConfig.sslAuth.enabled }}               
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $postgresSecretName }}
+                  key: password
+            {{- end }}
           ports:
             - name: http
               containerPort: {{ .Values.env.targetPort }}

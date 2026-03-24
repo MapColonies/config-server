@@ -1,12 +1,17 @@
 import { describe, beforeEach, afterEach, it, expect } from 'vitest';
-import { createRequestSender, ExpectResponseStatus, expectResponseStatusFactory, RequestSender } from '@map-colonies/openapi-helpers/requestSender';
+import {
+  createRequestSender,
+  type ExpectResponseStatus,
+  expectResponseStatusFactory,
+  type RequestSender,
+} from '@map-colonies/openapi-helpers/requestSender';
 import { jsLogger } from '@map-colonies/js-logger';
 import httpStatusCodes from 'http-status-codes';
-import { DependencyContainer } from 'tsyringe';
-import { paths, operations } from '@openapi';
+import type { DependencyContainer } from 'tsyringe';
+import type { paths, operations } from '@openapi';
 import { getApp } from '@src/app';
 import { SERVICES } from '@common/constants';
-import { SchemaReference } from '@src/schemas/models/types';
+import type { SchemaReference } from '@src/schemas/models/types';
 
 const expectResponseStatus: ExpectResponseStatus = expectResponseStatusFactory(expect);
 

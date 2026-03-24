@@ -5,10 +5,15 @@ import { eq } from 'drizzle-orm';
 import { describe, beforeAll, afterAll, beforeEach, afterEach, it, expect, vi } from 'vitest';
 import { jsLogger } from '@map-colonies/js-logger';
 import httpStatusCodes from 'http-status-codes';
-import { DependencyContainer } from 'tsyringe';
-import { createRequestSender, RequestSender, expectResponseStatusFactory, ExpectResponseStatus } from '@map-colonies/openapi-helpers/requestSender';
-import { paths, operations } from '@openapi';
-import { Drizzle } from '@src/db/createConnection';
+import type { DependencyContainer } from 'tsyringe';
+import {
+  createRequestSender,
+  type RequestSender,
+  expectResponseStatusFactory,
+  type ExpectResponseStatus,
+} from '@map-colonies/openapi-helpers/requestSender';
+import type { paths, operations } from '@openapi';
+import type { Drizzle } from '@src/db/createConnection';
 import { getApp } from '@src/app';
 import { SERVICES } from '@common/constants';
 import { locks } from '@src/locks/models/lock';

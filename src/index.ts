@@ -2,8 +2,8 @@
 import 'reflect-metadata';
 import { performance } from 'node:perf_hooks';
 import { createServer } from 'node:http';
-import { createTerminus, HealthCheck } from '@godaddy/terminus';
-import { Logger } from '@map-colonies/js-logger';
+import { createTerminus, type HealthCheck } from '@godaddy/terminus';
+import type { Logger } from '@map-colonies/js-logger';
 import { container } from 'tsyringe';
 import config from 'config';
 import { DEFAULT_SERVER_PORT, MILLISECONDS_IN_SECOND, SERVICES } from '@common/constants';

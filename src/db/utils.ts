@@ -1,7 +1,7 @@
-import { HealthCheck } from '@godaddy/terminus';
+import type { HealthCheck } from '@godaddy/terminus';
 import { sql } from 'drizzle-orm';
 import { promiseTimeout } from '@src/common/utils/promiseTimeout';
-import { Drizzle } from './createConnection';
+import type { Drizzle } from './createConnection';
 
 export const healthCheck = (drizzle: Drizzle, timeoutMs: number): HealthCheck => {
   return async (): Promise<void> => {

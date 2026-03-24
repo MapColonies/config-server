@@ -1,14 +1,14 @@
 import fs, { Dirent } from 'node:fs';
 import { describe, beforeEach, it, expect, vi, afterEach } from 'vitest';
-import { Logger, jsLogger } from '@map-colonies/js-logger';
+import { type Logger, jsLogger } from '@map-colonies/js-logger';
 import { ConfigManager } from '@src/configs/models/configManager';
-import { ConfigRefResponse, ConfigRepository } from '@src/configs/repositories/configRepository';
-import { Validator } from '@src/configs/models/configValidator';
+import type { ConfigRefResponse, ConfigRepository } from '@src/configs/repositories/configRepository';
+import type { Validator } from '@src/configs/models/configValidator';
 import { ConfigNotFoundError, ConfigVersionMismatchError, ConfigValidationError, ConfigSchemaMismatchError } from '@src/configs/models/errors';
 import * as utils from '@src/common/utils';
-import { ConfigReference } from '@src/configs/models/configReference';
-import { HashPropagationHelper } from '@src/configs/models/hashPropagationHelpers';
-import { SchemaManager } from '@src/schemas/models/schemaManager';
+import type { ConfigReference } from '@src/configs/models/configReference';
+import type { HashPropagationHelper } from '@src/configs/models/hashPropagationHelpers';
+import type { SchemaManager } from '@src/schemas/models/schemaManager';
 
 vi.mock('../../../src/common/utils', async () => {
   return {

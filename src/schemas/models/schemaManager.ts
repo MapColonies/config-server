@@ -160,10 +160,8 @@ export class SchemaManager {
 
       const objRecord = obj as Record<string, unknown>;
 
-      if (objRecord.$ref !== undefined && typeof objRecord.$ref === 'string') {
-        if (objRecord.$ref.startsWith('https://')) {
-          external.add(objRecord.$ref);
-        }
+      if (objRecord.$ref !== undefined && typeof objRecord.$ref === 'string' && objRecord.$ref.startsWith('https://')) {
+        external.add(objRecord.$ref);
       }
 
       // Recursively traverse all properties

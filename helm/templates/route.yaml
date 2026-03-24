@@ -5,7 +5,7 @@
 apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
-  name: {{ $releaseName }}-{{ $chartName }}-route
+  name: {{ include "config-server.fullname" . }}
   annotations:
     {{- if .Values.route.rewriteTarget }}
     haproxy.router.openshift.io/rewrite-target: {{ .Values.route.rewriteTarget }}

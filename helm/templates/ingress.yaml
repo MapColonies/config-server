@@ -4,11 +4,11 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ $releaseName }}-{{ $chartName }}-ingress
+  name: {{ include "config-server.fullname" . }}
   annotations:
     kubernetes.io/ingress.class: "nginx"
     nginx.org/mergeable-ingress-type: "minion"
-    nginx.org/rewrites: 'serviceName={{ $releaseName }}-{{ $chartName }} rewrite=/'    
+    nginx.org/rewrites: 'serviceName={{ include "config-server.fullname" . }} rewrite=/'    
     nginx.org/location-snippets: |
       if ($request_method = OPTIONS) {
         return 204;

@@ -26,6 +26,6 @@ spec:
   selector:
     app: {{ $chartName }}
     release: {{ $releaseName }}
-    run: {{ $releaseName }}-{{ $chartName }}
+    run: {{ include "config-server.fullname" . }}
     {{- include "config-server.selectorLabels" . | nindent 4 }}
 {{- end }}

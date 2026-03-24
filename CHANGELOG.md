@@ -2,6 +2,31 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [2.2.0](https://github.com/MapColonies/config-server/compare/v2.1.0...v2.2.0) (2026-03-24)
+
+
+### Features
+
+* config full endpoint ([#146](https://github.com/MapColonies/config-server/issues/146)) ([f8b67ea](https://github.com/MapColonies/config-server/commit/f8b67ea0960e5c2f39c08ab6cc2fa768ca1fb992))
+* removed the cache from the full config endpoint ([#151](https://github.com/MapColonies/config-server/issues/151)) ([1c5cd73](https://github.com/MapColonies/config-server/commit/1c5cd73b2658d0b2eff5590274639c85cdde7cc9))
+
+
+### Helm Changes
+
+* fix secretRef in deployment ([#155](https://github.com/MapColonies/config-server/issues/155)) ([38ba46c](https://github.com/MapColonies/config-server/commit/38ba46ca694c461a399d286cd2321a24662c78f8))
+* remove object types from names ([#154](https://github.com/MapColonies/config-server/issues/154)) ([f50a14d](https://github.com/MapColonies/config-server/commit/f50a14d1385f139c9cc8cc4117a13c3d1d873f63))
+* update mclabels structure in values.yaml ([#149](https://github.com/MapColonies/config-server/issues/149)) ([7c0fe6f](https://github.com/MapColonies/config-server/commit/7c0fe6f15261c53ac18c2276548e085c7a82d99d))
+
+
+### Dependency Updates
+
+* upgraded schemas to 1.18 ([#153](https://github.com/MapColonies/config-server/issues/153)) ([f3d3da6](https://github.com/MapColonies/config-server/commit/f3d3da619092d8f8d40038fd83b70785b62c729d))
+
+
+### Code Refactoring
+
+* moved to eslint-config 8 and fixed errors ([#152](https://github.com/MapColonies/config-server/issues/152)) ([5d6bb62](https://github.com/MapColonies/config-server/commit/5d6bb6251c4ec4fee167984f7bc1ed1734cad2ce))
+
 ## [2.1.0](https://github.com/MapColonies/config-server/compare/v2.0.7...v2.1.0) (2026-02-02)
 
 

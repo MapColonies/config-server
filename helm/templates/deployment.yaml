@@ -75,18 +75,6 @@ spec:
           env:
             - name: SERVER_PORT
               value: {{ .Values.env.targetPort | quote }}
-            {{- if .Values.ca.enabled }}
-            - name: REQUESTS_CA_BUNDLE
-              value: {{ printf "%s/%s" .Values.ca.path .Values.ca.key | quote }}
-            - name: NODE_EXTRA_CA_CERTS
-              value: {{ printf "[%s/%s]" .Values.ca.path .Values.ca.key | quote }}
-            {{- end }}
-            {{- if .Values.extraEnvVars }}
-            {{- toYaml .Values.extraEnvVars | nindent 12 }}
-            {{- end }}            
-          envFrom:
-            - configMapRef:
-                name: {{ include "config-server.fullname" . }}
             - name: DB_USERNAME
               valueFrom:
                 secretKeyRef:
@@ -99,6 +87,18 @@ spec:
                   name: {{ $postgresSecretName }}
                   key: password
             {{- end }}
+            {{- if .Values.ca.enabled }}
+            - name: REQUESTS_CA_BUNDLE
+              value: {{ printf "%s/%s" .Values.ca.path .Values.ca.key | quote }}
+            - name: NODE_EXTRA_CA_CERTS
+              value: {{ printf "[%s/%s]" .Values.ca.path .Values.ca.key | quote }}
+            {{- end }}
+            {{- if .Values.extraEnvVars }}
+            {{- toYaml .Values.extraEnvVars | nindent 12 }}
+            {{- end }}            
+          envFrom:
+            - configMapRef:
+                name: {{ include "config-server.fullname" . }}
           ports:
             - name: http
               containerPort: {{ .Values.env.targetPort }}

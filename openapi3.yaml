@@ -7,7 +7,7 @@ info:
   description: >-
     This is a config server that provides the means to manage all the
     configurations
-  version: 2.1.0
+  version: 2.2.0
   license:
     name: MIT
     url: https://opensource.org/licenses/MIT
@@ -139,7 +139,10 @@ paths:
     get:
       operationId: getFullConfig
       summary: Get comprehensive config metadata for inspector page
-      description: Returns all data needed for config inspector including raw/resolved/defaults config, dependencies, versions, env vars, and stats. Single endpoint replaces multiple API calls.
+      description: >-
+        Returns all data needed for config inspector including
+        raw/resolved/defaults config, dependencies, versions, env vars, and
+        stats. Single endpoint replaces multiple API calls.
       responses:
         '200':
           description: OK
@@ -771,7 +774,9 @@ components:
         rawConfig:
           type: object
           additionalProperties: true
-          description: Config with $refs intact (as stored) - same as 'config' field from base schema
+          description: >-
+            Config with $refs intact (as stored) - same as 'config' field from
+            base schema
         resolvedConfig:
           type: object
           additionalProperties: true
@@ -779,7 +784,9 @@ components:
         configWithDefaults:
           type: object
           additionalProperties: true
-          description: Config with $refs resolved AND schema defaults applied (actual runtime values)
+          description: >-
+            Config with $refs resolved AND schema defaults applied (actual
+            runtime values)
         schema:
           type: object
           description: Lightweight schema metadata

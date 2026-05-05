@@ -62,7 +62,7 @@
     "lodash": "^4.17.21",
     "pg": "^8.14.1",
     "reflect-metadata": "^0.2.2",
-    "tsyringe": "^4.8.0"
+    "tsyringe": "^4.10.0"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.8.0",

@@ -37,7 +37,7 @@
     "@godaddy/terminus": "^4.12.1",
     "@map-colonies/error-express-handler": "^4.0.0",
     "@map-colonies/express-access-log-middleware": "^4.0.0",
-    "@map-colonies/js-logger": "^4.0.0",
+    "@map-colonies/js-logger": "^5.0.0",
     "@map-colonies/openapi-express-viewer": "^5.0.0",
     "@map-colonies/prometheus": "^1.0.0",
     "@map-colonies/read-pkg": "^2.0.0",

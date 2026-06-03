@@ -121,7 +121,7 @@ route:
     caCertificate: ''
 
 ingress:
-  enabled: true
+  enabled: false
   path: /
   pathType: Prefix
   host: 'localhost'

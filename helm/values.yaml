@@ -121,9 +121,13 @@ route:
     caCertificate: ''
 
 ingress:
-  enabled: false
+  enabled: true
   path: /
+  pathType: Prefix
   host: 'localhost'
-  cors:
-    enabled: true
-    origin: '*'
+  hosts: []
+  extraPaths: []
+  labels: {}
+  annotations: {}
+  className: ""
+  tls: []

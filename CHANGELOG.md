@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [2.2.1](https://github.com/MapColonies/config-server/compare/v2.2.0...v2.2.1) (2026-06-03)
+
+
+### Helm Changes
+
+* fix ca ([#161](https://github.com/MapColonies/config-server/issues/161)) ([1f1f77f](https://github.com/MapColonies/config-server/commit/1f1f77f59879a50259bc77074491484fec34a960))
+
+
+### Dependency Updates
+
+* upgrades schemas to 1.21.0 ([#176](https://github.com/MapColonies/config-server/issues/176)) ([4b1cd63](https://github.com/MapColonies/config-server/commit/4b1cd636ee6e02056268c4de336308be550e15ec))
+
 ## [2.2.0](https://github.com/MapColonies/config-server/compare/v2.1.0...v2.2.0) (2026-03-24)
 
 

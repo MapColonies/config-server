@@ -1,34 +1,79 @@
-{{- $releaseName := .Release.Name -}}
-{{- $chartName := include "config-server.name" . -}}
 {{- if and (.Values.enabled) (.Values.ingress.enabled) -}}
+{{- $fullName := include "config-server.fullname" . -}}
+{{- $serviceName := printf "%s-service" $fullName -}}
+{{- $servicePort := .Values.env.port -}}
+{{- $ingressPath := .Values.ingress.path -}}
+{{- $ingressPathType := default "Prefix" .Values.ingress.pathType -}}
+{{- $extraPaths := .Values.ingress.extraPaths -}}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ include "config-server.fullname" . }}
-  annotations:
-    kubernetes.io/ingress.class: "nginx"
-    nginx.org/mergeable-ingress-type: "minion"
-    nginx.org/rewrites: 'serviceName={{ include "config-server.fullname" . }} rewrite=/'    
-    nginx.org/location-snippets: |
-      if ($request_method = OPTIONS) {
-        return 204;
-      }
-    {{- if .Values.ingress.cors.enabled }}
-      add_header 'Access-Control-Allow-Origin' '{{- .Values.ingress.cors.origin -}}';
-      add_header 'Access-Control-Max-Age' 3600;
-      add_header 'Access-Control-Expose-Headers' 'Content-Length';
-      add_header 'Access-Control-Allow-Headers' '*';
+  name: {{ $fullName }}-ingress
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "config-server.labels" . | nindent 4 }}
+    {{- with .Values.ingress.labels }}
+    {{- toYaml . | nindent 4 }}
     {{- end }}
+  {{- with .Values.ingress.annotations }}
+  annotations:
+    {{- range $key, $value := . }}
+    {{ $key }}: {{ tpl ($value | toString) $ | quote }}
+    {{- end }}
+  {{- end }}
 spec:
+  {{- if .Values.ingress.className }}
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- end }}
+  {{- with .Values.ingress.tls }}
+  tls:
+    {{- tpl (toYaml .) $ | nindent 4 }}
+  {{- end }}
   rules:
-  - http:
-      paths:
-      - path: {{ .Values.ingress.path }}
-        pathType: Prefix
-        backend:
-          service:
-            name: {{ printf "%s-service" (include "config-server.fullname" .) }}
-            port:
-              number: {{ .Values.env.port }}
-    host: {{ .Values.ingress.host | quote }}
-{{- end -}}
+  {{- if .Values.ingress.hosts  }}
+  {{- range .Values.ingress.hosts }}
+    - host: {{ tpl . $ | quote }}
+      http:
+        paths:
+          {{- with $extraPaths }}
+          {{- toYaml . | nindent 10 }}
+          {{- end }}
+          - path: {{ $ingressPath }}
+            pathType: {{ $ingressPathType }}
+            backend:
+              service:
+                name: {{ $serviceName }}
+                port:
+                  number: {{ $servicePort }}
+  {{- end }}
+  {{- else if .Values.ingress.host }}
+    - host: {{ tpl .Values.ingress.host $ | quote }}
+      http:
+        paths:
+          {{- with $extraPaths }}
+          {{- toYaml . | nindent 10 }}
+          {{- end }}
+          - path: {{ $ingressPath }}
+            pathType: {{ $ingressPathType }}
+            backend:
+              service:
+                name: {{ $serviceName }}
+                port:
+                  number: {{ $servicePort }}
+  {{- else }}
+    - http:
+        paths:
+          {{- with $extraPaths }}
+          {{- toYaml . | nindent 10 }}
+          {{- end }}
+          - backend:
+              service:
+                name: {{ $serviceName }}
+                port:
+                  number: {{ $servicePort }}
+            {{- with $ingressPath }}
+            path: {{ . }}
+            {{- end }}
+            pathType: {{ $ingressPathType }}
+  {{- end -}}
+{{- end }}

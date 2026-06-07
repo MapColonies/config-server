@@ -63,6 +63,9 @@ spec:
   {{- else }}
     - http:
         paths:
+          {{- with $extraPaths }}
+          {{- toYaml . | nindent 10 }}
+          {{- end }}
           - backend:
               service:
                 name: {{ $serviceName }}

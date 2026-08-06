@@ -9,6 +9,7 @@ mclabels:
   partOf: config-management
   prometheus:
     enabled: true
+  criticality: customer
 
 enabled: true
 replicaCount: 1

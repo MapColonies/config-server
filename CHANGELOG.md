@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [2.2.2](https://github.com/MapColonies/config-server/compare/v2.2.1...v2.2.2) (2026-08-06)
+
+
+### Helm Changes
+
+* ingress template MAPCO-10574 ([#177](https://github.com/MapColonies/config-server/issues/177)) ([048be5d](https://github.com/MapColonies/config-server/commit/048be5d79efdebe46b5366308deb89f05290299a))
+
+
+### Dependency Updates
+
+* update mclabels and added criticality ([#180](https://github.com/MapColonies/config-server/issues/180)) ([398d9b1](https://github.com/MapColonies/config-server/commit/398d9b16194e855f5d1cd935fa2f519fa834d962))
+
 ## [2.2.1](https://github.com/MapColonies/config-server/compare/v2.2.0...v2.2.1) (2026-06-03)
 
 

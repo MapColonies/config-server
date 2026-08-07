@@ -80,7 +80,7 @@
     "@types/fast-json-stable-stringify": "^2.0.0",
     "@types/json-pointer": "^1.0.34",
     "@types/lodash": "^4.17.16",
-    "@types/multer": "^1.4.12",
+    "@types/multer": "^2.1.0",
     "@types/node": "^24.1.0",
     "@types/pg": "^8.11.11",
     "@types/supertest": "^6.0.2",

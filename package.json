@@ -92,7 +92,7 @@
     "drizzle-kit": "^0.30.5",
     "eslint": "^9.22.0",
     "husky": "^9.1.7",
-    "jest-extended": "^4.0.2",
+    "jest-extended": "^7.0.0",
     "jest-openapi": "^0.14.2",
     "jest-sorted": "^1.0.15",
     "openapi-typescript": "^7.6.1",

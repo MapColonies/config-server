@@ -12,7 +12,7 @@ jobs:
 
     strategy:
       matrix:
-        node: [24]
+        node: [26]
 
     steps:
       - name: Check out TS Project Git repository
@@ -32,7 +32,7 @@ jobs:
 
     strategy:
       matrix:
-        node: [24]
+        node: [26]
 
     steps:
       - name: Check out TS Project Git repository
@@ -52,7 +52,7 @@ jobs:
 
     strategy:
       matrix:
-        node: [24]
+        node: [26]
 
     services:
       # Label used to access the service container

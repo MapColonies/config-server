@@ -3,6 +3,7 @@ import { metrics as OtelMetrics } from '@opentelemetry/api';
 import type { DependencyContainer } from 'tsyringe/dist/typings/types';
 import { instancePerContainerCachingFactory } from 'tsyringe';
 import type { Pool } from 'pg';
+import type { Logger } from '@map-colonies/js-logger';
 import { initConnection, createDrizzle, createConnectionOptions, type DbConfig, type Drizzle } from '@db';
 import { type InjectionObject, registerDependencies } from '@common/dependencyRegistration';
 import { SERVICES, SERVICE_NAME } from '@common/constants';
@@ -20,9 +21,13 @@ export interface RegisterOptions {
 }
 
 export async function registerExternalValues(options?: RegisterOptions): Promise<DependencyContainer> {
+  // The logger is resolved from the container, which only exists once the pool is registered.
+  const loggerRef: { current?: Logger } = {};
   let pool: Pool;
   try {
-    pool = await initConnection(createConnectionOptions(config.get<DbConfig>('db')));
+    pool = await initConnection(createConnectionOptions(config.get<DbConfig>('db')), {
+      onError: (err) => loggerRef.current?.error({ msg: 'database connection error', err }),
+    });
   } catch (error) {
     throw new Error(`Failed to connect to the database`, { cause: error });
   }
@@ -66,5 +71,7 @@ export async function registerExternalValues(options?: RegisterOptions): Promise
     },
   ];
 
-  return registerDependencies(dependencies, options?.override, options?.useChild);
+  const container = registerDependencies(dependencies, options?.override, options?.useChild);
+  loggerRef.current = container.resolve<Logger>(SERVICES.LOGGER);
+  return container;
 }

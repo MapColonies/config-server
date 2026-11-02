@@ -24,9 +24,44 @@ export function createConnectionOptions(dbConfig: DbConfig): PoolConfig {
   };
 }
 
-export async function initConnection(dbConfig: PoolConfig): Promise<Pool> {
+export interface InitConnectionOptions {
+  /**
+   * Called when a pooled connection fails outside of a query, for example when the database restarts,
+   * fails over, or terminates the session (`pg_terminate_backend`, `idle_in_transaction_session_timeout`).
+   * The pool discards the broken connection and opens a new one on demand, so this is for reporting only.
+   */
+  onError?: (err: Error) => void;
+}
+
+/**
+ * Creates and verifies a connected `pg.Pool`.
+ * The pool and every connection it opens get an `'error'` listener, so a connection that the database
+ * drops does not crash the process with an unhandled `'error'` event.
+ */
+export async function initConnection(dbConfig: PoolConfig, options: InitConnectionOptions = {}): Promise<Pool> {
+  const { onError = (): void => undefined } = options;
   const pool = new Pool(dbConfig);
-  await pool.query('SELECT NOW()');
+
+  // Every connection error, idle or checked out, reaches the connection's own listener.
+  pool.on('connect', (client) =>
+    client.on('error', (err) => {
+      try {
+        onError(err);
+      } catch {
+        // onError is for reporting only; a throwing reporter must not crash the process
+      }
+    })
+  );
+  // The pool re-emits errors of idle connections, which were already reported above.
+  pool.on('error', () => undefined);
+
+  try {
+    await pool.query('SELECT NOW()');
+  } catch (err) {
+    // A failing cleanup must not replace the original connection error
+    await pool.end().catch(() => undefined);
+    throw err;
+  }
   return pool;
 }
 

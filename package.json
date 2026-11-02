@@ -87,7 +87,7 @@
     "@types/swagger-ui-express": "^4.1.8",
     "@vitest/coverage-v8": "^4.0.17",
     "@vitest/ui": "^4.0.17",
-    "commitlint": "^19.8.0",
+    "commitlint": "^21.0.0",
     "copyfiles": "^2.4.1",
     "drizzle-kit": "^0.30.5",
     "eslint": "^9.22.0",

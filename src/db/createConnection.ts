@@ -58,7 +58,8 @@ export async function initConnection(dbConfig: PoolConfig, options: InitConnecti
   try {
     await pool.query('SELECT NOW()');
   } catch (err) {
-    await pool.end();
+    // A failing cleanup must not replace the original connection error
+    await pool.end().catch(() => undefined);
     throw err;
   }
   return pool;

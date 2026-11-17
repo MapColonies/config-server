@@ -99,7 +99,8 @@ export class ServerBuilder {
       // we use the static middleware twice. the second one is to catch subpath requests and serve the index.html
       // api is not affected by this middleware as the OpenApiMiddleware is registered before and sets 404 for all api misses
       this.serverInstance.use(expressStatic(staticPath));
-      this.serverInstance.use('*', expressStatic(staticPath));
+      // express 5 does not accept a bare '*' path, wildcards must be named. see https://expressjs.com/en/guide/migrating-5.html#path-syntax
+      this.serverInstance.use('/{*splat}', expressStatic(staticPath));
     }
 
     this.serverInstance.use(getErrorHandlerMiddleware());

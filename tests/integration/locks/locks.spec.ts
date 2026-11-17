@@ -6,12 +6,7 @@ import { describe, beforeAll, afterAll, beforeEach, afterEach, it, expect, vi } 
 import { jsLogger } from '@map-colonies/js-logger';
 import httpStatusCodes from 'http-status-codes';
 import type { DependencyContainer } from 'tsyringe';
-import {
-  createRequestSender,
-  type RequestSender,
-  expectResponseStatusFactory,
-  type ExpectResponseStatus,
-} from '@map-colonies/openapi-helpers/requestSender';
+import { createRequestSender, type RequestSender, expectResponseStatusFactory, type ExpectResponseStatus } from '@map-colonies/openapi-supertest';
 import type { paths, operations } from '@openapi';
 import type { Drizzle } from '@src/db/createConnection';
 import { getApp } from '@src/app';

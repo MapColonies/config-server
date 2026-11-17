@@ -1,10 +1,5 @@
 import { describe, beforeEach, afterEach, it, expect } from 'vitest';
-import {
-  createRequestSender,
-  type ExpectResponseStatus,
-  expectResponseStatusFactory,
-  type RequestSender,
-} from '@map-colonies/openapi-helpers/requestSender';
+import { createRequestSender, type ExpectResponseStatus, expectResponseStatusFactory, type RequestSender } from '@map-colonies/openapi-supertest';
 import { jsLogger } from '@map-colonies/js-logger';
 import httpStatusCodes from 'http-status-codes';
 import type { DependencyContainer } from 'tsyringe';

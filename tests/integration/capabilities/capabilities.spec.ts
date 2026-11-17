@@ -2,7 +2,7 @@ import { describe, beforeEach, afterEach, it, expect } from 'vitest';
 import { jsLogger } from '@map-colonies/js-logger';
 import httpStatusCodes from 'http-status-codes';
 import type { DependencyContainer } from 'tsyringe';
-import { createRequestSender, type RequestSender } from '@map-colonies/openapi-helpers/requestSender';
+import { createRequestSender, type RequestSender } from '@map-colonies/openapi-supertest';
 import type { paths, operations } from '@openapi';
 import { getApp } from '@src/app';
 import { SERVICES } from '@common/constants';

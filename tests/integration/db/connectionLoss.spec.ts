@@ -7,7 +7,7 @@ import { describe, beforeAll, beforeEach, afterAll, it, expect, vi, type MockIns
 import { jsLogger } from '@map-colonies/js-logger';
 import httpStatusCodes from 'http-status-codes';
 import type { DependencyContainer } from 'tsyringe';
-import { createRequestSender, type RequestSender } from '@map-colonies/openapi-helpers/requestSender';
+import { createRequestSender, type RequestSender } from '@map-colonies/openapi-supertest';
 import type { paths, operations } from '@openapi';
 import { createConnectionOptions, initConnection, type DbConfig } from '@src/db/createConnection';
 import { getApp } from '@src/app';

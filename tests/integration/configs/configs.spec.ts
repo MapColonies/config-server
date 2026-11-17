@@ -10,12 +10,7 @@ import httpStatusCodes from 'http-status-codes';
 import type { DependencyContainer } from 'tsyringe';
 import { faker } from '@faker-js/faker';
 import type { JSONSchema } from '@apidevtools/json-schema-ref-parser';
-import {
-  createRequestSender,
-  type RequestSender,
-  expectResponseStatusFactory,
-  type ExpectResponseStatus,
-} from '@map-colonies/openapi-helpers/requestSender';
+import { createRequestSender, type RequestSender, expectResponseStatusFactory, type ExpectResponseStatus } from '@map-colonies/openapi-supertest';
 import type { paths, operations } from '@openapi';
 import { ConfigRepository } from '@src/configs/repositories/configRepository';
 import { SchemaManager } from '@src/schemas/models/schemaManager';
